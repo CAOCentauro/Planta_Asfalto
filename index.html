@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Control de Producción · Planta de Asfalto</title>
+  <style>
+    /* ── Tokens ──────────────────────────────────────── */
+    :root {
+      --black:   #0f0f0f;
+      --asphalt: #1e1e1e;
+      --surface: #2a2a2a;
+      --border:  #3a3a3a;
+      --muted:   #6b6b6b;
+      --text:    #e8e8e8;
+      --sub:     #9a9a9a;
+      --amber:   #f59e0b;
+      --amber-d: #d97706;
+      --green:   #22c55e;
+      --red:     #ef4444;
+      --page:    #141414;
+
+      --tag-base:  #1d4ed8; --tag-base-bg:  #1e3a8a22;
+      --tag-grava: #16a34a; --tag-grava-bg: #14532d22;
+      --tag-arena: #ca8a04; --tag-arena-bg: #71350022;
+      --tag-extra: #9333ea; --tag-extra-bg: #4c1d9522;
+    }
+
+    /* ── Reset & base ────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--page);
+      color: var(--text);
+      min-height: 100dvh;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ── Header ──────────────────────────────────────── */
+    header {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--asphalt);
+      border-bottom: 2px solid var(--amber);
+      padding: 14px 16px 12px;
+      display: flex; align-items: center; gap: 12px;
+    }
+
+    .header-icon {
+      width: 40px; height: 40px;
+      background: var(--amber);
+      border-radius: 8px;
+      display: grid; place-items: center;
+      font-size: 20px; flex-shrink: 0;
+    }
+
+    .header-text h1 {
+      font-size: 15px; font-weight: 700;
+      letter-spacing: -0.3px; color: var(--text);
+    }
+    .header-text p {
+      font-size: 11px; color: var(--sub);
+      margin-top: 1px;
+    }
+
+    .header-id {
+      margin-left: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px; font-weight: 700;
+      color: var(--amber);
+      font-family: 'SF Mono', 'Cascadia Code', monospace;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    /* ── Layout ──────────────────────────────────────── */
+    main {
+      padding: 12px;
+      max-width: 960px;
+      margin: 0 auto;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+
+    /* ── Card ────────────────────────────────────────── */
+    .card {
+      background: var(--asphalt);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .card-head {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 16px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 700;
+      color: var(--sub);
+      text-transform: uppercase; letter-spacing: 1px;
+    }
+    .card-head-dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--amber);
+      flex-shrink: 0;
+    }
+
+    /* ── Form fields ─────────────────────────────────── */
+    .card-body { padding: 16px; }
+
+    .grid {
+      display: grid;
+      gap: 10px;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    @media (max-width: 540px) {
+      .grid-2, .grid-3 { grid-template-columns: 1fr; }
+    }
+
+    .field { display: flex; flex-direction: column; gap: 5px; }
+
+    .field label {
+      font-size: 10px; font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-size: 14px;
+      color: var(--text);
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      outline: none;
+      border-color: var(--amber);
+      background: #2e2a1a;
+    }
+
+    .field input[readonly] {
+      color: var(--amber);
+      font-weight: 700;
+      cursor: default;
+      font-family: monospace;
+      font-size: 13px;
+    }
+
+    .field textarea {
+      resize: vertical;
+      min-height: 64px;
+      font-size: 13px;
+    }
+
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    input[type="number"] { -moz-appearance: textfield; }
+    input[type="number"]::-webkit-inner-spin-button { display: none; }
+
+    /* ── Insumos table ───────────────────────────────── */
+    .table-scroll {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin: 0 -1px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    thead th {
+      background: var(--surface);
+      padding: 8px 10px;
+      text-align: left;
+      font-size: 9px; font-weight: 800;
+      color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      white-space: nowrap;
+      border-bottom: 1px solid var(--border);
+    }
+
+    thead th.auto { color: var(--amber); }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+    td { padding: 5px 6px; vertical-align: middle; }
+
+    td input, td select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 12px;
+      color: var(--text);
+      min-width: 0;
+      -webkit-appearance: none;
+    }
+    td input:focus, td select:focus {
+      outline: none;
+      border-color: var(--amber);
+    }
+    td select { background-image: none; }
+
+    td input[readonly] {
+      background: #2e2a1a;
+      color: var(--amber);
+      font-weight: 700;
+      cursor: default;
+    }
+
+    td input.base-name {
+      background: transparent;
+      border-color: transparent;
+      font-weight: 600;
+      color: var(--text);
+      cursor: default;
+      padding-left: 0;
+    }
+
+    /* ── Tag pills ───────────────────────────────────── */
+    .tag {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 9px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .tag-base  { color: var(--tag-base);  background: var(--tag-base-bg); }
+    .tag-grava { color: var(--tag-grava); background: var(--tag-grava-bg); }
+    .tag-arena { color: var(--tag-arena); background: var(--tag-arena-bg); }
+    .tag-extra { color: var(--tag-extra); background: var(--tag-extra-bg); }
+
+    .cell-name { display: flex; align-items: center; gap: 6px; }
+
+    /* ── Add row buttons ─────────────────────────────── */
+    .add-buttons {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      padding: 12px 16px 4px;
+    }
+
+    .btn-add {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 7px 13px;
+      border-radius: 8px;
+      border: 1.5px dashed;
+      font-size: 12px; font-weight: 700;
+      cursor: pointer;
+      background: transparent;
+      transition: background 0.15s;
+    }
+    .btn-add-grava { border-color: var(--tag-grava); color: var(--tag-grava); }
+    .btn-add-grava:hover { background: var(--tag-grava-bg); }
+    .btn-add-arena { border-color: var(--tag-arena); color: var(--tag-arena); }
+    .btn-add-arena:hover { background: var(--tag-arena-bg); }
+    .btn-add-extra { border-color: var(--tag-extra); color: var(--tag-extra); }
+    .btn-add-extra:hover { background: var(--tag-extra-bg); }
+
+    .btn-del {
+      background: none; border: none;
+      color: var(--muted);
+      font-size: 15px;
+      cursor: pointer; padding: 4px 6px;
+      border-radius: 4px;
+      line-height: 1;
+      transition: color 0.1s, background 0.1s;
+    }
+    .btn-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
+
+    .table-note {
+      padding: 8px 16px 14px;
+      font-size: 10px; color: var(--muted);
+    }
+    .table-note span { color: var(--amber); font-weight: 700; }
+
+    /* ── Submit ──────────────────────────────────────── */
+    .submit-card { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--amber);
+      color: var(--black);
+      border: none;
+      padding: 15px 24px;
+      border-radius: 10px;
+      font-size: 15px; font-weight: 800;
+      cursor: pointer;
+      letter-spacing: -0.2px;
+      transition: background 0.15s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: var(--amber-d);
+      transform: translateY(-1px);
+    }
+    .btn-submit:disabled {
+      background: var(--border);
+      color: var(--muted);
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-reset {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--muted);
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 12px; font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-reset:hover { border-color: var(--muted); color: var(--text); }
+
+    /* ── Toast ───────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      z-index: 999;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+    }
+    #toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+    #toast.success { background: var(--green); color: #fff; }
+    #toast.error   { background: var(--red);   color: #fff; }
+
+    /* ── Config warning ──────────────────────────────── */
+    .config-warn {
+      background: #2e1a00;
+      border: 1.5px solid var(--amber-d);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 12px;
+      color: #fcd34d;
+      display: none;
+      gap: 8px;
+      align-items: flex-start;
+    }
+    .config-warn.show { display: flex; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────── -->
+<header>
+  <div class="header-icon">🏗</div>
+  <div class="header-text">
+    <h1>Planta de Asfalto</h1>
+    <p>Registro de producción</p>
+  </div>
+  <div class="header-id" id="headerBadge">—</div>
+</header>
+
+<main>
+
+  <!-- Aviso de configuración -->
+  <div class="config-warn" id="configWarn">
+    ⚠️ Falta configurar la URL de tu Apps Script en la constante <code>APPS_SCRIPT_URL</code> del archivo. Los datos no se enviarán hasta que la configures.
+  </div>
+
+  <form id="prodForm" novalidate>
+
+    <!-- ── SECCIÓN 1: Producción ────────────── -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-dot"></div>
+        Datos de producción
+      </div>
+      <div class="card-body">
+        <div class="grid grid-2" style="margin-bottom:10px">
+          <div class="field">
+            <label>ID Producción</label>
+            <input type="text" id="idProd" readonly>
+          </div>
+          <div class="field">
+            <label>Fecha / Hora</label>
+            <input type="datetime-local" id="fechaHora" required>
+          </div>
+        </div>
+
+        <div class="grid grid-2" style="margin-bottom:10px">
+          <div class="field">
+            <label>Cliente / Obra</label>
+            <input type="text" id="clienteObra" placeholder="Constructora Vial — Tramo A" required>
+          </div>
+          <div class="field">
+            <label>Mezcla / Tipo de Asfalto</label>
+            <input type="text" id="mezcla" placeholder='HMA 1/2"' required>
+          </div>
+        </div>
+
+        <div class="grid grid-3" style="margin-bottom:10px">
+          <div class="field">
+            <label>Toneladas Producidas</label>
+            <input type="number" id="toneladas" placeholder="0" step="0.01" min="0" required>
+          </div>
+          <div class="field">
+            <label>Precio de Venta / Tn ($)</label>
+            <input type="number" id="precioTn" placeholder="0.00" step="0.01" min="0" required>
+          </div>
+          <div class="field">
+            <label>Costos Operativos ($)</label>
+            <input type="number" id="costosOp" placeholder="0.00" step="0.01" min="0" value="0">
+          </div>
+        </div>
+
+        <div class="grid grid-2">
+          <div class="field">
+            <label>Carpeta Drive (Fotos / Tickets)</label>
+            <input type="url" id="carpetaDrive" placeholder="https://drive.google.com/…">
+          </div>
+          <div class="field">
+            <label>Notas / Observaciones</label>
+            <textarea id="notas" placeholder="Temperatura de salida, incidentes, calidad…"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── SECCIÓN 2: Insumos ───────────────── -->
+    <div class="card">
+      <div class="card-head">
+        <div class="card-head-dot"></div>
+        Insumos utilizados
+      </div>
+
+      <div class="table-scroll">
+        <table id="insumosTable">
+          <thead>
+            <tr>
+              <th style="min-width:170px">Insumo</th>
+              <th style="min-width:95px">Cant. Inicio</th>
+              <th style="min-width:95px">Cant. Término</th>
+              <th class="auto" style="min-width:85px">Cant. Usada ★</th>
+              <th style="min-width:68px">Unidad</th>
+              <th style="min-width:95px">Costo Unit. ($)</th>
+              <th class="auto" style="min-width:95px">Costo Total ★</th>
+              <th style="min-width:90px">No. Ticket</th>
+              <th style="min-width:90px">Link Ticket</th>
+              <th style="min-width:32px"></th>
+            </tr>
+          </thead>
+          <tbody id="insumosBody"></tbody>
+        </table>
+      </div>
+
+      <div class="add-buttons">
+        <button type="button" class="btn-add btn-add-grava" onclick="addRow('grava')">+ Grava</button>
+        <button type="button" class="btn-add btn-add-arena" onclick="addRow('arena')">+ Arena</button>
+        <button type="button" class="btn-add btn-add-extra" onclick="addRow('extra')">+ Otro insumo</button>
+      </div>
+
+      <div class="table-note"><span>★</span> Calculado automáticamente · Cant. Usada = Inicio − Término</div>
+    </div>
+
+    <!-- ── Submit ───────────────────────────── -->
+    <div class="card">
+      <div class="submit-card">
+        <button type="submit" class="btn-submit" id="btnSubmit">
+          <span id="btnIcon">✅</span>
+          <span id="btnText">Registrar producción</span>
+        </button>
+        <button type="button" class="btn-reset" onclick="resetForm()">Limpiar formulario</button>
+      </div>
+    </div>
+
+  </form>
+</main>
+
+<div id="toast"></div>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPT
+═══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ─────────────────────────────────────────────
+// ⚙️  CONFIGURACIÓN — pega aquí tu URL de Apps Script
+// ─────────────────────────────────────────────
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/TU_ID_AQUI/exec';
+
+// ─────────────────────────────────────────────
+// Insumos base — siempre presentes, no se borran
+// ─────────────────────────────────────────────
+const BASE_INSUMOS = [
+  { nombre: 'Cemento Asfáltico (AC-20)', unidad: 'Tn' },
+  { nombre: 'Agua',                       unidad: 'L'  },
+  { nombre: 'Gas',                         unidad: 'Kg' },
+  { nombre: 'Diesel',                      unidad: 'L'  },
+  { nombre: 'Gasolina',                    unidad: 'L'  },
+  { nombre: 'Combustible Alterno',         unidad: 'L'  },
+];
+
+const UNIDADES = ['Tn', 'Kg', 'L', 'Gal', 'm³', 'lt', 'pza'];
+
+let rowId = 0;
+
+// ─────────────────────────────────────────────
+// Init
+// ─────────────────────────────────────────────
+function init() {
+  if (APPS_SCRIPT_URL.includes('TU_ID_AQUI')) {
+    document.getElementById('configWarn').classList.add('show');
+  }
+  generateId();
+  setNow();
+  renderBaseRows();
+  addRow('grava');
+  addRow('arena');
+}
+
+function generateId() {
+  const year = new Date().getFullYear();
+  const suffix = String(Date.now()).slice(-5);
+  const id = `PROD-${year}-${suffix}`;
+  document.getElementById('idProd').value = id;
+  document.getElementById('headerBadge').textContent = id;
+}
+
+function setNow() {
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset() * 60000);
+  document.getElementById('fechaHora').value = local.toISOString().slice(0, 16);
+}
+
+// ─────────────────────────────────────────────
+// Tabla de insumos
+// ─────────────────────────────────────────────
+const TIPO = {
+  base:  { label: 'BASE',  cls: 'tag-base',  ph: '',              editable: false },
+  grava: { label: 'GRAVA', cls: 'tag-grava', ph: 'Tipo de grava', editable: true  },
+  arena: { label: 'ARENA', cls: 'tag-arena', ph: 'Tipo de arena', editable: true  },
+  extra: { label: 'EXTRA', cls: 'tag-extra', ph: 'Nombre del insumo', editable: true },
+};
+
+function renderBaseRows() {
+  BASE_INSUMOS.forEach(ins => addRow('base', ins.nombre, ins.unidad));
+}
+
+function addRow(tipo, nombre = '', unidad = '') {
+  const cfg = TIPO[tipo];
+  const id  = `r${rowId++}`;
+  const tbody = document.getElementById('insumosBody');
+  const tr = document.createElement('tr');
+  tr.id = id;
+
+  const unidadOpts = UNIDADES.map(u =>
+    `<option value="${u}"${u === unidad ? ' selected' : ''}>${u}</option>`
+  ).join('');
+
+  const nameCell = cfg.editable
+    ? `<input type="text" class="insumo-nombre" placeholder="${cfg.ph}" value="${nombre}">`
+    : `<input type="text" class="insumo-nombre base-name" value="${nombre}" readonly tabindex="-1">`;
+
+  tr.innerHTML = `
+    <td>
+      <div class="cell-name">
+        <span class="tag ${cfg.cls}">${cfg.label}</span>
+        ${nameCell}
+      </div>
+    </td>
+    <td><input type="number" step="0.01" min="0" placeholder="0" class="qty-i"  oninput="calcRow('${id}')"></td>
+    <td><input type="number" step="0.01" min="0" placeholder="0" class="qty-t"  oninput="calcRow('${id}')"></td>
+    <td><input type="number" step="0.01"          placeholder="—" class="qty-u"  readonly></td>
+    <td><select class="insumo-u">${unidadOpts}</select></td>
+    <td><input type="number" step="0.01" min="0" placeholder="0.00" class="c-unit" oninput="calcRow('${id}')"></td>
+    <td><input type="number" step="0.01"          placeholder="—" class="c-total" readonly></td>
+    <td><input type="text"   maxlength="20" placeholder="TK-00000" class="ticket"></td>
+    <td><input type="url"                   placeholder="https://drive…" class="link-t"></td>
+    <td>${tipo !== 'base' ? `<button type="button" class="btn-del" onclick="delRow('${id}')" title="Eliminar">✕</button>` : ''}</td>
+  `;
+  tbody.appendChild(tr);
+}
+
+function delRow(id) {
+  document.getElementById(id)?.remove();
+}
+
+function calcRow(id) {
+  const tr = document.getElementById(id);
+  if (!tr) return;
+  const i = parseFloat(tr.querySelector('.qty-i')?.value)    || 0;
+  const t = parseFloat(tr.querySelector('.qty-t')?.value)    || 0;
+  const u = parseFloat(tr.querySelector('.c-unit')?.value)   || 0;
+  const usada = Math.max(0, i - t);
+  const total = usada * u;
+  tr.querySelector('.qty-u').value   = usada > 0 ? round2(usada) : '';
+  tr.querySelector('.c-total').value = total > 0 ? round2(total) : '';
+}
+
+function round2(n) { return Math.round(n * 100) / 100; }
+
+// ─────────────────────────────────────────────
+// Submit
+// ─────────────────────────────────────────────
+document.getElementById('prodForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+
+  // Validación mínima
+  const required = ['clienteObra', 'mezcla', 'toneladas', 'precioTn'];
+  const missing = required.find(id => !document.getElementById(id).value.trim());
+  if (missing) {
+    document.getElementById(missing).focus();
+    toast('Completa los campos obligatorios', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('btnSubmit');
+  btn.disabled = true;
+  document.getElementById('btnIcon').textContent = '⏳';
+  document.getElementById('btnText').textContent = 'Registrando…';
+
+  // Recopilar insumos
+  const insumos = [];
+  document.querySelectorAll('#insumosBody tr').forEach(tr => {
+    const nombre = tr.querySelector('.insumo-nombre')?.value?.trim();
+    if (!nombre) return;
+    insumos.push({
+      nombre,
+      cantidadInicio:  tr.querySelector('.qty-i')?.value   || '0',
+      cantidadTermino: tr.querySelector('.qty-t')?.value   || '0',
+      cantidadUsada:   tr.querySelector('.qty-u')?.value   || '0',
+      unidad:          tr.querySelector('.insumo-u')?.value || '',
+      costoUnitario:   tr.querySelector('.c-unit')?.value  || '0',
+      costoTotal:      tr.querySelector('.c-total')?.value || '0',
+      ticket:          tr.querySelector('.ticket')?.value  || '',
+      linkTicket:      tr.querySelector('.link-t')?.value  || '',
+    });
+  });
+
+  const payload = {
+    produccion: {
+      id:               document.getElementById('idProd').value,
+      fechaHora:        document.getElementById('fechaHora').value,
+      clienteObra:      document.getElementById('clienteObra').value.trim(),
+      mezcla:           document.getElementById('mezcla').value.trim(),
+      toneladas:        document.getElementById('toneladas').value,
+      precioTn:         document.getElementById('precioTn').value,
+      costosOperativos: document.getElementById('costosOp').value || '0',
+      carpetaDrive:     document.getElementById('carpetaDrive').value,
+      notas:            document.getElementById('notas').value.trim(),
+    },
+    insumos,
+  };
+
+  try {
+    await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',   // Apps Script cross-origin
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+
+    toast(`✅ ${payload.produccion.id} registrada en Sheets`, 'success');
+
+    // Limpiar después de 1.5 s
+    setTimeout(resetForm, 1500);
+
+  } catch (err) {
+    console.error(err);
+    toast('❌ Error de conexión. Revisa tu red.', 'error');
+  } finally {
+    btn.disabled = false;
+    document.getElementById('btnIcon').textContent = '✅';
+    document.getElementById('btnText').textContent = 'Registrar producción';
+  }
+});
+
+// ─────────────────────────────────────────────
+// Reset
+// ─────────────────────────────────────────────
+function resetForm() {
+  document.getElementById('prodForm').reset();
+  document.getElementById('insumosBody').innerHTML = '';
+  rowId = 0;
+  generateId();
+  setNow();
+  renderBaseRows();
+  addRow('grava');
+  addRow('arena');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ─────────────────────────────────────────────
+// Toast
+// ─────────────────────────────────────────────
+let toastTimer;
+function toast(msg, tipo) {
+  const el = document.getElementById('toast');
+  clearTimeout(toastTimer);
+  el.textContent = msg;
+  el.className = `${tipo} show`;
+  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
+
+// ─────────────────────────────────────────────
+// Arrancar
+// ─────────────────────────────────────────────
+init();
+</script>
+
+</body>
+</html>
