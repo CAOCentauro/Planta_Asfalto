@@ -508,7 +508,7 @@
 // ─────────────────────────────────────────────
 // ⚙️  CONFIGURACIÓN — pega aquí tu URL de Apps Script
 // ─────────────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzMgtcu-c5pAvoMA_1HWyhBnRqfI9OilgYHbKxGUOuKgCXpN1VvCnr7S4HOawLOVbke/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQX29Mm86KPOZuwZ9kqPy5-4F_F3oTrm9DJhda27HokAslB_LIxqUE0VxXTTtLHYeq/exec';
 
 // ─────────────────────────────────────────────
 // Insumos base — siempre presentes, no se borran
@@ -674,21 +674,29 @@ document.getElementById('prodForm').addEventListener('submit', async (e) => {
     insumos,
   };
 
+  // Agregar campo action para que Apps Script sepa qué hacer
+  payload.action = 'produccion';
+
   try {
-    await fetch(APPS_SCRIPT_URL, {
+    const res = await fetch(APPS_SCRIPT_URL, {
       method: 'POST',
-      mode: 'no-cors',   // Apps Script cross-origin
+      // SIN mode:'no-cors' — text/plain no dispara preflight y permite leer la respuesta
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
     });
 
-    toast(`✅ ${payload.produccion.id} registrada en Sheets`, 'success');
+    const result = await res.json().catch(() => ({ status: 'error', message: 'Respuesta no válida' }));
 
-    // Limpiar después de 1.5 s
-    setTimeout(resetForm, 1500);
+    if (result.status === 'ok') {
+      toast(`✅ ${payload.produccion.id} registrada en Sheets`, 'success');
+      setTimeout(resetForm, 1500);
+    } else {
+      toast('❌ Apps Script: ' + (result.message || 'Error desconocido'), 'error');
+      console.error('Apps Script error:', result);
+    }
 
   } catch (err) {
-    console.error(err);
+    console.error('Fetch error:', err);
     toast('❌ Error de conexión. Revisa tu red.', 'error');
   } finally {
     btn.disabled = false;
