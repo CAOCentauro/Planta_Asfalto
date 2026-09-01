@@ -1,0 +1,18 @@
+{
+  "name": "Planta de Asfalto — Control de Producción",
+  "short_name": "Planta",
+  "description": "Registro de producción, insumos y bitácora de flota",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#141414",
+  "theme_color": "#f59e0b",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23f59e0b' rx='20'/><text y='.9em' font-size='80' x='10'>🏗</text></svg>",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
