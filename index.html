@@ -2,271 +2,300 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-  <title>Control de Producción · Planta de Asfalto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Planta de Asfalto</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
-    /* ── Tokens ──────────────────────────────────────── */
+    /* ══ TOKENS ════════════════════════════════════════════ */
     :root {
-      --black:   #0f0f0f;
+      --page:    #141414;
       --asphalt: #1e1e1e;
       --surface: #2a2a2a;
-      --border:  #3a3a3a;
-      --muted:   #6b6b6b;
+      --border:  #383838;
       --text:    #e8e8e8;
-      --sub:     #9a9a9a;
+      --sub:     #8a8a8a;
+      --muted:   #5a5a5a;
       --amber:   #f59e0b;
       --amber-d: #d97706;
       --green:   #22c55e;
       --red:     #ef4444;
-      --page:    #141414;
+      --blue:    #3b82f6;
 
-      --tag-base:  #1d4ed8; --tag-base-bg:  #1e3a8a22;
-      --tag-grava: #16a34a; --tag-grava-bg: #14532d22;
-      --tag-arena: #ca8a04; --tag-arena-bg: #71350022;
-      --tag-extra: #9333ea; --tag-extra-bg: #4c1d9522;
+      --tag-base:     #3b82f6; --tag-base-bg:  rgba(59,130,246,.15);
+      --tag-cemento:  #f59e0b; --tag-cemento-bg: rgba(245,158,11,.15);
+      --tag-grava:    #22c55e; --tag-grava-bg: rgba(34,197,94,.15);
+      --tag-arena:    #f97316; --tag-arena-bg: rgba(249,115,22,.15);
+      --tag-extra:    #a855f7; --tag-extra-bg: rgba(168,85,247,.15);
+
+      --header-h: 56px;
+      --tabs-h:   46px;
     }
 
-    /* ── Reset & base ────────────────────────────────── */
+    /* ══ RESET ═════════════════════════════════════════════ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
+    html, body { height: 100%; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       background: var(--page);
       color: var(--text);
-      min-height: 100dvh;
       -webkit-tap-highlight-color: transparent;
+      overscroll-behavior: none;
     }
 
-    /* ── Header ──────────────────────────────────────── */
+    /* ══ HEADER ════════════════════════════════════════════ */
     header {
-      position: sticky; top: 0; z-index: 50;
+      position: sticky; top: 0; z-index: 100;
+      height: var(--header-h);
       background: var(--asphalt);
       border-bottom: 2px solid var(--amber);
-      padding: 14px 16px 12px;
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center;
+      padding: 0 14px; gap: 10px;
     }
-
-    .header-icon {
-      width: 40px; height: 40px;
-      background: var(--amber);
-      border-radius: 8px;
+    .h-icon {
+      width: 36px; height: 36px;
+      background: var(--amber); border-radius: 8px;
       display: grid; place-items: center;
-      font-size: 20px; flex-shrink: 0;
+      font-size: 18px; flex-shrink: 0;
     }
+    .h-title { font-size: 14px; font-weight: 800; letter-spacing: -.3px; }
+    .h-sub   { font-size: 10px; color: var(--sub); margin-top: 1px; }
+    #connDot {
+      margin-left: auto; display: flex; align-items: center; gap: 5px;
+      font-size: 10px; font-weight: 700; color: var(--green);
+    }
+    #connDot.offline { color: var(--red); }
+    #connDot::before {
+      content: ''; width: 7px; height: 7px;
+      border-radius: 50%; background: currentColor;
+    }
+    #pendingBadge {
+      background: var(--red); color: #fff;
+      border-radius: 20px; padding: 2px 8px;
+      font-size: 10px; font-weight: 800;
+      display: none;
+    }
+    #pendingBadge.show { display: block; }
 
-    .header-text h1 {
-      font-size: 15px; font-weight: 700;
-      letter-spacing: -0.3px; color: var(--text);
+    /* ══ TAB NAV ═══════════════════════════════════════════ */
+    .tab-nav {
+      position: sticky; top: var(--header-h); z-index: 99;
+      height: var(--tabs-h);
+      background: var(--asphalt);
+      border-bottom: 1px solid var(--border);
+      display: flex; overflow-x: auto;
+      scrollbar-width: none;
     }
-    .header-text p {
-      font-size: 11px; color: var(--sub);
-      margin-top: 1px;
-    }
-
-    .header-id {
-      margin-left: auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 4px 10px;
+    .tab-nav::-webkit-scrollbar { display: none; }
+    .tab-btn {
+      flex: 1; min-width: 80px;
+      background: none; border: none;
+      color: var(--sub);
       font-size: 11px; font-weight: 700;
-      color: var(--amber);
-      font-family: 'SF Mono', 'Cascadia Code', monospace;
-      letter-spacing: 0.5px;
+      cursor: pointer; padding: 0 4px;
+      border-bottom: 2.5px solid transparent;
       white-space: nowrap;
+      transition: color .15s, border-color .15s;
+    }
+    .tab-btn.active {
+      color: var(--amber);
+      border-bottom-color: var(--amber);
     }
 
-    /* ── Layout ──────────────────────────────────────── */
-    main {
-      padding: 12px;
-      max-width: 960px;
-      margin: 0 auto;
-      display: flex; flex-direction: column; gap: 12px;
+    /* ══ ACTIVE PROD BAR ═══════════════════════════════════ */
+    #activeProdBar {
+      background: #2e2a1a;
+      border-bottom: 1px solid #4a3f1a;
+      padding: 7px 14px;
+      display: none; align-items: center; gap: 8px;
+      font-size: 11px;
+    }
+    #activeProdBar.show { display: flex; }
+    #activeProdLabel {
+      font-weight: 800; color: var(--amber);
+      font-family: monospace; letter-spacing: .5px;
+    }
+    .btn-cambiar {
+      margin-left: auto;
+      background: none; border: 1px solid var(--muted);
+      color: var(--sub); border-radius: 6px;
+      padding: 3px 8px; font-size: 10px; font-weight: 700;
+      cursor: pointer;
     }
 
-    /* ── Card ────────────────────────────────────────── */
+    /* ══ MAIN CONTENT ══════════════════════════════════════ */
+    main { padding: 12px; max-width: 680px; margin: 0 auto; }
+
+    /* ══ TAB PANELS ════════════════════════════════════════ */
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ══ CARD ══════════════════════════════════════════════ */
     .card {
       background: var(--asphalt);
       border: 1px solid var(--border);
-      border-radius: 14px;
+      border-radius: 12px;
       overflow: hidden;
+      margin-bottom: 10px;
     }
-
     .card-head {
       background: var(--surface);
       border-bottom: 1px solid var(--border);
-      padding: 11px 16px;
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; font-weight: 700;
-      color: var(--sub);
-      text-transform: uppercase; letter-spacing: 1px;
+      padding: 10px 14px;
+      display: flex; align-items: center; gap: 7px;
+      font-size: 11px; font-weight: 800;
+      color: var(--sub); text-transform: uppercase; letter-spacing: 1px;
     }
-    .card-head-dot {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: var(--amber);
-      flex-shrink: 0;
-    }
+    .card-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--amber); flex-shrink: 0; }
+    .card-body { padding: 14px; }
 
-    /* ── Form fields ─────────────────────────────────── */
-    .card-body { padding: 16px; }
-
-    .grid {
-      display: grid;
-      gap: 10px;
-    }
-    .grid-2 { grid-template-columns: 1fr 1fr; }
-    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-
-    @media (max-width: 540px) {
+    /* ══ FORM ══════════════════════════════════════════════ */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    @media (max-width: 500px) {
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
     }
+    .gap { margin-bottom: 10px; }
 
-    .field { display: flex; flex-direction: column; gap: 5px; }
-
+    .field { display: flex; flex-direction: column; gap: 4px; }
     .field label {
       font-size: 10px; font-weight: 700;
-      color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
     }
-
-    .field input,
-    .field textarea {
-      width: 100%;
+    .field input, .field select, .field textarea {
       background: var(--surface);
       border: 1.5px solid var(--border);
       border-radius: 8px;
       padding: 10px 12px;
-      font-size: 14px;
-      color: var(--text);
-      transition: border-color 0.15s;
-      -webkit-appearance: none;
+      font-size: 14px; color: var(--text);
+      transition: border-color .15s;
+      -webkit-appearance: none; width: 100%;
     }
-
-    .field input:focus,
-    .field textarea:focus {
-      outline: none;
-      border-color: var(--amber);
-      background: #2e2a1a;
+    .field input:focus, .field select:focus, .field textarea:focus {
+      outline: none; border-color: var(--amber); background: #2c2818;
     }
-
     .field input[readonly] {
-      color: var(--amber);
-      font-weight: 700;
-      cursor: default;
-      font-family: monospace;
-      font-size: 13px;
+      color: var(--amber); font-weight: 700;
+      cursor: default; font-family: monospace; font-size: 13px;
     }
-
-    .field textarea {
-      resize: vertical;
-      min-height: 64px;
-      font-size: 13px;
-    }
-
+    .field textarea { resize: vertical; min-height: 60px; font-size: 13px; }
+    .field select option { background: var(--asphalt); }
     input::placeholder, textarea::placeholder { color: var(--muted); }
-    input[type="number"] { -moz-appearance: textfield; }
-    input[type="number"]::-webkit-inner-spin-button { display: none; }
+    input[type=number] { -moz-appearance: textfield; }
+    input[type=number]::-webkit-inner-spin-button { display: none; }
 
-    /* ── Insumos table ───────────────────────────────── */
-    .table-scroll {
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      margin: 0 -1px;
+    /* ══ INSUMO CARDS ══════════════════════════════════════ */
+    .section-title {
+      font-size: 10px; font-weight: 800;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 1px;
+      margin: 14px 0 7px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
     }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 860px;
-    }
-
-    thead th {
+    .insumo-card {
       background: var(--surface);
-      padding: 8px 10px;
-      text-align: left;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      padding: 11px 12px;
+      margin-bottom: 8px;
+      transition: border-color .15s;
+    }
+    .insumo-card.err { border-color: var(--red); }
+
+    .insumo-card-head {
+      display: flex; align-items: center; gap: 7px;
+      margin-bottom: 9px;
+    }
+    .insumo-card-head .tag {
+      padding: 2px 7px; border-radius: 4px;
       font-size: 9px; font-weight: 800;
-      color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.8px;
-      white-space: nowrap;
-      border-bottom: 1px solid var(--border);
+      text-transform: uppercase; letter-spacing: .4px;
+      white-space: nowrap; flex-shrink: 0;
     }
+    .tag-base    { color: var(--tag-base);    background: var(--tag-base-bg); }
+    .tag-cemento { color: var(--tag-cemento); background: var(--tag-cemento-bg); }
+    .tag-grava   { color: var(--tag-grava);   background: var(--tag-grava-bg); }
+    .tag-arena   { color: var(--tag-arena);   background: var(--tag-arena-bg); }
+    .tag-extra   { color: var(--tag-extra);   background: var(--tag-extra-bg); }
 
-    thead th.auto { color: var(--amber); }
-
-    tbody tr {
-      border-bottom: 1px solid var(--border);
-      transition: background 0.1s;
-    }
-    tbody tr:last-child { border-bottom: none; }
-    tbody tr:hover { background: rgba(255,255,255,0.02); }
-
-    td { padding: 5px 6px; vertical-align: middle; }
-
-    td input, td select {
-      width: 100%;
-      background: var(--surface);
+    .insumo-select, .insumo-nombre-input {
+      flex: 1;
+      background: var(--asphalt);
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 12px;
-      color: var(--text);
-      min-width: 0;
+      padding: 7px 10px;
+      font-size: 13px; color: var(--text);
       -webkit-appearance: none;
     }
-    td input:focus, td select:focus {
-      outline: none;
-      border-color: var(--amber);
+    .insumo-select:focus, .insumo-nombre-input:focus {
+      outline: none; border-color: var(--amber);
     }
-    td select { background-image: none; }
-
-    td input[readonly] {
-      background: #2e2a1a;
-      color: var(--amber);
-      font-weight: 700;
-      cursor: default;
-    }
-
-    td input.base-name {
-      background: transparent;
-      border-color: transparent;
-      font-weight: 600;
+    .insumo-nombre-fixed {
+      flex: 1; font-size: 13px; font-weight: 600;
       color: var(--text);
-      cursor: default;
-      padding-left: 0;
     }
 
-    /* ── Tag pills ───────────────────────────────────── */
-    .tag {
-      display: inline-block;
-      padding: 2px 6px;
-      border-radius: 4px;
-      font-size: 9px; font-weight: 800;
-      text-transform: uppercase; letter-spacing: 0.5px;
-      white-space: nowrap;
+    .btn-del-card {
+      background: none; border: none;
+      color: var(--muted); font-size: 16px;
+      cursor: pointer; padding: 2px 4px; border-radius: 4px;
+      line-height: 1; flex-shrink: 0;
+      transition: color .1s, background .1s;
     }
-    .tag-base  { color: var(--tag-base);  background: var(--tag-base-bg); }
-    .tag-grava { color: var(--tag-grava); background: var(--tag-grava-bg); }
-    .tag-arena { color: var(--tag-arena); background: var(--tag-arena-bg); }
-    .tag-extra { color: var(--tag-extra); background: var(--tag-extra-bg); }
+    .btn-del-card:hover { color: var(--red); background: rgba(239,68,68,.1); }
 
-    .cell-name { display: flex; align-items: center; gap: 6px; }
+    .insumo-qty-row {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+      margin-bottom: 7px;
+    }
+    .qty-field { display: flex; flex-direction: column; gap: 3px; }
+    .qty-label { font-size: 10px; color: var(--muted); font-weight: 700; text-transform: uppercase; }
+    .qty-input-wrap { position: relative; }
+    .qty-input {
+      width: 100%;
+      background: var(--asphalt);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 14px; color: var(--text);
+      -webkit-appearance: none;
+    }
+    .qty-input:focus { outline: none; border-color: var(--amber); }
+    .qty-unit {
+      position: absolute; right: 8px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 10px; color: var(--muted); font-weight: 700;
+      pointer-events: none;
+    }
+    input[type=number].qty-input { -moz-appearance: textfield; padding-right: 30px; }
+    input[type=number].qty-input::-webkit-inner-spin-button { display: none; }
 
-    /* ── Add row buttons ─────────────────────────────── */
-    .add-buttons {
-      display: flex; flex-wrap: wrap; gap: 8px;
-      padding: 12px 16px 4px;
+    .insumo-result {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: var(--sub);
+    }
+    .insumo-used {
+      font-weight: 700; font-size: 13px;
+      color: var(--amber);
+    }
+    .insumo-price { font-size: 10px; color: var(--muted); }
+    .insumo-err-msg {
+      color: var(--red); font-size: 10px; font-weight: 700;
+      margin-top: 4px;
     }
 
+    /* ══ ADD BUTTONS ═══════════════════════════════════════ */
+    .add-btns { display: flex; flex-wrap: wrap; gap: 7px; margin: 8px 0 4px; }
     .btn-add {
-      display: inline-flex; align-items: center; gap: 5px;
-      padding: 7px 13px;
-      border-radius: 8px;
-      border: 1.5px dashed;
-      font-size: 12px; font-weight: 700;
-      cursor: pointer;
-      background: transparent;
-      transition: background 0.15s;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 6px 12px; border-radius: 7px;
+      border: 1.5px dashed; font-size: 11px; font-weight: 700;
+      cursor: pointer; background: transparent;
+      transition: background .15s;
     }
     .btn-add-grava { border-color: var(--tag-grava); color: var(--tag-grava); }
     .btn-add-grava:hover { background: var(--tag-grava-bg); }
@@ -275,468 +304,1025 @@
     .btn-add-extra { border-color: var(--tag-extra); color: var(--tag-extra); }
     .btn-add-extra:hover { background: var(--tag-extra-bg); }
 
-    .btn-del {
-      background: none; border: none;
-      color: var(--muted);
-      font-size: 15px;
-      cursor: pointer; padding: 4px 6px;
-      border-radius: 4px;
-      line-height: 1;
-      transition: color 0.1s, background 0.1s;
-    }
-    .btn-del:hover { color: var(--red); background: rgba(239,68,68,0.1); }
-
-    .table-note {
-      padding: 8px 16px 14px;
-      font-size: 10px; color: var(--muted);
-    }
-    .table-note span { color: var(--amber); font-weight: 700; }
-
-    /* ── Submit ──────────────────────────────────────── */
-    .submit-card { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-
+    /* ══ SUBMIT ════════════════════════════════════════════ */
     .btn-submit {
-      width: 100%;
-      background: var(--amber);
-      color: var(--black);
-      border: none;
-      padding: 15px 24px;
-      border-radius: 10px;
+      width: 100%; padding: 14px;
+      background: var(--amber); color: #111;
+      border: none; border-radius: 10px;
       font-size: 15px; font-weight: 800;
-      cursor: pointer;
-      letter-spacing: -0.2px;
-      transition: background 0.15s, transform 0.1s;
-      display: flex; align-items: center; justify-content: center; gap: 8px;
+      cursor: pointer; letter-spacing: -.2px;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      transition: background .15s, transform .1s;
     }
-    .btn-submit:hover:not(:disabled) {
-      background: var(--amber-d);
-      transform: translateY(-1px);
-    }
-    .btn-submit:disabled {
-      background: var(--border);
-      color: var(--muted);
-      cursor: not-allowed;
-      transform: none;
-    }
-
+    .btn-submit:hover:not(:disabled) { background: var(--amber-d); transform: translateY(-1px); }
+    .btn-submit:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
     .btn-reset {
-      background: none;
-      border: 1.5px solid var(--border);
-      color: var(--muted);
-      padding: 10px;
-      border-radius: 8px;
-      font-size: 12px; font-weight: 600;
-      cursor: pointer;
-      width: 100%;
-      transition: border-color 0.15s, color 0.15s;
+      width: 100%; margin-top: 8px; padding: 10px;
+      background: none; border: 1.5px solid var(--border);
+      color: var(--muted); border-radius: 8px;
+      font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: border-color .15s, color .15s;
     }
-    .btn-reset:hover { border-color: var(--muted); color: var(--text); }
+    .btn-reset:hover { border-color: var(--sub); color: var(--text); }
 
-    /* ── Toast ───────────────────────────────────────── */
+    /* ══ WARNING BANNER ════════════════════════════════════ */
+    .warn-banner {
+      background: #1f1410; border: 1.5px solid var(--red);
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 12px; color: #fca5a5;
+      margin-bottom: 12px; display: none;
+      align-items: flex-start; gap: 8px;
+    }
+    .warn-banner.show { display: flex; }
+
+    /* ══ INFO BANNER ═══════════════════════════════════════ */
+    .info-banner {
+      background: #2e2a1a; border: 1.5px solid var(--amber-d);
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 12px; color: #fcd34d;
+      margin-bottom: 12px;
+    }
+
+    /* ══ CATALOGUE LOADING ═════════════════════════════════ */
+    #catalogStatus {
+      font-size: 11px; color: var(--muted);
+      padding: 6px 0 2px; text-align: center;
+    }
+
+    /* ══ BITÁCORA HISTORY ══════════════════════════════════ */
+    .bit-history { margin-top: 10px; }
+    .bit-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 12px;
+      margin-bottom: 6px;
+      display: flex; justify-content: space-between;
+      font-size: 12px;
+    }
+    .bit-placa { font-weight: 800; font-family: monospace; color: var(--amber); }
+    .bit-chofer { color: var(--sub); }
+    .bit-time { font-size: 10px; color: var(--muted); text-align: right; }
+
+    /* ══ PENDING QUEUE LIST ════════════════════════════════ */
+    .queue-list { margin-top: 8px; }
+    .queue-item {
+      background: #1f1410;
+      border: 1px solid #4a2a1a;
+      border-radius: 8px; padding: 8px 12px;
+      margin-bottom: 5px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px;
+    }
+    .queue-item-label { flex: 1; color: #fca5a5; font-weight: 600; }
+    .queue-item-time { color: var(--muted); font-size: 10px; }
+
+    /* ══ TOAST ═════════════════════════════════════════════ */
     #toast {
-      position: fixed;
-      bottom: 24px; left: 50%;
-      transform: translateX(-50%) translateY(80px);
-      z-index: 999;
-      padding: 12px 20px;
-      border-radius: 10px;
-      font-size: 14px; font-weight: 700;
-      white-space: nowrap;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-      pointer-events: none;
-      opacity: 0;
-      transition: transform 0.3s cubic-bezier(.34,1.56,.64,1), opacity 0.3s;
+      position: fixed; bottom: 20px; left: 50%;
+      transform: translateX(-50%) translateY(60px);
+      z-index: 9999; padding: 11px 18px;
+      border-radius: 10px; font-size: 13px; font-weight: 700;
+      white-space: nowrap; pointer-events: none; opacity: 0;
+      box-shadow: 0 8px 24px rgba(0,0,0,.5);
+      transition: transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s;
     }
-    #toast.show {
-      transform: translateX(-50%) translateY(0);
-      opacity: 1;
-    }
+    #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
     #toast.success { background: var(--green); color: #fff; }
     #toast.error   { background: var(--red);   color: #fff; }
-
-    /* ── Config warning ──────────────────────────────── */
-    .config-warn {
-      background: #2e1a00;
-      border: 1.5px solid var(--amber-d);
-      border-radius: 10px;
-      padding: 12px 16px;
-      font-size: 12px;
-      color: #fcd34d;
-      display: none;
-      gap: 8px;
-      align-items: flex-start;
-    }
-    .config-warn.show { display: flex; }
+    #toast.info    { background: var(--blue);  color: #fff; }
   </style>
 </head>
 <body>
 
-<!-- ── Header ─────────────────────────────── -->
+<!-- ══ HEADER ═══════════════════════════════════════════════ -->
 <header>
-  <div class="header-icon">🏗</div>
-  <div class="header-text">
-    <h1>Planta de Asfalto</h1>
-    <p>Registro de producción</p>
+  <div class="h-icon">🏗</div>
+  <div>
+    <div class="h-title">Planta de Asfalto</div>
+    <div class="h-sub" id="catalogStatus">Cargando catálogo…</div>
   </div>
-  <div class="header-id" id="headerBadge">—</div>
+  <div id="connDot">En línea</div>
+  <div id="pendingBadge">0 pend.</div>
 </header>
+
+<!-- ══ TAB NAV ══════════════════════════════════════════════ -->
+<nav class="tab-nav" id="tabNav">
+  <button class="tab-btn active" data-tab="produccion">🏗 Producción</button>
+  <button class="tab-btn"        data-tab="insumos">🧪 Insumos</button>
+  <button class="tab-btn"        data-tab="bitacora">🚛 Bitácora</button>
+  <button class="tab-btn"        data-tab="entradas">📦 Entradas</button>
+</nav>
+
+<!-- ══ ACTIVE PRODUCTION BAR (tabs 2 y 3) ═══════════════════ -->
+<div id="activeProdBar">
+  <span style="color:var(--sub);font-size:11px">Prod. activa:</span>
+  <strong id="activeProdLabel">—</strong>
+  <button class="btn-cambiar" onclick="promptCambiarProd()">Cambiar</button>
+</div>
 
 <main>
 
-  <!-- Aviso de configuración -->
-  <div class="config-warn" id="configWarn">
-    ⚠️ Falta configurar la URL de tu Apps Script en la constante <code>APPS_SCRIPT_URL</code> del archivo. Los datos no se enviarán hasta que la configures.
+<!-- ════════════════════════════════════════════════════════
+     TAB 1 — PRODUCCIÓN
+════════════════════════════════════════════════════════ -->
+<section id="tab-produccion" class="tab-panel active">
+
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Datos de producción</div>
+    <div class="card-body">
+
+      <div class="grid-2 gap">
+        <div class="field">
+          <label>ID Producción</label>
+          <input type="text" id="p-id" readonly>
+        </div>
+        <div class="field">
+          <label>Fecha / Hora</label>
+          <input type="datetime-local" id="p-fecha" required oninput="onFechaChange()">
+        </div>
+      </div>
+
+      <div class="grid-2 gap">
+        <div class="field">
+          <label>Cliente / Obra</label>
+          <input type="text" id="p-cliente" placeholder="Constructora Vial — Tramo A" required>
+        </div>
+        <div class="field">
+          <label>Mezcla / Tipo de Asfalto</label>
+          <input type="text" id="p-mezcla" placeholder='HMA 1/2"' required>
+        </div>
+      </div>
+
+      <div class="grid-3 gap">
+        <div class="field">
+          <label>Toneladas</label>
+          <input type="number" id="p-tn" placeholder="0" step="0.01" min="0.01" required>
+        </div>
+        <div class="field">
+          <label>Precio / Tn ($)</label>
+          <input type="number" id="p-precio" placeholder="0" step="0.01" min="0.01" required>
+        </div>
+        <div class="field">
+          <label>Costos Operativos ($)</label>
+          <input type="number" id="p-opex" placeholder="0" step="0.01" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Notas / Observaciones</label>
+        <textarea id="p-notas" placeholder="Temperatura de salida, incidentes, calidad…"></textarea>
+      </div>
+
+    </div>
   </div>
 
-  <form id="prodForm" novalidate>
+  <button class="btn-submit" id="btn-prod" onclick="submitProduccion()">
+    <span id="btn-prod-icon">✅</span>
+    <span id="btn-prod-txt">Registrar producción</span>
+  </button>
+  <button class="btn-reset" onclick="resetProduccion()">Limpiar formulario</button>
 
-    <!-- ── SECCIÓN 1: Producción ────────────── -->
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     TAB 2 — INSUMOS
+════════════════════════════════════════════════════════ -->
+<section id="tab-insumos" class="tab-panel">
+
+  <div class="warn-banner" id="warn-no-prod">
+    ⚠️ Debes registrar una producción primero. Ve a la pestaña Producción y guárdala antes de agregar insumos.
+  </div>
+
+  <div id="insumos-content">
+
+    <!-- Cemento Asfáltico -->
+    <div class="section-title">Cemento Asfáltico</div>
+    <div id="rows-cemento"></div>
+
+    <!-- Grava -->
+    <div class="section-title">Grava</div>
+    <div id="rows-grava"></div>
+    <div class="add-btns">
+      <button class="btn-add btn-add-grava" onclick="addInsumoRow('grava')">+ Grava</button>
+    </div>
+
+    <!-- Arena -->
+    <div class="section-title">Arena</div>
+    <div id="rows-arena"></div>
+    <div class="add-btns">
+      <button class="btn-add btn-add-arena" onclick="addInsumoRow('arena')">+ Arena</button>
+    </div>
+
+    <!-- Insumos base -->
+    <div class="section-title">Insumos Base</div>
+    <div id="rows-base"></div>
+
+    <!-- Extras -->
+    <div class="section-title">Otros</div>
+    <div id="rows-extra"></div>
+    <div class="add-btns">
+      <button class="btn-add btn-add-extra" onclick="addInsumoRow('extra')">+ Otro insumo</button>
+    </div>
+
+    <div style="margin-top:14px">
+      <button class="btn-submit" id="btn-ins" onclick="submitInsumos()">
+        <span id="btn-ins-icon">✅</span>
+        <span id="btn-ins-txt">Registrar insumos</span>
+      </button>
+    </div>
+  </div>
+
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     TAB 3 — BITÁCORA
+════════════════════════════════════════════════════════ -->
+<section id="tab-bitacora" class="tab-panel">
+
+  <div class="warn-banner" id="warn-no-prod-bit">
+    ⚠️ Debes registrar una producción primero para agregar registros a la bitácora.
+  </div>
+
+  <div id="bitacora-content">
+
     <div class="card">
-      <div class="card-head">
-        <div class="card-head-dot"></div>
-        Datos de producción
-      </div>
+      <div class="card-head"><div class="card-dot"></div>Registro de camión</div>
       <div class="card-body">
-        <div class="grid grid-2" style="margin-bottom:10px">
+
+        <div class="grid-2 gap">
           <div class="field">
-            <label>ID Producción</label>
-            <input type="text" id="idProd" readonly>
+            <label>Placa</label>
+            <input type="text" id="b-placa" placeholder="ABC-1234" maxlength="10"
+                   oninput="this.value=this.value.toUpperCase()">
           </div>
           <div class="field">
-            <label>Fecha / Hora</label>
-            <input type="datetime-local" id="fechaHora" required>
+            <label>Nombre del Chofer</label>
+            <input type="text" id="b-chofer" placeholder="Nombre completo">
           </div>
         </div>
 
-        <div class="grid grid-2" style="margin-bottom:10px">
+        <div class="grid-2 gap">
           <div class="field">
-            <label>Cliente / Obra</label>
-            <input type="text" id="clienteObra" placeholder="Constructora Vial — Tramo A" required>
+            <label>Hora de Entrada</label>
+            <input type="time" id="b-entrada">
           </div>
           <div class="field">
-            <label>Mezcla / Tipo de Asfalto</label>
-            <input type="text" id="mezcla" placeholder='HMA 1/2"' required>
-          </div>
-        </div>
-
-        <div class="grid grid-3" style="margin-bottom:10px">
-          <div class="field">
-            <label>Toneladas Producidas</label>
-            <input type="number" id="toneladas" placeholder="0" step="0.01" min="0" required>
-          </div>
-          <div class="field">
-            <label>Precio de Venta / Tn ($)</label>
-            <input type="number" id="precioTn" placeholder="0.00" step="0.01" min="0" required>
-          </div>
-          <div class="field">
-            <label>Costos Operativos ($)</label>
-            <input type="number" id="costosOp" placeholder="0.00" step="0.01" min="0" value="0">
+            <label>Hora de Salida</label>
+            <input type="time" id="b-salida">
           </div>
         </div>
 
-        <div class="grid grid-2">
+        <div class="section-title">Nota de Remisión</div>
+
+        <div class="grid-2 gap">
           <div class="field">
-            <label>Carpeta Drive (Fotos / Tickets)</label>
-            <input type="url" id="carpetaDrive" placeholder="https://drive.google.com/…">
+            <label>Folio</label>
+            <input type="text" id="b-folio" placeholder="NR-00001">
           </div>
           <div class="field">
-            <label>Notas / Observaciones</label>
-            <textarea id="notas" placeholder="Temperatura de salida, incidentes, calidad…"></textarea>
+            <label>Cliente</label>
+            <input type="text" id="b-cliente" placeholder="Cliente de la carga">
           </div>
         </div>
+
+        <div class="field">
+          <label>Metros Cúbicos (m³)</label>
+          <input type="number" id="b-metros" placeholder="0.00" step="0.01" min="0.01">
+        </div>
+
       </div>
     </div>
 
-    <!-- ── SECCIÓN 2: Insumos ───────────────── -->
-    <div class="card">
-      <div class="card-head">
-        <div class="card-head-dot"></div>
-        Insumos utilizados
-      </div>
+    <button class="btn-submit" id="btn-bit" onclick="submitBitacora()">
+      <span id="btn-bit-icon">✅</span>
+      <span id="btn-bit-txt">Registrar camión</span>
+    </button>
 
-      <div class="table-scroll">
-        <table id="insumosTable">
-          <thead>
-            <tr>
-              <th style="min-width:170px">Insumo</th>
-              <th style="min-width:95px">Cant. Inicio</th>
-              <th style="min-width:95px">Cant. Término</th>
-              <th class="auto" style="min-width:85px">Cant. Usada ★</th>
-              <th style="min-width:68px">Unidad</th>
-              <th style="min-width:95px">Costo Unit. ($)</th>
-              <th class="auto" style="min-width:95px">Costo Total ★</th>
-              <th style="min-width:90px">No. Ticket</th>
-              <th style="min-width:90px">Link Ticket</th>
-              <th style="min-width:32px"></th>
-            </tr>
-          </thead>
-          <tbody id="insumosBody"></tbody>
-        </table>
-      </div>
-
-      <div class="add-buttons">
-        <button type="button" class="btn-add btn-add-grava" onclick="addRow('grava')">+ Grava</button>
-        <button type="button" class="btn-add btn-add-arena" onclick="addRow('arena')">+ Arena</button>
-        <button type="button" class="btn-add btn-add-extra" onclick="addRow('extra')">+ Otro insumo</button>
-      </div>
-
-      <div class="table-note"><span>★</span> Calculado automáticamente · Cant. Usada = Inicio − Término</div>
+    <!-- Historial de esta sesión -->
+    <div class="section-title" style="margin-top:16px">Registrados en esta sesión</div>
+    <div id="bit-history" class="bit-history">
+      <div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>
     </div>
 
-    <!-- ── Submit ───────────────────────────── -->
-    <div class="card">
-      <div class="submit-card">
-        <button type="submit" class="btn-submit" id="btnSubmit">
-          <span id="btnIcon">✅</span>
-          <span id="btnText">Registrar producción</span>
-        </button>
-        <button type="button" class="btn-reset" onclick="resetForm()">Limpiar formulario</button>
-      </div>
-    </div>
+  </div>
 
-  </form>
-</main>
+</section>
+
+
+<!-- ════════════════════════════════════════════════════════
+     TAB 4 — ENTRADAS DE MATERIAL
+════════════════════════════════════════════════════════ -->
+<section id="tab-entradas" class="tab-panel">
+
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Entrada de material</div>
+    <div class="card-body">
+
+      <div class="grid-2 gap">
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="e-fecha">
+        </div>
+        <div class="field">
+          <label>Material</label>
+          <input type="text" id="e-material" placeholder="Grava 3/8&quot;, Cemento AC-20…">
+        </div>
+      </div>
+
+      <div class="grid-3 gap">
+        <div class="field">
+          <label>Cantidad</label>
+          <input type="number" id="e-cantidad" placeholder="0" step="0.01" min="0.01">
+        </div>
+        <div class="field">
+          <label>Unidad</label>
+          <select id="e-unidad">
+            <option value="Tn">Tn</option>
+            <option value="Kg">Kg</option>
+            <option value="L">L</option>
+            <option value="Gal">Gal</option>
+            <option value="m³">m³</option>
+            <option value="pza">pza</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Monto ($)</label>
+          <input type="number" id="e-monto" placeholder="0" step="0.01" min="0">
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <button class="btn-submit" id="btn-ent" onclick="submitEntrada()">
+    <span id="btn-ent-icon">✅</span>
+    <span id="btn-ent-txt">Registrar entrada</span>
+  </button>
+  <button class="btn-reset" onclick="resetEntrada()">Limpiar</button>
+
+</section>
+
+</main><!-- /main -->
 
 <div id="toast"></div>
 
-<!-- ═══════════════════════════════════════════
-     SCRIPT
-═══════════════════════════════════════════ -->
+<!-- ══════════════════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════════════════ -->
 <script>
 'use strict';
 
-// ─────────────────────────────────────────────
-// ⚙️  CONFIGURACIÓN — pega aquí tu URL de Apps Script
-// ─────────────────────────────────────────────
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQX29Mm86KPOZuwZ9kqPy5-4F_F3oTrm9DJhda27HokAslB_LIxqUE0VxXTTtLHYeq/exec';
-
-// ─────────────────────────────────────────────
-// Insumos base — siempre presentes, no se borran
-// ─────────────────────────────────────────────
+/* ═══ CONFIG ═══════════════════════════════════════════════ */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/TU_URL_AQUI/exec';
 const BASE_INSUMOS = [
-  { nombre: 'Cemento Asfáltico (AC-20)', unidad: 'Tn' },
-  { nombre: 'Agua',                       unidad: 'L'  },
-  { nombre: 'Gas',                         unidad: 'Kg' },
-  { nombre: 'Diesel',                      unidad: 'L'  },
-  { nombre: 'Gasolina',                    unidad: 'L'  },
-  { nombre: 'Combustible Alterno',         unidad: 'L'  },
+  { nombre: 'Agua',               unidad: 'L'  },
+  { nombre: 'Gas',                unidad: 'Kg' },
+  { nombre: 'Diesel',             unidad: 'L'  },
+  { nombre: 'Gasolina',           unidad: 'L'  },
+  { nombre: 'Combustible Alterno',unidad: 'L'  },
 ];
 
-const UNIDADES = ['Tn', 'Kg', 'L', 'Gal', 'm³', 'lt', 'pza'];
-
-let rowId = 0;
-
-// ─────────────────────────────────────────────
-// Init
-// ─────────────────────────────────────────────
-function init() {
-  if (APPS_SCRIPT_URL.includes('TU_ID_AQUI')) {
-    document.getElementById('configWarn').classList.add('show');
-  }
-  generateId();
-  setNow();
-  renderBaseRows();
-  addRow('grava');
-  addRow('arena');
-}
-
-function generateId() {
-  const year = new Date().getFullYear();
-  const suffix = String(Date.now()).slice(-5);
-  const id = `PROD-${year}-${suffix}`;
-  document.getElementById('idProd').value = id;
-  document.getElementById('headerBadge').textContent = id;
-}
-
-function setNow() {
-  const now = new Date();
-  const local = new Date(now - now.getTimezoneOffset() * 60000);
-  document.getElementById('fechaHora').value = local.toISOString().slice(0, 16);
-}
-
-// ─────────────────────────────────────────────
-// Tabla de insumos
-// ─────────────────────────────────────────────
-const TIPO = {
-  base:  { label: 'BASE',  cls: 'tag-base',  ph: '',              editable: false },
-  grava: { label: 'GRAVA', cls: 'tag-grava', ph: 'Tipo de grava', editable: true  },
-  arena: { label: 'ARENA', cls: 'tag-arena', ph: 'Tipo de arena', editable: true  },
-  extra: { label: 'EXTRA', cls: 'tag-extra', ph: 'Nombre del insumo', editable: true },
+/* ═══ STATE ════════════════════════════════════════════════ */
+const S = {
+  catalog:      {},         // { 'Cemento Asfáltico': [{tipo,unidad,precio},...], ... }
+  activeProdId: '',
+  pendingQueue: [],
+  online:       navigator.onLine,
+  bitHistory:   [],
+  rowCounter:   0,
 };
 
-function renderBaseRows() {
-  BASE_INSUMOS.forEach(ins => addRow('base', ins.nombre, ins.unidad));
+/* ═══════════════════════════════════════════════════════════
+   INIT
+══════════════════════════════════════════════════════════ */
+async function init() {
+  loadPersistedState();
+  setupTabs();
+  setupOnlineDetection();
+  registerSW();
+  initProduccion();
+  initBitacora();
+  initEntrada();
+  updateActiveProdBar();
+  await loadCatalog();
+  renderInsumos();
 }
 
-function addRow(tipo, nombre = '', unidad = '') {
-  const cfg = TIPO[tipo];
-  const id  = `r${rowId++}`;
-  const tbody = document.getElementById('insumosBody');
-  const tr = document.createElement('tr');
-  tr.id = id;
-
-  const unidadOpts = UNIDADES.map(u =>
-    `<option value="${u}"${u === unidad ? ' selected' : ''}>${u}</option>`
-  ).join('');
-
-  const nameCell = cfg.editable
-    ? `<input type="text" class="insumo-nombre" placeholder="${cfg.ph}" value="${nombre}">`
-    : `<input type="text" class="insumo-nombre base-name" value="${nombre}" readonly tabindex="-1">`;
-
-  tr.innerHTML = `
-    <td>
-      <div class="cell-name">
-        <span class="tag ${cfg.cls}">${cfg.label}</span>
-        ${nameCell}
-      </div>
-    </td>
-    <td><input type="number" step="0.01" min="0" placeholder="0" class="qty-i"  oninput="calcRow('${id}')"></td>
-    <td><input type="number" step="0.01" min="0" placeholder="0" class="qty-t"  oninput="calcRow('${id}')"></td>
-    <td><input type="number" step="0.01"          placeholder="—" class="qty-u"  readonly></td>
-    <td><select class="insumo-u">${unidadOpts}</select></td>
-    <td><input type="number" step="0.01" min="0" placeholder="0.00" class="c-unit" oninput="calcRow('${id}')"></td>
-    <td><input type="number" step="0.01"          placeholder="—" class="c-total" readonly></td>
-    <td><input type="text"   maxlength="20" placeholder="TK-00000" class="ticket"></td>
-    <td><input type="url"                   placeholder="https://drive…" class="link-t"></td>
-    <td>${tipo !== 'base' ? `<button type="button" class="btn-del" onclick="delRow('${id}')" title="Eliminar">✕</button>` : ''}</td>
-  `;
-  tbody.appendChild(tr);
+function loadPersistedState() {
+  S.activeProdId = localStorage.getItem('activeProdId') || '';
+  try { S.pendingQueue = JSON.parse(localStorage.getItem('pendingQueue') || '[]'); } catch { S.pendingQueue = []; }
+  updatePendingBadge();
 }
 
-function delRow(id) {
-  document.getElementById(id)?.remove();
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 }
 
-function calcRow(id) {
-  const tr = document.getElementById(id);
-  if (!tr) return;
-  const i = parseFloat(tr.querySelector('.qty-i')?.value)    || 0;
-  const t = parseFloat(tr.querySelector('.qty-t')?.value)    || 0;
-  const u = parseFloat(tr.querySelector('.c-unit')?.value)   || 0;
-  const usada = Math.max(0, i - t);
-  const total = usada * u;
-  tr.querySelector('.qty-u').value   = usada > 0 ? round2(usada) : '';
-  tr.querySelector('.c-total').value = total > 0 ? round2(total) : '';
+/* ═══════════════════════════════════════════════════════════
+   TABS
+══════════════════════════════════════════════════════════ */
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+  });
 }
 
-function round2(n) { return Math.round(n * 100) / 100; }
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
 
-// ─────────────────────────────────────────────
-// Submit
-// ─────────────────────────────────────────────
-document.getElementById('prodForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
+  const needsProd = tab === 'insumos' || tab === 'bitacora';
+  document.getElementById('activeProdBar').classList.toggle('show', needsProd);
+  checkProdRequired(tab);
+}
 
-  // Validación mínima
-  const required = ['clienteObra', 'mezcla', 'toneladas', 'precioTn'];
-  const missing = required.find(id => !document.getElementById(id).value.trim());
-  if (missing) {
-    document.getElementById(missing).focus();
-    toast('Completa los campos obligatorios', 'error');
+function checkProdRequired(tab) {
+  const hasProd = !!S.activeProdId;
+  if (tab === 'insumos') {
+    document.getElementById('warn-no-prod').classList.toggle('show', !hasProd);
+    document.getElementById('insumos-content').style.opacity = hasProd ? '1' : '.4';
+    document.getElementById('insumos-content').style.pointerEvents = hasProd ? '' : 'none';
+  }
+  if (tab === 'bitacora') {
+    document.getElementById('warn-no-prod-bit').classList.toggle('show', !hasProd);
+    document.getElementById('bitacora-content').style.opacity = hasProd ? '1' : '.4';
+    document.getElementById('bitacora-content').style.pointerEvents = hasProd ? '' : 'none';
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CATÁLOGO
+══════════════════════════════════════════════════════════ */
+async function loadCatalog() {
+  document.getElementById('catalogStatus').textContent = 'Cargando catálogo…';
+
+  // Intentar desde cache primero
+  const cached = localStorage.getItem('catalog');
+  if (cached) {
+    try { S.catalog = JSON.parse(cached); } catch {}
+  }
+
+  if (!S.online) {
+    document.getElementById('catalogStatus').textContent = S.catalog && Object.keys(S.catalog).length
+      ? '📦 Catálogo desde caché (sin internet)'
+      : '⚠️ Sin catálogo — agrega internet y recarga';
     return;
   }
 
-  const btn = document.getElementById('btnSubmit');
-  btn.disabled = true;
-  document.getElementById('btnIcon').textContent = '⏳';
-  document.getElementById('btnText').textContent = 'Registrando…';
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.catalog) {
+      S.catalog = data.catalog;
+      localStorage.setItem('catalog', JSON.stringify(S.catalog));
+      document.getElementById('catalogStatus').textContent = '✅ Catálogo actualizado';
+    }
+  } catch {
+    document.getElementById('catalogStatus').textContent = cached
+      ? '📦 Catálogo desde caché'
+      : '⚠️ No se pudo cargar el catálogo';
+  }
+}
 
-  // Recopilar insumos
-  const insumos = [];
-  document.querySelectorAll('#insumosBody tr').forEach(tr => {
-    const nombre = tr.querySelector('.insumo-nombre')?.value?.trim();
-    if (!nombre) return;
-    insumos.push({
-      nombre,
-      cantidadInicio:  tr.querySelector('.qty-i')?.value   || '0',
-      cantidadTermino: tr.querySelector('.qty-t')?.value   || '0',
-      cantidadUsada:   tr.querySelector('.qty-u')?.value   || '0',
-      unidad:          tr.querySelector('.insumo-u')?.value || '',
-      costoUnitario:   tr.querySelector('.c-unit')?.value  || '0',
-      costoTotal:      tr.querySelector('.c-total')?.value || '0',
-      ticket:          tr.querySelector('.ticket')?.value  || '',
-      linkTicket:      tr.querySelector('.link-t')?.value  || '',
-    });
-  });
+function getCatOptions(categoria) {
+  return (S.catalog[categoria] || []);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ACTIVE PRODUCTION
+══════════════════════════════════════════════════════════ */
+function setActiveProd(id) {
+  S.activeProdId = id;
+  localStorage.setItem('activeProdId', id);
+  updateActiveProdBar();
+}
+
+function updateActiveProdBar() {
+  document.getElementById('activeProdLabel').textContent = S.activeProdId || '—';
+}
+
+function promptCambiarProd() {
+  const nuevo = prompt('ID de producción:', S.activeProdId);
+  if (nuevo !== null && nuevo.trim()) setActiveProd(nuevo.trim());
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB 1 — PRODUCCIÓN
+══════════════════════════════════════════════════════════ */
+function initProduccion() {
+  setNow();
+  updateProdId();
+}
+
+function setNow() {
+  const now   = new Date();
+  const local = new Date(now - now.getTimezoneOffset() * 60000);
+  document.getElementById('p-fecha').value = local.toISOString().slice(0, 16);
+}
+
+function onFechaChange() { updateProdId(); }
+
+function updateProdId() {
+  const val  = document.getElementById('p-fecha').value;
+  const id   = generateProdId(val ? new Date(val) : new Date());
+  document.getElementById('p-id').value = id;
+}
+
+function generateProdId(d) {
+  const DD = String(d.getDate()).padStart(2,'0');
+  const MM = String(d.getMonth()+1).padStart(2,'0');
+  const YY = String(d.getFullYear()).slice(-2);
+  const HH = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return `PROD-${DD}${MM}${YY}-${HH}${mm}`;
+}
+
+async function submitProduccion() {
+  const id      = document.getElementById('p-id').value;
+  const cliente = document.getElementById('p-cliente').value.trim();
+  const mezcla  = document.getElementById('p-mezcla').value.trim();
+  const tn      = parseFloat(document.getElementById('p-tn').value);
+  const precio  = parseFloat(document.getElementById('p-precio').value);
+
+  if (!cliente || !mezcla || !tn || !precio) {
+    toast('Completa los campos obligatorios', 'error'); return;
+  }
 
   const payload = {
+    action: 'produccion',
     produccion: {
-      id:               document.getElementById('idProd').value,
-      fechaHora:        document.getElementById('fechaHora').value,
-      clienteObra:      document.getElementById('clienteObra').value.trim(),
-      mezcla:           document.getElementById('mezcla').value.trim(),
-      toneladas:        document.getElementById('toneladas').value,
-      precioTn:         document.getElementById('precioTn').value,
-      costosOperativos: document.getElementById('costosOp').value || '0',
-      carpetaDrive:     document.getElementById('carpetaDrive').value,
-      notas:            document.getElementById('notas').value.trim(),
+      id,
+      fechaHora:        document.getElementById('p-fecha').value,
+      clienteObra:      cliente,
+      mezcla,
+      toneladas:        String(tn),
+      precioTn:         String(precio),
+      costosOperativos: document.getElementById('p-opex').value || '0',
+      notas:            document.getElementById('p-notas').value.trim(),
     },
-    insumos,
   };
 
-  // Agregar campo action para que Apps Script sepa qué hacer
-  payload.action = 'produccion';
+  await send(payload, 'btn-prod', async result => {
+    toast(`✅ ${id} creada`, 'success');
+    setActiveProd(id);
+    setTimeout(() => {
+      resetProduccion();
+      switchTab('insumos');
+    }, 1200);
+  });
+}
 
-  try {
-    const res = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      // SIN mode:'no-cors' — text/plain no dispara preflight y permite leer la respuesta
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await res.json().catch(() => ({ status: 'error', message: 'Respuesta no válida' }));
-
-    if (result.status === 'ok') {
-      toast(`✅ ${payload.produccion.id} registrada en Sheets`, 'success');
-      setTimeout(resetForm, 1500);
-    } else {
-      toast('❌ Apps Script: ' + (result.message || 'Error desconocido'), 'error');
-      console.error('Apps Script error:', result);
-    }
-
-  } catch (err) {
-    console.error('Fetch error:', err);
-    toast('❌ Error de conexión. Revisa tu red.', 'error');
-  } finally {
-    btn.disabled = false;
-    document.getElementById('btnIcon').textContent = '✅';
-    document.getElementById('btnText').textContent = 'Registrar producción';
-  }
-});
-
-// ─────────────────────────────────────────────
-// Reset
-// ─────────────────────────────────────────────
-function resetForm() {
-  document.getElementById('prodForm').reset();
-  document.getElementById('insumosBody').innerHTML = '';
-  rowId = 0;
-  generateId();
+function resetProduccion() {
+  ['p-cliente','p-mezcla','p-tn','p-precio','p-notas'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.getElementById('p-opex').value = '0';
   setNow();
-  renderBaseRows();
-  addRow('grava');
-  addRow('arena');
+  updateProdId();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ─────────────────────────────────────────────
-// Toast
-// ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
+   TAB 2 — INSUMOS (tarjetas)
+══════════════════════════════════════════════════════════ */
+function renderInsumos() {
+  // Cemento: siempre 1 fila
+  const cementoOpts = getCatOptions('Cemento Asfáltico');
+  addInsumoRow('cemento', '', '', 0, cementoOpts, 'rows-cemento', false);
+
+  // Grava: 1 por defecto
+  addInsumoRow('grava');
+
+  // Arena: 1 por defecto
+  addInsumoRow('arena');
+
+  // Base fijos
+  BASE_INSUMOS.forEach(ins =>
+    addInsumoRow('base', ins.nombre, ins.unidad, 0, [], 'rows-base', false)
+  );
+}
+
+function addInsumoRow(tipo, nombre = '', unidadDef = '', precioDef = 0, opts = null, containerId = null, deletable = true) {
+  const containers = {
+    cemento: 'rows-cemento',
+    grava:   'rows-grava',
+    arena:   'rows-arena',
+    base:    'rows-base',
+    extra:   'rows-extra',
+  };
+  const cid = containerId || containers[tipo];
+  const id  = `ins_${S.rowCounter++}`;
+
+  const catOptions = opts !== null ? opts : getCatOptions(
+    tipo === 'grava'   ? 'Grava' :
+    tipo === 'arena'   ? 'Arena' : ''
+  );
+
+  const tagMap = {
+    cemento: ['CEMENTO', 'tag-cemento'],
+    grava:   ['GRAVA',   'tag-grava'],
+    arena:   ['ARENA',   'tag-arena'],
+    base:    ['BASE',    'tag-base'],
+    extra:   ['EXTRA',   'tag-extra'],
+  };
+  const [tagLabel, tagClass] = tagMap[tipo] || ['EXTRA','tag-extra'];
+
+  // Construir cabecera de la tarjeta
+  let headContent = `<span class="tag ${tagClass}">${tagLabel}</span>`;
+
+  if (tipo === 'cemento' || tipo === 'grava' || tipo === 'arena') {
+    const optsHtml = catOptions.length
+      ? catOptions.map(o => `<option value="${o.tipo}" data-precio="${o.precio}" data-unidad="${o.unidad}">${o.tipo}</option>`).join('')
+      : `<option value="">Sin catálogo — agrega en Sheets</option>`;
+    headContent += `<select class="insumo-select" id="${id}-sel" onchange="onCatSelect('${id}')">${optsHtml}</select>`;
+  } else if (tipo === 'base') {
+    headContent += `<span class="insumo-nombre-fixed">${nombre}</span>`;
+  } else {
+    headContent += `<input type="text" class="insumo-nombre-input" placeholder="Nombre del insumo" value="${nombre}">`;
+  }
+
+  if (deletable) {
+    headContent += `<button class="btn-del-card" onclick="delCard('${id}')" title="Eliminar">✕</button>`;
+  }
+
+  // Unidad inicial
+  const unidadInit = catOptions.length ? (catOptions[0]?.unidad || 'Tn') : (unidadDef || 'Tn');
+  const precioInit = catOptions.length ? (catOptions[0]?.precio || 0) : precioDef;
+
+  const div = document.createElement('div');
+  div.className = 'insumo-card';
+  div.id = id;
+  div.dataset.tipo   = tipo;
+  div.dataset.unidad = unidadInit;
+  div.dataset.precio = precioInit;
+  div.dataset.nombre = nombre;
+
+  div.innerHTML = `
+    <div class="insumo-card-head">${headContent}</div>
+    <div class="insumo-qty-row">
+      <div class="qty-field">
+        <div class="qty-label">Inicio</div>
+        <div class="qty-input-wrap">
+          <input type="number" class="qty-input ini" id="${id}-ini" step="0.01" min="0"
+                 placeholder="0" oninput="calcCard('${id}')">
+          <span class="qty-unit" id="${id}-unit">${unidadInit}</span>
+        </div>
+      </div>
+      <div class="qty-field">
+        <div class="qty-label">Término</div>
+        <div class="qty-input-wrap">
+          <input type="number" class="qty-input ter" id="${id}-ter" step="0.01" min="0"
+                 placeholder="0" oninput="calcCard('${id}')">
+          <span class="qty-unit">${unidadInit}</span>
+        </div>
+      </div>
+    </div>
+    <div class="insumo-result">
+      <span id="${id}-err" class="insumo-err-msg" style="display:none">
+        ⚠️ Término mayor que Inicio
+      </span>
+      <span id="${id}-used" class="insumo-used">— ${unidadInit}</span>
+      <span id="${id}-precio" class="insumo-price">${precioInit > 0 ? '$' + precioInit.toLocaleString('es-MX') + '/' + unidadInit : ''}</span>
+    </div>
+  `;
+
+  document.getElementById(cid).appendChild(div);
+}
+
+function onCatSelect(id) {
+  const sel   = document.getElementById(`${id}-sel`);
+  const opt   = sel.selectedOptions[0];
+  const precio = parseFloat(opt?.dataset?.precio) || 0;
+  const unidad = opt?.dataset?.unidad || 'Tn';
+  const card   = document.getElementById(id);
+  card.dataset.precio = precio;
+  card.dataset.unidad = unidad;
+  // Actualizar unidades mostradas
+  card.querySelectorAll('.qty-unit').forEach(el => el.textContent = unidad);
+  document.getElementById(`${id}-precio`).textContent =
+    precio > 0 ? `$${precio.toLocaleString('es-MX')}/${unidad}` : '';
+  calcCard(id);
+}
+
+function delCard(id) {
+  document.getElementById(id)?.remove();
+}
+
+function calcCard(id) {
+  const card = document.getElementById(id);
+  if (!card) return;
+  const ini   = parseFloat(document.getElementById(`${id}-ini`)?.value) || 0;
+  const ter   = parseFloat(document.getElementById(`${id}-ter`)?.value) || 0;
+  const unidad = card.dataset.unidad || '';
+  const error  = ini > 0 && ter > ini;
+  const usada  = error ? 0 : Math.max(0, ini - ter);
+  const precio = parseFloat(card.dataset.precio) || 0;
+
+  card.classList.toggle('err', error);
+  document.getElementById(`${id}-err`).style.display = error ? 'block' : 'none';
+  document.getElementById(`${id}-used`).textContent  = usada > 0 ? `${usada.toFixed(2)} ${unidad}` : `— ${unidad}`;
+}
+
+function collectInsumos() {
+  const rows = [];
+  document.querySelectorAll('#insumos-content .insumo-card').forEach(card => {
+    const id     = card.id;
+    const tipo   = card.dataset.tipo;
+    const unidad = card.dataset.unidad || '';
+    const precio = parseFloat(card.dataset.precio) || 0;
+    const ini    = parseFloat(document.getElementById(`${id}-ini`)?.value) || 0;
+    const ter    = parseFloat(document.getElementById(`${id}-ter`)?.value) || 0;
+
+    if (ini === 0 && ter === 0) return; // skip vacíos
+
+    const error  = ini > 0 && ter > ini;
+    if (error) return; // skip filas con error
+
+    const usada  = Math.max(0, ini - ter);
+
+    // Nombre según tipo
+    let nombre = '';
+    if (tipo === 'cemento') {
+      const sel = document.getElementById(`${id}-sel`);
+      nombre = sel ? `Cemento Asfáltico ${sel.value}` : 'Cemento Asfáltico';
+    } else if (tipo === 'grava') {
+      const sel = document.getElementById(`${id}-sel`);
+      nombre = sel ? `Grava ${sel.value}` : 'Grava';
+    } else if (tipo === 'arena') {
+      const sel = document.getElementById(`${id}-sel`);
+      nombre = sel ? `Arena ${sel.value}` : 'Arena';
+    } else if (tipo === 'base') {
+      nombre = card.dataset.nombre || card.querySelector('.insumo-nombre-fixed')?.textContent || '';
+    } else {
+      nombre = card.querySelector('.insumo-nombre-input')?.value?.trim() || '';
+    }
+
+    if (!nombre) return;
+
+    rows.push({ nombre, cantidadInicio: ini, cantidadTermino: ter, cantidadUsada: usada, unidad, precio });
+  });
+  return rows;
+}
+
+async function submitInsumos() {
+  if (!S.activeProdId) { toast('Registra una producción primero', 'error'); return; }
+
+  // Verificar errores de término > inicio
+  const errCards = document.querySelectorAll('#insumos-content .insumo-card.err');
+  if (errCards.length) { toast('Corrige los errores antes de enviar', 'error'); return; }
+
+  const insumos = collectInsumos();
+  if (!insumos.length) { toast('Agrega al menos un insumo con datos', 'error'); return; }
+
+  const payload = { action: 'insumos', idProd: S.activeProdId, insumos };
+
+  await send(payload, 'btn-ins', async result => {
+    toast(`✅ ${result.insumos} insumos registrados`, 'success');
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB 3 — BITÁCORA
+══════════════════════════════════════════════════════════ */
+function initBitacora() {
+  // Hora actual en campos de entrada/salida
+  const now    = new Date();
+  const hhmm   = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('b-entrada').value = hhmm;
+}
+
+async function submitBitacora() {
+  if (!S.activeProdId) { toast('Registra una producción primero', 'error'); return; }
+
+  const placa   = document.getElementById('b-placa').value.trim();
+  const chofer  = document.getElementById('b-chofer').value.trim();
+  const entrada = document.getElementById('b-entrada').value;
+  const metros  = parseFloat(document.getElementById('b-metros').value);
+
+  if (!placa || !chofer || !entrada) {
+    toast('Placa, chofer y hora de entrada son obligatorios', 'error'); return;
+  }
+
+  const payload = {
+    action: 'bitacora',
+    bitacora: {
+      idProd:      S.activeProdId,
+      placa,
+      chofer,
+      horaEntrada: entrada,
+      horaSalida:  document.getElementById('b-salida').value,
+      folio:       document.getElementById('b-folio').value.trim(),
+      cliente:     document.getElementById('b-cliente').value.trim(),
+      metros:      String(metros || 0),
+    },
+  };
+
+  await send(payload, 'btn-bit', async () => {
+    toast(`✅ Camión ${placa} registrado`, 'success');
+
+    // Agregar al historial de sesión
+    S.bitHistory.unshift({ placa, chofer, entrada, salida: document.getElementById('b-salida').value });
+    renderBitHistory();
+
+    // Limpiar (excepto producción)
+    ['b-placa','b-chofer','b-salida','b-folio','b-cliente'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('b-metros').value = '';
+    const now  = new Date();
+    document.getElementById('b-entrada').value =
+      `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  });
+}
+
+function renderBitHistory() {
+  const el = document.getElementById('bit-history');
+  if (!S.bitHistory.length) {
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>';
+    return;
+  }
+  el.innerHTML = S.bitHistory.slice(0, 5).map(b => `
+    <div class="bit-item">
+      <div>
+        <div class="bit-placa">${b.placa}</div>
+        <div class="bit-chofer">${b.chofer}</div>
+      </div>
+      <div class="bit-time">
+        <div>${b.entrada}${b.salida ? ' → ' + b.salida : ''}</div>
+        <div style="color:var(--muted)">${S.activeProdId}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAB 4 — ENTRADAS
+══════════════════════════════════════════════════════════ */
+function initEntrada() {
+  document.getElementById('e-fecha').value = new Date().toISOString().slice(0,10);
+}
+
+async function submitEntrada() {
+  const mat    = document.getElementById('e-material').value.trim();
+  const cant   = parseFloat(document.getElementById('e-cantidad').value);
+
+  if (!mat || !cant) { toast('Material y cantidad son obligatorios', 'error'); return; }
+
+  const payload = {
+    action: 'entrada',
+    entrada: {
+      fecha:    document.getElementById('e-fecha').value,
+      material: mat,
+      cantidad: String(cant),
+      unidad:   document.getElementById('e-unidad').value,
+      monto:    document.getElementById('e-monto').value || '0',
+    },
+  };
+
+  await send(payload, 'btn-ent', async () => {
+    toast('✅ Entrada registrada', 'success');
+    resetEntrada();
+  });
+}
+
+function resetEntrada() {
+  ['e-material','e-cantidad','e-monto'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('e-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('e-unidad').value = 'Tn';
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ENVÍO + COLA OFFLINE
+══════════════════════════════════════════════════════════ */
+async function send(payload, btnId, onSuccess) {
+  const icon = document.getElementById(`${btnId}-icon`);
+  const txt  = document.getElementById(`${btnId}-txt`);
+  const btn  = document.getElementById(btnId);
+
+  btn.disabled = true;
+  icon.textContent = '⏳';
+  txt.textContent  = 'Enviando…';
+
+  if (!S.online) {
+    enqueue(payload);
+    toast('📶 Sin conexión — guardado en cola', 'info');
+    resetBtn(btnId);
+    return;
+  }
+
+  try {
+    const res    = await fetch(APPS_SCRIPT_URL, {
+      method:  'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body:    JSON.stringify(payload),
+    });
+    const result = await res.json().catch(() => ({ status: 'error', message: 'Respuesta inválida' }));
+
+    if (result.status === 'ok') {
+      await onSuccess(result);
+    } else {
+      toast('❌ ' + (result.message || 'Error en Apps Script'), 'error');
+      console.error('Apps Script error:', result);
+    }
+  } catch (err) {
+    console.error('Fetch error:', err);
+    enqueue(payload);
+    toast('❌ Error de red — guardado en cola', 'error');
+  } finally {
+    resetBtn(btnId);
+  }
+}
+
+function resetBtn(btnId) {
+  const icons = { 'btn-prod':'✅','btn-ins':'✅','btn-bit':'✅','btn-ent':'✅' };
+  const texts = {
+    'btn-prod':'Registrar producción',
+    'btn-ins':'Registrar insumos',
+    'btn-bit':'Registrar camión',
+    'btn-ent':'Registrar entrada',
+  };
+  document.getElementById(btnId).disabled = false;
+  document.getElementById(`${btnId}-icon`).textContent = icons[btnId] || '✅';
+  document.getElementById(`${btnId}-txt`).textContent  = texts[btnId] || 'Enviar';
+}
+
+/* ── Cola offline ────────────────────────────────────── */
+function enqueue(payload) {
+  S.pendingQueue.push({ payload, ts: Date.now() });
+  localStorage.setItem('pendingQueue', JSON.stringify(S.pendingQueue));
+  updatePendingBadge();
+}
+
+async function processQueue() {
+  if (!S.online || !S.pendingQueue.length) return;
+  const queue = [...S.pendingQueue];
+  S.pendingQueue = [];
+
+  for (const item of queue) {
+    try {
+      const res    = await fetch(APPS_SCRIPT_URL, {
+        method:  'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body:    JSON.stringify(item.payload),
+      });
+      const result = await res.json().catch(() => ({ status: 'error' }));
+      if (result.status !== 'ok') S.pendingQueue.push(item); // reencolar si falló
+    } catch {
+      S.pendingQueue.push(item);
+      break; // si hay error de red, parar y esperar
+    }
+  }
+
+  localStorage.setItem('pendingQueue', JSON.stringify(S.pendingQueue));
+  updatePendingBadge();
+  if (queue.length !== S.pendingQueue.length) {
+    toast(`✅ ${queue.length - S.pendingQueue.length} registro(s) enviado(s)`, 'success');
+  }
+}
+
+function updatePendingBadge() {
+  const n   = S.pendingQueue.length;
+  const el  = document.getElementById('pendingBadge');
+  el.textContent = `${n} pend.`;
+  el.classList.toggle('show', n > 0);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   CONEXIÓN
+══════════════════════════════════════════════════════════ */
+function setupOnlineDetection() {
+  function update(online) {
+    S.online = online;
+    const el = document.getElementById('connDot');
+    el.textContent = online ? 'En línea' : 'Sin conexión';
+    el.classList.toggle('offline', !online);
+    if (online) processQueue();
+  }
+  window.addEventListener('online',  () => update(true));
+  window.addEventListener('offline', () => update(false));
+  update(navigator.onLine);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TOAST
+══════════════════════════════════════════════════════════ */
 let toastTimer;
-function toast(msg, tipo) {
+function toast(msg, tipo = 'success') {
   const el = document.getElementById('toast');
   clearTimeout(toastTimer);
   el.textContent = msg;
-  el.className = `${tipo} show`;
+  el.className   = `${tipo} show`;
   toastTimer = setTimeout(() => { el.className = ''; }, 3500);
 }
 
-// ─────────────────────────────────────────────
-// Arrancar
-// ─────────────────────────────────────────────
+/* ═══════════════════════════════════════════════════════════
+   ARRANCAR
+══════════════════════════════════════════════════════════ */
 init();
 </script>
-
 </body>
 </html>
