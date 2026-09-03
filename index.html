@@ -11,8 +11,8 @@
     :root {
       --page:#141414; --asphalt:#1e1e1e; --surface:#2a2a2a; --border:#383838;
       --text:#e8e8e8; --sub:#8a8a8a; --muted:#5a5a5a;
-      --amber:#f59e0b; --amber-d:#d97706; --green:#22c55e; --red:#ef4444; --blue:#3b82f6;
-      --orange:#f97316;
+      --amber:#f59e0b; --amber-d:#d97706; --green:#22c55e;
+      --red:#ef4444; --blue:#3b82f6; --orange:#f97316;
       --header-h:56px; --tabs-h:46px;
     }
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -20,7 +20,6 @@
     body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
          background:var(--page);color:var(--text);-webkit-tap-highlight-color:transparent}
 
-    /* HEADER */
     header{position:sticky;top:0;z-index:100;height:var(--header-h);
            background:var(--asphalt);border-bottom:2px solid var(--amber);
            display:flex;align-items:center;padding:0 14px;gap:10px}
@@ -36,7 +35,6 @@
                   padding:2px 8px;font-size:10px;font-weight:800;display:none}
     #pendingBadge.show{display:block}
 
-    /* TABS */
     .tab-nav{position:sticky;top:var(--header-h);z-index:99;height:var(--tabs-h);
              background:var(--asphalt);border-bottom:1px solid var(--border);
              display:flex;overflow-x:auto;scrollbar-width:none}
@@ -47,7 +45,6 @@
              transition:color .15s,border-color .15s}
     .tab-btn.active{color:var(--amber);border-bottom-color:var(--amber)}
 
-    /* ACTIVE PROD BAR */
     #activeProdBar{background:#2e2a1a;border-bottom:1px solid #4a3f1a;
                    padding:7px 14px;display:none;align-items:center;gap:8px;font-size:11px}
     #activeProdBar.show{display:flex}
@@ -56,7 +53,6 @@
                  color:var(--sub);border-radius:6px;padding:3px 8px;
                  font-size:10px;font-weight:700;cursor:pointer}
 
-    /* DRAFT RESTORE BANNER */
     #draftBanner{background:#1a2e1a;border:1px solid var(--green);border-radius:10px;
                  padding:10px 14px;margin:12px 12px 0;font-size:12px;color:#86efac;
                  display:none;align-items:center;justify-content:space-between;gap:10px}
@@ -65,12 +61,10 @@
     .btn-draft-yes{background:var(--green);color:#fff}
     .btn-draft-no{background:none;border:1px solid var(--muted);color:var(--sub)}
 
-    /* LAYOUT */
     main{padding:12px;max-width:700px;margin:0 auto;padding-bottom:40px}
     .tab-panel{display:none}
     .tab-panel.active{display:block}
 
-    /* CARD */
     .card{background:var(--asphalt);border:1px solid var(--border);
           border-radius:12px;overflow:hidden;margin-bottom:10px}
     .card-head{background:var(--surface);border-bottom:1px solid var(--border);
@@ -80,7 +74,6 @@
     .card-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0}
     .card-body{padding:14px}
 
-    /* FORM */
     .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
     .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
     @media(max-width:480px){.grid-2,.grid-3{grid-template-columns:1fr}}
@@ -102,13 +95,15 @@
     input[type=number]{-moz-appearance:textfield}
     input[type=number]::-webkit-inner-spin-button{display:none}
 
-    /* SECTION TITLE */
+    /* Checkbox row */
+    .check-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+    .check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--amber);cursor:pointer;flex-shrink:0}
+    .check-row label{font-size:13px;color:var(--text);cursor:pointer}
+
     .section-title{font-size:10px;font-weight:800;color:var(--muted);
                    text-transform:uppercase;letter-spacing:1px;
                    margin:14px 0 7px;display:flex;align-items:center;gap:8px}
     .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
-
-    /* SOFT WARNING */
     .warn-soft{background:#2a1f00;border:1px solid #ca8a04;border-radius:8px;
                padding:9px 12px;font-size:11px;color:#fbbf24;margin-bottom:10px}
 
@@ -121,22 +116,26 @@
     .ig-tag{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;
             text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
     .ig-name{font-size:13px;font-weight:700;flex:1}
-    .ig-total{font-size:11px;color:var(--amber);font-weight:700;margin-left:auto;
-              font-family:monospace;white-space:nowrap}
+    .ig-total{font-size:11px;color:var(--amber);font-weight:700;
+              margin-left:auto;font-family:monospace;white-space:nowrap}
 
     /* Destination rows */
     .dest-row{padding:10px 12px;border-bottom:1px solid var(--border)}
     .dest-row:last-of-type{border-bottom:none}
     .dest-row-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
-    .dest-label{font-size:11px;font-weight:700;color:var(--sub);flex:1}
+    .dest-label{font-size:12px;font-weight:700;color:var(--sub);flex:1}
     .dest-fixed-badge{font-size:8px;font-weight:800;color:var(--muted);
                       text-transform:uppercase;letter-spacing:.5px}
+    .dest-name-input{flex:1;background:var(--asphalt);border:1px solid var(--border);
+                     border-radius:6px;padding:5px 8px;font-size:12px;
+                     color:var(--text);-webkit-appearance:none}
+    .dest-name-input:focus{outline:none;border-color:var(--amber)}
     .btn-del-dest{background:none;border:none;color:var(--muted);font-size:14px;
-                  cursor:pointer;padding:2px 4px;border-radius:4px;
+                  cursor:pointer;padding:2px 4px;border-radius:4px;flex-shrink:0;
                   transition:color .1s,background .1s}
     .btn-del-dest:hover{color:var(--red);background:rgba(239,68,68,.1)}
 
-    .dest-qty{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+    .dest-qty{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
     .qty-field{display:flex;flex-direction:column;gap:3px}
     .qty-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
     .qty-wrap{position:relative}
@@ -145,34 +144,50 @@
              -moz-appearance:textfield}
     .qty-inp:focus{outline:none;border-color:var(--amber)}
     .qty-inp::-webkit-inner-spin-button{display:none}
-    .qty-inp.warn-border{border-color:var(--red)}
     .qty-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);
               font-size:10px;color:var(--muted);font-weight:700;pointer-events:none}
     .dest-used{font-size:11px;color:var(--amber);font-weight:700}
-    .dest-warn{font-size:10px;color:var(--red);font-weight:700;margin-top:2px}
+    .dest-warn{font-size:10px;color:var(--red);font-weight:700;margin-left:8px;display:none}
 
-    /* Type selector for grava/arena */
-    .ig-type-sel{flex:1;background:var(--surface);border:1px solid var(--border);
-                 border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);
-                 -webkit-appearance:none}
-    .ig-type-sel:focus{outline:none;border-color:var(--amber)}
+    /* Tolva selector */
+    .tolva-sel{flex:1;background:var(--asphalt);border:1px solid var(--border);
+               border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);
+               -webkit-appearance:none}
+    .tolva-sel:focus{outline:none;border-color:var(--amber)}
+    .tolva-sel option:disabled{color:var(--muted)}
 
-    /* Single qty row (for insumos without sub-destinations) */
-    .single-dest{padding:10px 12px}
+    /* Per-dest photos */
+    .dest-photo-row{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+    .dest-thumbs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0}
+    .thumb-wrap{position:relative}
+    .thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;
+           border:1.5px solid var(--border);display:block}
+    .thumb-del{position:absolute;top:-4px;right:-4px;width:16px;height:16px;
+               background:var(--red);color:#fff;border:none;border-radius:50%;
+               font-size:10px;cursor:pointer;display:flex;align-items:center;
+               justify-content:center;font-weight:700}
+    .photo-btns{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-photo-sm{display:inline-flex;align-items:center;gap:4px;background:none;
+                  border:1.5px dashed var(--border);border-radius:6px;padding:4px 9px;
+                  font-size:11px;font-weight:700;color:var(--sub);cursor:pointer;
+                  transition:border-color .15s,color .15s}
+    .btn-photo-sm:hover{border-color:var(--amber);color:var(--amber)}
 
-    /* Optional destination buttons */
-    .add-dest-row{padding:8px 12px;display:flex;flex-wrap:wrap;gap:6px;
-                  border-top:1px solid var(--border)}
+    /* Add dest / tipo buttons */
+    .add-dest-row{padding:8px 12px;border-top:1px solid var(--border);
+                  display:flex;flex-wrap:wrap;gap:6px}
     .btn-add-dest{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
                   border-radius:6px;border:1.5px dashed var(--border);
                   font-size:10px;font-weight:700;cursor:pointer;background:transparent;
                   color:var(--sub);transition:border-color .15s,color .15s}
     .btn-add-dest:hover{border-color:var(--amber);color:var(--amber)}
 
-    /* Group photo row */
-    .group-photo-row{padding:8px 12px;border-top:1px solid var(--border)}
+    /* Tipo selector for grava/arena */
+    .ig-type-sel{flex:1;background:var(--surface);border:1px solid var(--border);
+                 border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);
+                 -webkit-appearance:none}
+    .ig-type-sel:focus{outline:none;border-color:var(--amber)}
 
-    /* ADD INSUMO (grava/arena) */
     .add-btns{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 8px}
     .btn-add{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;
              border-radius:7px;border:1.5px dashed;font-size:11px;font-weight:700;
@@ -182,23 +197,7 @@
     .btn-add-arena{border-color:#f97316;color:#f97316}
     .btn-add-arena:hover{background:rgba(249,115,22,.1)}
 
-    /* PHOTOS */
-    .photo-row{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
-    .thumbs-row{display:flex;flex-wrap:wrap;gap:5px}
-    .thumb-wrap{position:relative}
-    .thumb{width:50px;height:50px;object-fit:cover;border-radius:6px;
-           border:1.5px solid var(--border);display:block}
-    .thumb-del{position:absolute;top:-5px;right:-5px;width:17px;height:17px;
-               background:var(--red);color:#fff;border:none;border-radius:50%;
-               font-size:10px;cursor:pointer;display:flex;align-items:center;
-               justify-content:center;font-weight:700}
-    .btn-photo{display:inline-flex;align-items:center;gap:5px;background:none;
-               border:1.5px dashed var(--border);border-radius:7px;padding:5px 10px;
-               font-size:11px;font-weight:700;color:var(--sub);cursor:pointer;
-               transition:border-color .15s,color .15s}
-    .btn-photo:hover{border-color:var(--amber);color:var(--amber)}
-
-    /* CRONÓMETRO */
+    /* Cronómetro */
     .cron-wrap{text-align:center;padding:8px 0 12px}
     .cron-time{font-size:44px;font-weight:800;color:var(--amber);
                font-family:monospace;letter-spacing:2px;line-height:1}
@@ -210,7 +209,7 @@
     .btn-cron-start{background:var(--green);color:#fff}
     .btn-cron-stop{background:var(--red);color:#fff}
 
-    /* TRUCK */
+    /* Truck */
     .truck-counter{font-size:30px;font-weight:800;color:var(--sub);
                    text-align:center;margin-top:4px;font-family:monospace}
     .truck-counter.ready{color:var(--green)}
@@ -230,19 +229,24 @@
     .btn-truck:hover{border-color:var(--amber);color:var(--amber)}
     .btn-truck.del:hover{border-color:var(--red);color:var(--red)}
     .truck-body{font-size:11px;color:var(--sub)}
-    .truck-photos{display:flex;gap:6px;margin-top:6px}
+
+    /* Truck photo slots */
+    .truck-photos{display:flex;gap:8px;margin-top:10px}
     .truck-photo-slot{flex:1;background:var(--asphalt);border:1.5px dashed var(--border);
-                      border-radius:8px;padding:8px;text-align:center;cursor:pointer;
-                      transition:border-color .15s}
+                      border-radius:8px;padding:10px 8px;text-align:center;
+                      cursor:pointer;transition:border-color .15s}
     .truck-photo-slot:hover{border-color:var(--amber)}
     .truck-photo-slot.has-photo{border-style:solid;border-color:var(--green)}
     .truck-photo-label{font-size:10px;color:var(--sub);font-weight:700;margin-top:4px}
-    .truck-photo-thumb{width:100%;height:60px;object-fit:cover;border-radius:5px;display:none}
+    .truck-photo-thumb{width:100%;height:56px;object-fit:cover;border-radius:5px;display:none}
     .truck-photo-slot.has-photo .truck-photo-thumb{display:block}
     .truck-photo-slot.has-photo .truck-photo-icon{display:none}
     .truck-photo-icon{font-size:20px}
+    /* Mini gallery button inside slot */
+    .slot-gallery-btn{display:block;margin-top:4px;font-size:9px;color:var(--muted);
+                      background:none;border:none;cursor:pointer;text-decoration:underline}
 
-    /* SUBMIT BUTTONS */
+    /* Submit */
     .btn-submit{width:100%;padding:14px;background:var(--amber);color:#111;
                 border:none;border-radius:10px;font-size:15px;font-weight:800;
                 cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -252,15 +256,14 @@
                          cursor:not-allowed;transform:none}
     .btn-reset{width:100%;margin-top:8px;padding:10px;background:none;
                border:1.5px solid var(--border);color:var(--muted);border-radius:8px;
-               font-size:12px;font-weight:600;cursor:pointer;
-               transition:border-color .15s,color .15s}
+               font-size:12px;font-weight:600;cursor:pointer}
     .btn-reset:hover{border-color:var(--sub);color:var(--text)}
     .btn-primary{padding:10px 16px;background:var(--amber);color:#111;border:none;
                  border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;
-                 width:100%;transition:background .15s}
+                 width:100%}
     .btn-primary:hover{background:var(--amber-d)}
 
-    /* MODAL */
+    /* Modal */
     .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);
                    display:none;place-items:center;padding:16px}
     .modal-overlay.show{display:grid}
@@ -272,8 +275,7 @@
                 display:flex;align-items:center;justify-content:space-between}
     .btn-modal-x{background:none;border:none;color:var(--muted);
                  font-size:20px;cursor:pointer;line-height:1;padding:0 2px}
-    .modal-scroll{overflow-y:auto;padding:14px 16px;flex:1;
-                  -webkit-overflow-scrolling:touch}
+    .modal-scroll{overflow-y:auto;padding:14px 16px;flex:1;-webkit-overflow-scrolling:touch}
     .modal-foot{border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px}
     .btn-modal-back{flex:1;padding:11px;background:none;border:1.5px solid var(--border);
                     border-radius:8px;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
@@ -284,14 +286,13 @@
     .sum-item.has-warn{border-color:#ca8a04}
     .sum-item-head{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
     .sum-item-body{font-size:12px;color:var(--sub);line-height:1.5}
-    .sum-warn-msg{font-size:10px;color:#fbbf24;margin-top:4px;font-weight:700}
 
-    /* TOAST */
+    /* Toast */
     #toast{position:fixed;bottom:20px;left:50%;
-           transform:translateX(-50%) translateY(60px);
-           z-index:9999;padding:11px 18px;border-radius:10px;
-           font-size:13px;font-weight:700;white-space:nowrap;
-           pointer-events:none;opacity:0;box-shadow:0 8px 24px rgba(0,0,0,.5);
+           transform:translateX(-50%) translateY(60px);z-index:9999;
+           padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;
+           white-space:nowrap;pointer-events:none;opacity:0;
+           box-shadow:0 8px 24px rgba(0,0,0,.5);
            transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s}
     #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
     #toast.success{background:var(--green);color:#fff}
@@ -325,7 +326,6 @@
   <button class="btn-cambiar" onclick="promptCambiarProd()">Cambiar</button>
 </div>
 
-<!-- Draft restore banner -->
 <div id="draftBanner">
   <span>📝 Hay un borrador guardado. ¿Restaurarlo?</span>
   <div style="display:flex;gap:6px;flex-shrink:0">
@@ -336,9 +336,7 @@
 
 <main>
 
-<!-- ══════════════════════════════════════════════════════
-     TAB 1 — PRODUCCIÓN
-══════════════════════════════════════════════════════ -->
+<!-- ══ TAB 1: PRODUCCIÓN ═══════════════════════════════════ -->
 <section id="tab-produccion" class="tab-panel active">
   <div class="card">
     <div class="card-head"><div class="card-dot"></div>Datos de producción</div>
@@ -368,7 +366,7 @@
       </div>
       <div class="field">
         <label>Notas / Observaciones</label>
-        <textarea id="p-notas" placeholder="Temperatura de salida, incidentes, observaciones…" oninput="saveDraft()"></textarea>
+        <textarea id="p-notas" placeholder="Temperatura de salida, incidentes…" oninput="saveDraft()"></textarea>
       </div>
     </div>
   </div>
@@ -378,19 +376,13 @@
   <button class="btn-reset" onclick="resetProduccion()">Limpiar formulario</button>
 </section>
 
-
-<!-- ══════════════════════════════════════════════════════
-     TAB 2 — INSUMOS
-══════════════════════════════════════════════════════ -->
+<!-- ══ TAB 2: INSUMOS ══════════════════════════════════════ -->
 <section id="tab-insumos" class="tab-panel">
   <div id="warn-ins" class="warn-soft" style="display:none">
     ⚠️ Sin producción activa — puedes llenar los datos, pero no podrás enviar hasta registrar una producción.
   </div>
-
-  <!-- Insumos se renderizan aquí por JavaScript -->
   <div id="insumos-container"></div>
 
-  <!-- Grava y Arena son multi-tipo -->
   <div class="section-title">Grava</div>
   <div id="rows-grava"></div>
   <div class="add-btns">
@@ -405,15 +397,12 @@
 
   <div style="margin-top:16px">
     <button class="btn-submit" id="btn-ins" onclick="preSubmitInsumos()">
-      <span id="btn-ins-icon">👁</span><span id="btn-ins-txt">Revisar y enviar insumos</span>
+      <span id="btn-ins-icon">📋</span><span id="btn-ins-txt">Revisar y enviar insumos</span>
     </button>
   </div>
 </section>
 
-
-<!-- ══════════════════════════════════════════════════════
-     TAB 3 — BITÁCORA
-══════════════════════════════════════════════════════ -->
+<!-- ══ TAB 3: BITÁCORA ═════════════════════════════════════ -->
 <section id="tab-bitacora" class="tab-panel">
   <div id="warn-bit" class="warn-soft" style="display:none">
     ⚠️ Sin producción activa — puedes registrar camiones, pero no podrás enviar hasta registrar una producción.
@@ -445,7 +434,7 @@
   </div>
 
   <div class="card" id="truck-form-card">
-    <div class="card-head"><div class="card-dot"></div><span id="truck-form-label">Agregar camión</span></div>
+    <div class="card-head"><div class="card-dot"></div><span id="truck-form-label">Registrar camión</span></div>
     <div class="card-body">
       <div class="grid-2 gap">
         <div class="field"><label>Folio Nota Remisión</label>
@@ -470,32 +459,36 @@
       <div style="font-size:10px;color:var(--muted);margin-top:-6px;margin-bottom:12px">
         Al menos uno de los dos campos es obligatorio
       </div>
-      <!-- Fotos del camión y de la nota -->
       <div class="section-title">Fotos</div>
       <div class="truck-photos">
-        <div class="truck-photo-slot" id="slot-camion" onclick="document.getElementById('photo-camion').click()">
+        <!-- Slot camión -->
+        <div class="truck-photo-slot" id="slot-camion">
           <div class="truck-photo-icon">📷</div>
           <img class="truck-photo-thumb" id="thumb-camion" alt="">
           <div class="truck-photo-label">Foto camión</div>
+          <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-camion-gal').click()">Elegir de galería</button>
         </div>
-        <div class="truck-photo-slot" id="slot-nota" onclick="document.getElementById('photo-nota').click()">
+        <!-- Slot nota -->
+        <div class="truck-photo-slot" id="slot-nota">
           <div class="truck-photo-icon">🧾</div>
           <img class="truck-photo-thumb" id="thumb-nota" alt="">
           <div class="truck-photo-label">Foto nota</div>
+          <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-nota-gal').click()">Elegir de galería</button>
         </div>
       </div>
-      <input type="file" id="photo-camion" accept="image/*" style="display:none"
-             onchange="handleTruckPhoto('camion',this)">
-      <input type="file" id="photo-nota"   accept="image/*" style="display:none"
-             onchange="handleTruckPhoto('nota',this)">
+      <!-- Hidden file inputs for truck photos -->
+      <input type="file" id="photo-camion-cam" accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('camion',this)">
+      <input type="file" id="photo-camion-gal" accept="image/*"                       style="display:none" onchange="handleTruckPhoto('camion',this)">
+      <input type="file" id="photo-nota-cam"   accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('nota',this)">
+      <input type="file" id="photo-nota-gal"   accept="image/*"                       style="display:none" onchange="handleTruckPhoto('nota',this)">
     </div>
     <div style="padding:0 14px 14px">
-      <button class="btn-primary" id="btn-add-truck" onclick="addTruck()">+ Agregar camión</button>
+      <button class="btn-primary" id="btn-add-truck" onclick="addTruck()">✅ Registrar camión</button>
     </div>
   </div>
 
-  <div class="section-title" style="margin-top:4px">Camiones registrados</div>
-  <div id="truck-list"><div style="font-size:11px;color:var(--muted)">Ningún camión agregado aún.</div></div>
+  <div class="section-title">Camiones registrados</div>
+  <div id="truck-list"><div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div></div>
 
   <div style="margin-top:14px">
     <button class="btn-submit" id="btn-bit" onclick="preSubmitBitacora()" disabled>
@@ -504,10 +497,7 @@
   </div>
 </section>
 
-
-<!-- ══════════════════════════════════════════════════════
-     TAB 4 — ENTRADAS
-══════════════════════════════════════════════════════ -->
+<!-- ══ TAB 4: ENTRADAS ═════════════════════════════════════ -->
 <section id="tab-entradas" class="tab-panel">
   <div class="card">
     <div class="card-head"><div class="card-dot"></div>Entrada de material</div>
@@ -515,7 +505,10 @@
       <div class="grid-2 gap">
         <div class="field"><label>Fecha</label><input type="date" id="e-fecha"></div>
         <div class="field"><label>Material / Insumo</label>
-          <select id="e-insumo"><option value="">— Seleccionar —</option></select></div>
+          <select id="e-insumo" onchange="onEntradaInsumoChange()">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
       </div>
       <div class="grid-3 gap">
         <div class="field"><label>Cantidad</label>
@@ -528,19 +521,35 @@
           </select>
         </div>
         <div class="field"><label>Precio Unit. ($)</label>
-          <input type="number" id="e-precio" placeholder="0" step="0.01" min="0"></div>
+          <input type="number" id="e-precio" placeholder="0" step="0.01" min="0"
+                 oninput="calcEntradaTotals()"></div>
       </div>
-      <div class="field gap"><label>Flete ($)</label>
+      <!-- IVA -->
+      <div class="check-row gap">
+        <input type="checkbox" id="e-iva-check" onchange="calcEntradaTotals()">
+        <label for="e-iva-check">Agregar IVA (16%)</label>
+      </div>
+      <div class="grid-2 gap" id="iva-fields" style="display:none">
+        <div class="field"><label>IVA ($)</label>
+          <input type="number" id="e-iva-monto" readonly placeholder="—"></div>
+        <div class="field"><label>Precio Total / Unit. ($)</label>
+          <input type="number" id="e-precio-total" readonly placeholder="—"></div>
+      </div>
+      <!-- Flete -->
+      <div class="field gap"><label>Flete ($) <span style="font-weight:400;text-transform:none">(opcional)</span></label>
         <input type="number" id="e-flete" placeholder="0" step="0.01" min="0"></div>
-      <!-- Fotos -->
-      <div style="margin-top:8px">
-        <div id="entrada-thumbs" class="thumbs-row" style="margin-bottom:6px"></div>
-        <button type="button" class="btn-photo"
-                onclick="document.getElementById('entrada-photo').click()">
-          📷 Agregar foto de la entrada
-        </button>
-        <input type="file" id="entrada-photo" accept="image/*" multiple style="display:none"
-               onchange="handleEntradaPhotos(this)">
+      <!-- Foto -->
+      <div class="section-title">Comprobante</div>
+      <div id="entrada-thumbs" class="dest-thumbs" style="margin-bottom:6px"></div>
+      <div class="photo-btns">
+        <button type="button" class="btn-photo-sm"
+                onclick="document.getElementById('entrada-cam').click()">📷 Cámara</button>
+        <button type="button" class="btn-photo-sm"
+                onclick="document.getElementById('entrada-gal').click()">🖼 Galería</button>
+        <input type="file" id="entrada-cam" accept="image/*" capture="environment" multiple
+               style="display:none" onchange="handleEntradaPhotos(this)">
+        <input type="file" id="entrada-gal" accept="image/*" multiple
+               style="display:none" onchange="handleEntradaPhotos(this)">
       </div>
     </div>
   </div>
@@ -549,10 +558,9 @@
   </button>
   <button class="btn-reset" onclick="resetEntrada()">Limpiar</button>
 </section>
-
 </main>
 
-<!-- MODAL -->
+<!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-box">
     <div class="modal-head">
@@ -562,734 +570,627 @@
     <div class="modal-scroll" id="modal-body"></div>
     <div class="modal-foot">
       <button class="btn-modal-back" onclick="closeModal()">← Revisar</button>
-      <button class="btn-modal-ok"   id="modal-confirm">Confirmar y enviar</button>
+      <button class="btn-modal-ok" id="modal-confirm">Confirmar y enviar</button>
     </div>
   </div>
 </div>
-
 <div id="toast"></div>
 
 <script>
 'use strict';
 
-/* ══ CONFIG ══════════════════════════════════════════════ */
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwEk7KHV3awhS3OKLgO0KM3x3BkWzmx8a44KeJ_9qQ3XgIq6tO7guKFKoJ4QDA-umY-/exec';
-
-/* ══ CATÁLOGO FALLBACK (sin internet) ═══════════════════ */
-const FALLBACK = {
-  insumos: [
-    {Nombre:'Cemento Asfáltico', Unidad:'Tn', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Combustible Alterno', Unidad:'L', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Diesel', Unidad:'L', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Gasolina', Unidad:'L', 'Tipo de Captura (L/pct)':'pct', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Grava', Unidad:'Tn', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Arena', Unidad:'Tn', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Gas', Unidad:'Kg', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-    {Nombre:'Agua', Unidad:'L', 'Tipo de Captura (L/pct)':'L', 'Precio Base ($)':0, 'Flete ($)':0},
-  ],
-  destinos: [
-    {Insumo:'Cemento Asfáltico', Destino:'Tanque 1', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Cemento Asfáltico', Destino:'Tanque 2', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Combustible Alterno', Destino:'Tanque 1 CA', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Combustible Alterno', Destino:'Tanque 2 CA', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Diesel', Destino:'Generador Grande', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Diesel', Destino:'Quemador', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Diesel', Destino:'Pachara', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Diesel', Destino:'Lavado', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Gasolina', Destino:'Generador Chico', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Gas', Destino:'Soplete', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Agua', Destino:'Tinaco', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Grava', Destino:'Tolva 1', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Grava', Destino:'Tolva 2', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Grava', Destino:'Tolva 3', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Grava', Destino:'Tolva 4', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Arena', Destino:'Tolva 1', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Arena', Destino:'Tolva 2', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Arena', Destino:'Tolva 3', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Arena', Destino:'Tolva 4', 'Fijo (VERDADERO/FALSO)':'FALSO'},
-  ],
-  mezclas: [
-    {Tipo:'HMA 1/2"', Descripción:'', Unidad:'Tn', 'Precio Unitario Mínimo ($)':0},
-    {Tipo:'HMA 3/8"', Descripción:'', Unidad:'Tn', 'Precio Unitario Mínimo ($)':0},
-    {Tipo:'Concreto Asfáltico', Descripción:'', Unidad:'Tn', 'Precio Unitario Mínimo ($)':0},
-  ],
-};
-
-/* Orden fijo de insumos base */
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUaUkjjM8JGltMg91-Mx9kQJGzjTVM-AoViJgHvNbjPpQABAeWzztDvqgY7OPuHBDG/exec';
+const TOLVAS = ['Tolva 1','Tolva 2','Tolva 3','Tolva 4'];
 const INSUMO_ORDER = ['Cemento Asfáltico','Combustible Alterno','Diesel','Gasolina','Gas','Agua'];
 
-/* ══ STATE ═══════════════════════════════════════════════ */
-const S = {
-  catalog:            FALLBACK,
-  activeProdId:       '',
-  activeProdFolderId: '',
-  pendingQueue:       [],
-  online:             navigator.onLine,
-  rowCounter:         0,
-  groupPhotoStore:    {},    // { groupId: [{b64,dataUrl}] }
-  trucks:             [],
-  truckPhotos:        { camion: null, nota: null }, // {b64,dataUrl}
-  editTruckIdx:       null,
-  cronTimer:          null,
-  cronSecs:           0,
-  entradaPhotos:      [],
+const FALLBACK = {
+  insumos:[
+    {Nombre:'Cemento Asfáltico',Unidad:'Tn','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Combustible Alterno',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Diesel',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gasolina',Unidad:'L','Tipo de Captura (L/pct)':'pct','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gas',Unidad:'Kg','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Agua',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+  ],
+  destinos:[
+    {Insumo:'Cemento Asfáltico',Destino:'Tanque 1','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Cemento Asfáltico',Destino:'Tanque 2','Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 1 CA','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 2 CA','Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Diesel',Destino:'Generador Grande','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',Destino:'Quemador','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',Destino:'Pachara','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Gasolina',Destino:'Generador Chico','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+  ],
+  mezclas:[
+    {Tipo:'HMA 1/2"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'HMA 3/8"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'Concreto Asfáltico',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+  ],
 };
 
-/* ══ INIT ════════════════════════════════════════════════ */
+const S = {
+  catalog:FALLBACK, activeProdId:'', activeProdFolderId:'',
+  pendingQueue:[], online:navigator.onLine,
+  rowCounter:0,
+  destPhotoStore:{},       // { rid: [{b64,dataUrl}] }
+  usedTolvas:{},           // { 'Tolva 1': rid_that_uses_it }
+  trucks:[], truckPhotos:{camion:null,nota:null},
+  editTruckIdx:null, cronTimer:null, cronSecs:0,
+  entradaPhotos:[],
+};
+
+/* ══ INIT ══════════════════════════════════════════════ */
 async function init() {
-  loadState();
-  setupTabs();
-  setupOnline();
-  registerSW();
-  initProduccion();
-  initEntrada();
+  loadState(); setupTabs(); setupOnline(); registerSW();
+  initProduccion(); initEntrada();
   checkDraftBanner();
   await loadCatalog();
-  renderInsumos();
-  populateMezclas();
-  populateInsumoSelect();
-  updateActiveProdBar();
-  updateCounter();
+  renderInsumos(); populateMezclas(); populateInsumoSelect();
+  updateActiveProdBar(); updateCounter();
 }
-
 function loadState() {
-  S.activeProdId       = localStorage.getItem('activeProdId')       || '';
-  S.activeProdFolderId = localStorage.getItem('activeProdFolderId') || '';
-  try { S.pendingQueue = JSON.parse(localStorage.getItem('pendingQueue')||'[]'); } catch { S.pendingQueue=[]; }
-  try {
-    const cc = localStorage.getItem('catalog');
-    if (cc) S.catalog = JSON.parse(cc);
-  } catch {}
+  S.activeProdId       = localStorage.getItem('activeProdId')||'';
+  S.activeProdFolderId = localStorage.getItem('activeProdFolderId')||'';
+  try{S.pendingQueue=JSON.parse(localStorage.getItem('pendingQueue')||'[]');}catch{S.pendingQueue=[];}
+  try{const cc=localStorage.getItem('catalog');if(cc)S.catalog=JSON.parse(cc);}catch{}
   updatePendingBadge();
 }
+function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});}
 
-function registerSW() {
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{});
+/* ══ TABS ══════════════════════════════════════════════ */
+function setupTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+}
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
+  const np=tab==='insumos'||tab==='bitacora';
+  document.getElementById('activeProdBar').classList.toggle('show',np);
+  if(tab==='insumos') document.getElementById('warn-ins').style.display=S.activeProdId?'none':'block';
+  if(tab==='bitacora')document.getElementById('warn-bit').style.display=S.activeProdId?'none':'block';
 }
 
-/* ══ TABS ════════════════════════════════════════════════ */
-function setupTabs() {
-  document.querySelectorAll('.tab-btn').forEach(btn =>
-    btn.addEventListener('click', ()=> switchTab(btn.dataset.tab))
-  );
-}
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab===tab));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id==='tab-'+tab));
-  const needsProd = tab==='insumos' || tab==='bitacora';
-  document.getElementById('activeProdBar').classList.toggle('show', needsProd);
-  if (tab==='insumos') document.getElementById('warn-ins').style.display = S.activeProdId ? 'none' : 'block';
-  if (tab==='bitacora') document.getElementById('warn-bit').style.display = S.activeProdId ? 'none' : 'block';
-}
-
-/* ══ CATALOG ═════════════════════════════════════════════ */
-async function loadCatalog() {
-  document.getElementById('catalogStatus').textContent = 'Cargando catálogo…';
-  if (!S.online) {
-    document.getElementById('catalogStatus').textContent = '📦 Catálogo desde caché';
-    return;
-  }
-  try {
-    const res  = await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
-    const data = await res.json();
-    if (data.status==='ok' && data.catalogo) {
-      S.catalog = data.catalogo;
-      localStorage.setItem('catalog', JSON.stringify(S.catalog));
-      document.getElementById('catalogStatus').textContent = '✅ Catálogo listo';
+/* ══ CATALOG ════════════════════════════════════════════ */
+async function loadCatalog(){
+  document.getElementById('catalogStatus').textContent='Cargando catálogo…';
+  if(!S.online){document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';return;}
+  try{
+    const res=await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
+    const data=await res.json();
+    if(data.status==='ok'&&data.catalogo){
+      S.catalog=data.catalogo;
+      localStorage.setItem('catalog',JSON.stringify(S.catalog));
+      document.getElementById('catalogStatus').textContent='✅ Catálogo listo';
     }
-  } catch {
-    document.getElementById('catalogStatus').textContent = '📦 Catálogo desde caché';
-  }
+  }catch{document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';}
 }
-
-function getDestinos(insumoNombre) {
-  return (S.catalog.destinos || FALLBACK.destinos)
-    .filter(d => d.Insumo === insumoNombre);
+function getDestinos(nombre){return(S.catalog.destinos||FALLBACK.destinos).filter(d=>d.Insumo===nombre);}
+function getInsumoInfo(nombre){return(S.catalog.insumos||FALLBACK.insumos).find(i=>i.Nombre===nombre)||{};}
+function populateMezclas(){
+  const sel=document.getElementById('p-mezcla');
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  (S.catalog.mezclas||FALLBACK.mezclas).forEach(m=>{
+    const o=document.createElement('option');o.value=o.textContent=m.Tipo;sel.appendChild(o);
+  });
 }
-
-function getInsumoInfo(nombre) {
-  return (S.catalog.insumos || FALLBACK.insumos).find(i => i.Nombre === nombre) || {};
-}
-
-function populateMezclas() {
-  const sel = document.getElementById('p-mezcla');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>';
-  (S.catalog.mezclas || FALLBACK.mezclas).forEach(m => {
-    const o = document.createElement('option');
-    o.value = o.textContent = m.Tipo;
-    sel.appendChild(o);
+function populateInsumoSelect(){
+  const sel=document.getElementById('e-insumo');
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  (S.catalog.insumos||FALLBACK.insumos).forEach(ins=>{
+    const o=document.createElement('option');o.value=o.textContent=ins.Nombre;sel.appendChild(o);
   });
 }
 
-function populateInsumoSelect() {
-  const sel = document.getElementById('e-insumo');
-  sel.innerHTML = '<option value="">— Seleccionar —</option>';
-  (S.catalog.insumos || FALLBACK.insumos).forEach(ins => {
-    const o = document.createElement('option');
-    o.value = o.textContent = ins.Nombre;
-    sel.appendChild(o);
-  });
-  // Auto-set unidad when insumo changes
-  sel.onchange = () => {
-    const info = getInsumoInfo(sel.value);
-    if (info.Unidad) document.getElementById('e-unidad').value = info.Unidad;
-  };
-}
-
-/* ══ ACTIVE PRODUCTION ═══════════════════════════════════ */
-function setActiveProd(id, folderId='') {
-  S.activeProdId = id; S.activeProdFolderId = folderId;
-  localStorage.setItem('activeProdId', id);
-  localStorage.setItem('activeProdFolderId', folderId);
+/* ══ ACTIVE PRODUCTION ══════════════════════════════════ */
+function setActiveProd(id,folderId=''){
+  S.activeProdId=id;S.activeProdFolderId=folderId;
+  localStorage.setItem('activeProdId',id);
+  localStorage.setItem('activeProdFolderId',folderId);
   updateActiveProdBar();
-  document.getElementById('warn-ins').style.display = id ? 'none' : 'block';
-  document.getElementById('warn-bit').style.display = id ? 'none' : 'block';
+  document.getElementById('warn-ins').style.display=id?'none':'block';
+  document.getElementById('warn-bit').style.display=id?'none':'block';
 }
-function updateActiveProdBar() {
-  document.getElementById('activeProdLabel').textContent = S.activeProdId || '—';
-}
-function promptCambiarProd() {
-  const v = prompt('ID de producción:', S.activeProdId);
-  if (v !== null && v.trim()) setActiveProd(v.trim(), '');
-}
+function updateActiveProdBar(){document.getElementById('activeProdLabel').textContent=S.activeProdId||'—';}
+function promptCambiarProd(){const v=prompt('ID de producción:',S.activeProdId);if(v!==null&&v.trim())setActiveProd(v.trim(),'');}
 
-/* ══ DRAFT AUTO-SAVE ════════════════════════════════════ */
-function saveDraft() {
-  try {
-    const draft = {
-      p_fecha:     document.getElementById('p-fecha')?.value,
-      p_cliente:   document.getElementById('p-cliente')?.value,
-      p_obra:      document.getElementById('p-obra')?.value,
-      p_residente: document.getElementById('p-residente')?.value,
-      p_mezcla:    document.getElementById('p-mezcla')?.value,
-      p_tn:        document.getElementById('p-tn')?.value,
-      p_lote:      document.getElementById('p-lote')?.value,
-      p_notas:     document.getElementById('p-notas')?.value,
-      ts:          Date.now(),
-    };
-    localStorage.setItem('draft_prod', JSON.stringify(draft));
-  } catch {}
+/* ══ DRAFT ══════════════════════════════════════════════ */
+function saveDraft(){
+  try{localStorage.setItem('draft_prod',JSON.stringify({
+    p_fecha:document.getElementById('p-fecha')?.value,
+    p_cliente:document.getElementById('p-cliente')?.value,
+    p_obra:document.getElementById('p-obra')?.value,
+    p_residente:document.getElementById('p-residente')?.value,
+    p_mezcla:document.getElementById('p-mezcla')?.value,
+    p_tn:document.getElementById('p-tn')?.value,
+    p_lote:document.getElementById('p-lote')?.value,
+    p_notas:document.getElementById('p-notas')?.value,
+    ts:Date.now()
+  }));}catch{}
 }
-
-function checkDraftBanner() {
-  try {
-    const d = JSON.parse(localStorage.getItem('draft_prod')||'null');
-    if (d && d.ts && (Date.now()-d.ts) < 24*60*60*1000 && d.p_cliente) {
-      document.getElementById('draftBanner').classList.add('show');
-    }
-  } catch {}
+function checkDraftBanner(){
+  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');
+  if(d&&d.ts&&(Date.now()-d.ts)<86400000&&d.p_cliente)
+    document.getElementById('draftBanner').classList.add('show');}catch{}
 }
-
-function restoreDraft() {
-  try {
-    const d = JSON.parse(localStorage.getItem('draft_prod')||'null');
-    if (!d) return;
-    if (d.p_fecha)     document.getElementById('p-fecha').value     = d.p_fecha;
-    if (d.p_cliente)   document.getElementById('p-cliente').value   = d.p_cliente;
-    if (d.p_obra)      document.getElementById('p-obra').value      = d.p_obra;
-    if (d.p_residente) document.getElementById('p-residente').value = d.p_residente;
-    if (d.p_mezcla)    document.getElementById('p-mezcla').value    = d.p_mezcla;
-    if (d.p_tn)        document.getElementById('p-tn').value        = d.p_tn;
-    if (d.p_lote)      document.getElementById('p-lote').value      = d.p_lote;
-    if (d.p_notas)     document.getElementById('p-notas').value     = d.p_notas;
-    updateProdId();
-  } catch {}
+function restoreDraft(){
+  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');if(!d)return;
+  ['p_fecha','p_cliente','p_obra','p_residente','p_mezcla','p_tn','p_lote','p_notas'].forEach(k=>{
+    const el=document.getElementById(k.replace('_','-'));if(el&&d[k])el.value=d[k];
+  });updateProdId();}catch{}
   document.getElementById('draftBanner').classList.remove('show');
-  toast('Borrador restaurado', 'success');
+  toast('Borrador restaurado','success');
 }
+function discardDraft(){localStorage.removeItem('draft_prod');document.getElementById('draftBanner').classList.remove('show');}
 
-function discardDraft() {
-  localStorage.removeItem('draft_prod');
-  document.getElementById('draftBanner').classList.remove('show');
-}
+/* ══ TAB 1: PRODUCCIÓN ══════════════════════════════════ */
+function initProduccion(){setNow();updateProdId();}
+function setNow(){const now=new Date();const local=new Date(now-now.getTimezoneOffset()*60000);document.getElementById('p-fecha').value=local.toISOString().slice(0,16);}
+function onFechaChange(){updateProdId();}
+function updateProdId(){const val=document.getElementById('p-fecha').value;document.getElementById('p-id').value=genProdId(val?new Date(val):new Date());}
+function genProdId(d){const DD=String(d.getDate()).padStart(2,'0'),MM=String(d.getMonth()+1).padStart(2,'0'),YY=String(d.getFullYear()).slice(-2),HH=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');return`PROD-${DD}${MM}${YY}-${HH}${mm}`;}
 
-/* ══ TAB 1: PRODUCCIÓN ═══════════════════════════════════ */
-function initProduccion() { setNow(); updateProdId(); }
-function setNow() {
-  const now   = new Date();
-  const local = new Date(now - now.getTimezoneOffset()*60000);
-  document.getElementById('p-fecha').value = local.toISOString().slice(0,16);
-}
-function onFechaChange() { updateProdId(); }
-function updateProdId() {
-  const val = document.getElementById('p-fecha').value;
-  const id  = genProdId(val ? new Date(val) : new Date());
-  document.getElementById('p-id').value = id;
-}
-function genProdId(d) {
-  const DD=String(d.getDate()).padStart(2,'0');
-  const MM=String(d.getMonth()+1).padStart(2,'0');
-  const YY=String(d.getFullYear()).slice(-2);
-  const HH=String(d.getHours()).padStart(2,'0');
-  const mm=String(d.getMinutes()).padStart(2,'0');
-  return `PROD-${DD}${MM}${YY}-${HH}${mm}`;
-}
-
-async function submitProduccion() {
-  const id      = document.getElementById('p-id').value;
-  const cliente = document.getElementById('p-cliente').value.trim();
-  const obra    = document.getElementById('p-obra').value.trim();
-  const mezcla  = document.getElementById('p-mezcla').value;
-  const tn      = parseFloat(document.getElementById('p-tn').value);
-  if (!cliente || !obra || !mezcla || !tn) {
-    toast('Completa los campos obligatorios', 'error'); return;
-  }
-  const payload = {
-    action: 'produccion',
-    produccion: {
-      id, fechaHora: document.getElementById('p-fecha').value,
-      cliente, obra,
-      residente: document.getElementById('p-residente').value.trim(),
-      mezcla, toneladas: String(tn),
-      lote: document.getElementById('p-lote').value.trim(),
-      notas: document.getElementById('p-notas').value.trim(),
-    },
-  };
-  await send(payload, 'btn-prod', async result => {
-    toast(`✅ ${id} registrada`, 'success');
-    setActiveProd(result.id||id, result.carpetaId||'');
+async function submitProduccion(){
+  const id=document.getElementById('p-id').value;
+  const cliente=document.getElementById('p-cliente').value.trim();
+  const obra=document.getElementById('p-obra').value.trim();
+  const mezcla=document.getElementById('p-mezcla').value;
+  const tn=parseFloat(document.getElementById('p-tn').value);
+  if(!cliente||!obra||!mezcla||!tn){toast('Completa los campos obligatorios','error');return;}
+  const payload={action:'produccion',produccion:{
+    id,fechaHora:document.getElementById('p-fecha').value,
+    cliente,obra,residente:document.getElementById('p-residente').value.trim(),
+    mezcla,toneladas:String(tn),
+    lote:document.getElementById('p-lote').value.trim(),
+    notas:document.getElementById('p-notas').value.trim(),
+  }};
+  await send(payload,'btn-prod',async result=>{
+    toast(`✅ ${id} registrada`,'success');
+    setActiveProd(result.id||id,result.carpetaId||'');
     localStorage.removeItem('draft_prod');
-    setTimeout(()=>{ resetProduccion(); switchTab('insumos'); }, 1400);
+    setTimeout(()=>{resetProduccion();switchTab('insumos');},1400);
   });
 }
-
-function resetProduccion() {
-  ['p-cliente','p-obra','p-residente','p-tn','p-lote','p-notas']
-    .forEach(id => document.getElementById(id).value='');
+function resetProduccion(){
+  ['p-cliente','p-obra','p-residente','p-tn','p-lote','p-notas'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('p-mezcla').selectedIndex=0;
-  setNow(); updateProdId();
-  window.scrollTo({top:0,behavior:'smooth'});
+  setNow();updateProdId();window.scrollTo({top:0,behavior:'smooth'});
 }
 
-/* ══ TAB 2: INSUMOS ══════════════════════════════════════ */
-function renderInsumos() {
-  const container = document.getElementById('insumos-container');
-  container.innerHTML = '';
+/* ══ TAB 2: INSUMOS ════════════════════════════════════ */
+function renderInsumos(){
+  const container=document.getElementById('insumos-container');
+  container.innerHTML='';
+  INSUMO_ORDER.forEach(nombre=>{
+    const info=getInsumoInfo(nombre);
+    const destinos=getDestinos(nombre);
+    const fijos=destinos.filter(d=>d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()==='VERDADERO');
+    const unidad=info.Unidad||'L';
+    const gid='grp_'+nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    const colors={'Cemento Asfáltico':'#f59e0b','Combustible Alterno':'#f97316','Diesel':'#64748b','Gasolina':'#a855f7','Gas':'#22c55e','Agua':'#3b82f6'};
+    const color=colors[nombre]||'#8a8a8a';
+    const tagLabel=nombre.split(' ')[0].toUpperCase();
 
-  INSUMO_ORDER.forEach(nombre => {
-    const info     = getInsumoInfo(nombre);
-    const destinos = getDestinos(nombre);
-    const fijos    = destinos.filter(d => d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()==='VERDADERO');
-    const opciones = destinos.filter(d => d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()!=='VERDADERO');
-    const unidad   = info.Unidad || 'L';
-    const gid      = 'grp_' + nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    // Build fixed dest rows HTML
+    const fijosHTML=fijos.map(d=>{
+      const rid=`${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
+      return buildDestRow(rid,d.Destino,unidad,true);
+    }).join('');
 
-    const group = document.createElement('div');
-    group.className = 'insumo-group';
-    group.id = gid;
-    group.dataset.nombre = nombre;
-    group.dataset.unidad = unidad;
-    group.dataset.precio = info['Precio Base ($)'] || 0;
-    group.dataset.flete  = info['Flete ($)'] || 0;
+    const group=document.createElement('div');
+    group.className='insumo-group';group.id=gid;
+    group.dataset.nombre=nombre;group.dataset.unidad=unidad;
+    group.dataset.precio=info['Precio Base ($)']||0;
+    group.dataset.flete=info['Flete ($)']||0;
 
-    // Head
-    const color = { 'Cemento Asfáltico':'#f59e0b','Combustible Alterno':'#f97316',
-                    'Diesel':'#64748b','Gasolina':'#a855f7','Gas':'#22c55e','Agua':'#3b82f6' }[nombre] || '#8a8a8a';
-
-    let headHTML = `<div class="insumo-group-head">
-      <span class="ig-tag" style="background:${color}22;color:${color}">${nombre.split(' ')[0].toUpperCase()}</span>
-      <span class="ig-name">${nombre}</span>
-      <span class="ig-total" id="${gid}-total">— ${unidad}</span>
-    </div>`;
-
-    // Fixed destinations (each has Inicio/Término)
-    let destsHTML = '';
-    fijos.forEach(d => {
-      const rid = `${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
-      destsHTML += buildDestRow(rid, d.Destino, unidad, true);
-    });
-
-    // Optional destinations (can be added)
-    let opcsHTML = '';
-    if (opciones.length) {
-      opcsHTML = `<div class="add-dest-row">
-        ${opciones.map(d => `
-          <button class="btn-add-dest"
-                  id="btn-add-${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}"
-                  onclick="addDestToGroup('${gid}','${d.Destino}','${unidad}')">
-            + ${d.Destino}
-          </button>`).join('')}
-      </div>`;
-    }
-
-    // Photo section
-    const photoHTML = `<div class="group-photo-row">
-      <div class="photo-row">
-        <div id="${gid}-thumbs" class="thumbs-row"></div>
-        <button type="button" class="btn-photo"
-                onclick="document.getElementById('${gid}-photo').click()">📷 Foto</button>
-        <input type="file" id="${gid}-photo" accept="image/*" multiple style="display:none"
-               onchange="handleGroupPhotos('${gid}',this)">
+    group.innerHTML=`
+      <div class="insumo-group-head">
+        <span class="ig-tag" style="background:${color}22;color:${color}">${tagLabel}</span>
+        <span class="ig-name">${nombre}</span>
+        <span class="ig-total" id="${gid}-total">— ${unidad}</span>
       </div>
-    </div>`;
-
-    group.innerHTML = headHTML +
-      `<div id="${gid}-dests">${destsHTML}</div>` +
-      `<div id="${gid}-opts" class="added-opts"></div>` +
-      opcsHTML + photoHTML;
-
+      <div id="${gid}-dests">${fijosHTML}</div>
+      <div id="${gid}-opts"></div>
+      <div class="add-dest-row">
+        <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
+      </div>`;
     container.appendChild(group);
   });
-
-  // Render initial grava/arena rows
+  // Initial grava and arena
   addTipoInsumo('grava');
   addTipoInsumo('arena');
 }
 
-function buildDestRow(rid, destino, unidad, fijo) {
-  return `<div class="dest-row" id="${rid}">
+/* Build a fixed or optional dest row */
+function buildDestRow(rid,destino,unidad,fijo){
+  return`<div class="dest-row" id="${rid}">
     <div class="dest-row-head">
       <span class="dest-label">${destino}</span>
-      <span class="dest-fixed-badge">${fijo ? 'FIJO' : ''}</span>
-      ${!fijo ? `<button class="btn-del-dest" onclick="delDestRow('${rid}','${destino}','${rid.split('_')[0]+'_'+rid.split('_')[1]}')" title="Quitar">✕</button>` : ''}
+      <span class="dest-fixed-badge">${fijo?'FIJO':''}</span>
+      ${!fijo?`<button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>`:''}
     </div>
-    <div class="dest-qty">
-      <div class="qty-field">
-        <div class="qty-label">Inicio</div>
-        <div class="qty-wrap">
-          <input type="number" class="qty-inp" id="${rid}-ini" step="0.01" min="0"
-                 placeholder="0" oninput="calcDest('${rid}');saveDraft()">
-          <span class="qty-unit">${unidad}</span>
-        </div>
-      </div>
-      <div class="qty-field">
-        <div class="qty-label">Término</div>
-        <div class="qty-wrap">
-          <input type="number" class="qty-inp" id="${rid}-ter" step="0.01" min="0"
-                 placeholder="0" oninput="calcDest('${rid}');saveDraft()">
-          <span class="qty-unit">${unidad}</span>
-        </div>
-      </div>
-    </div>
-    <div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
       <span class="dest-used" id="${rid}-used">— ${unidad}</span>
-      <span class="dest-warn" id="${rid}-warn" style="display:none">⚠️ Término mayor que inicio</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+/* Build a free-text "+Otro" dest row */
+function buildOtroDestRow(rid,unidad){
+  return`<div class="dest-row" id="${rid}">
+    <div class="dest-row-head">
+      <input type="text" class="dest-name-input" id="${rid}-name"
+             placeholder="Nombre del destino / uso">
+      <button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>
+    </div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
+      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+/* Build a tolva dest row (for grava/arena) */
+function buildTolvaDestRow(rid,unidad){
+  const opts=TOLVAS.map(t=>{
+    const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
+    return`<option value="${t}" ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+  }).join('');
+  return`<div class="dest-row" id="${rid}">
+    <div class="dest-row-head">
+      <select class="tolva-sel" id="${rid}-tolva" onchange="onTolvaChange('${rid}',this)">
+        <option value="">— Sin tolva asignada —</option>
+        ${opts}
+      </select>
+      <button class="btn-del-dest" onclick="delTolvaRow('${rid}')">✕</button>
+    </div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
+      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+function buildQtyGrid(rid,unidad){
+  return`<div class="dest-qty">
+    <div class="qty-field">
+      <div class="qty-label">Inicio</div>
+      <div class="qty-wrap">
+        <input type="number" class="qty-inp" id="${rid}-ini" step="0.01" min="0"
+               placeholder="0" oninput="calcDest('${rid}')">
+        <span class="qty-unit">${unidad}</span>
+      </div>
+    </div>
+    <div class="qty-field">
+      <div class="qty-label">Término</div>
+      <div class="qty-wrap">
+        <input type="number" class="qty-inp" id="${rid}-ter" step="0.01" min="0"
+               placeholder="0" oninput="calcDest('${rid}')">
+        <span class="qty-unit">${unidad}</span>
+      </div>
     </div>
   </div>`;
 }
 
-function calcDest(rid) {
-  const ini  = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
-  const ter  = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
-  const err  = ini > 0 && ter > ini;
-  const used = err ? 0 : Math.max(0, ini - ter);
+function buildDestPhotoRow(rid){
+  return`<div class="dest-photo-row">
+    <div id="${rid}-thumbs" class="dest-thumbs"></div>
+    <div class="photo-btns">
+      <button type="button" class="btn-photo-sm"
+              onclick="document.getElementById('${rid}-cam').click()">📷 Cámara</button>
+      <button type="button" class="btn-photo-sm"
+              onclick="document.getElementById('${rid}-gal').click()">🖼 Galería</button>
+      <input type="file" id="${rid}-cam" accept="image/*" capture="environment" multiple
+             style="display:none" onchange="handleDestPhoto('${rid}',this)">
+      <input type="file" id="${rid}-gal" accept="image/*" multiple
+             style="display:none" onchange="handleDestPhoto('${rid}',this)">
+    </div>
+  </div>`;
+}
 
-  // Find unidad from parent group
-  const row   = document.getElementById(rid);
-  const group = row?.closest('.insumo-group');
-  const unidad = group?.dataset.unidad || '';
+/* Add "+Otro destino" free text row */
+function addOtroDest(gid,unidad){
+  const rid=`${gid}_otro_${S.rowCounter++}`;
+  document.getElementById(`${gid}-opts`).insertAdjacentHTML('beforeend',buildOtroDestRow(rid,unidad));
+}
 
-  document.getElementById(`${rid}-used`).textContent = used > 0 ? `${used.toFixed(2)} ${unidad}` : `— ${unidad}`;
-  const warnEl = document.getElementById(`${rid}-warn`);
-  if (warnEl) warnEl.style.display = err ? 'inline' : 'none';
-  if (row) row.style.borderColor = err ? 'var(--red)' : '';
+function delDestRow(rid){
+  document.getElementById(rid)?.remove();
+  delete S.destPhotoStore[rid];
+}
 
+/* Tolva exclusivity */
+function onTolvaChange(rid,sel){
+  // Remove previous usage from this row
+  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
+  // Set new usage
+  if(sel.value) S.usedTolvas[sel.value]=rid;
+  // Refresh all tolva selects
+  updateAllTolvaSelects();
+}
+
+function updateAllTolvaSelects(){
+  document.querySelectorAll('.tolva-sel').forEach(sel=>{
+    const rid=sel.id.replace('-tolva','');
+    const cur=sel.value;
+    const opts=TOLVAS.map(t=>{
+      const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
+      return`<option value="${t}" ${t===cur?'selected':''} ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+    }).join('');
+    sel.innerHTML=`<option value="" ${!cur?'selected':''}>— Sin tolva asignada —</option>${opts}`;
+  });
+}
+
+function delTolvaRow(rid){
+  // Free up the tolva
+  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
+  document.getElementById(rid)?.remove();
+  delete S.destPhotoStore[rid];
+  updateAllTolvaSelects();
+}
+
+/* Grava / Arena multi-tipo */
+let gravaCounter=0, arenaCounter=0;
+function addTipoInsumo(tipo){
+  const isg=tipo==='grava';
+  const nombre=isg?'Grava':'Arena';
+  const color=isg?'#22c55e':'#f97316';
+  const idx=isg?gravaCounter++:arenaCounter++;
+  const gid=`grp_${tipo}_${idx}`;
+  const unidad='Tn';
+
+  const tiposCat=(S.catalog.insumos||FALLBACK.insumos)
+    .filter(i=>i.Nombre.toLowerCase().startsWith(nombre.toLowerCase())&&i.Nombre!==nombre);
+
+  const selectorHTML=tiposCat.length
+    ?`<select class="ig-type-sel" id="${gid}-tipo">${tiposCat.map(t=>`<option value="${t.Nombre}">${t.Nombre}</option>`).join('')}</select>`
+    :`<input type="text" class="ig-type-sel" id="${gid}-tipo" placeholder="Tipo de ${nombre}">`;
+
+  const rid=`${gid}_tolva`;
+  const html=`<div class="insumo-group" id="${gid}" data-nombre="${nombre}" data-unidad="${unidad}">
+    <div class="insumo-group-head">
+      <span class="ig-tag" style="background:${color}22;color:${color}">${nombre.toUpperCase()}</span>
+      ${selectorHTML}
+      <span class="ig-total" id="${gid}-total">— ${unidad}</span>
+      <button class="btn-del-dest" onclick="delGravaArenaGroup('${gid}')" style="margin-left:4px">✕</button>
+    </div>
+    <div id="${gid}-dests">
+      ${buildTolvaDestRow(rid,unidad)}
+    </div>
+    <div id="${gid}-opts"></div>
+    <div class="add-dest-row">
+      <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
+    </div>
+  </div>`;
+  document.getElementById(`rows-${tipo}`).insertAdjacentHTML('beforeend',html);
+}
+
+function delGravaArenaGroup(gid){
+  // Free all tolvas used by this group
+  document.querySelectorAll(`#${gid} .tolva-sel`).forEach(sel=>{
+    if(sel.value) delete S.usedTolvas[sel.value];
+  });
+  document.getElementById(gid)?.remove();
+  updateAllTolvaSelects();
+}
+
+/* Calc */
+function calcDest(rid){
+  const row=document.getElementById(rid);if(!row)return;
+  const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+  const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+  const group=row.closest('.insumo-group');
+  const unidad=group?.dataset.unidad||'';
+  const err=ini>0&&ter>ini;
+  const used=err?0:Math.max(0,ini-ter);
+  document.getElementById(`${rid}-used`).textContent=used>0?`${used.toFixed(2)} ${unidad}`:`— ${unidad}`;
+  const w=document.getElementById(`${rid}-warn`);if(w)w.style.display=err?'inline':'none';
   updateGroupTotal(group?.id);
 }
 
-function updateGroupTotal(gid) {
-  if (!gid) return;
-  const group  = document.getElementById(gid);
-  if (!group) return;
-  const unidad = group.dataset.unidad || '';
-  let total = 0;
-  group.querySelectorAll('.dest-row').forEach(row => {
-    const rid  = row.id;
-    const ini  = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
-    const ter  = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
-    if (!(ini > 0 && ter > ini)) total += Math.max(0, ini - ter);
+function updateGroupTotal(gid){
+  if(!gid)return;
+  const group=document.getElementById(gid);if(!group)return;
+  const unidad=group.dataset.unidad||'';
+  let total=0;
+  group.querySelectorAll('.dest-row').forEach(row=>{
+    const rid=row.id;
+    const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+    const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+    if(!(ini>0&&ter>ini))total+=Math.max(0,ini-ter);
   });
-  const el = document.getElementById(`${gid}-total`);
-  if (el) el.textContent = total > 0 ? `${total.toFixed(2)} ${unidad} total` : `— ${unidad}`;
+  const el=document.getElementById(`${gid}-total`);
+  if(el)el.textContent=total>0?`${total.toFixed(2)} ${unidad} total`:`— ${unidad}`;
 }
 
-function addDestToGroup(gid, destino, unidad) {
-  const rid = `${gid}_${destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
-  if (document.getElementById(rid)) { toast(`${destino} ya está agregado`, 'warn'); return; }
-  const container = document.getElementById(`${gid}-opts`);
-  container.insertAdjacentHTML('beforeend', buildDestRow(rid, destino, unidad, false));
-  // Hide the add button
-  const btn = document.getElementById(`btn-add-${rid}`);
-  if (btn) btn.style.display = 'none';
-}
-
-function delDestRow(rid, destino, gid) {
-  document.getElementById(rid)?.remove();
-  // Show the add button again
-  const btn = document.getElementById(`btn-add-${rid}`);
-  if (btn) btn.style.display = '';
-  updateGroupTotal(gid);
-}
-
-/* Grava y Arena multi-tipo */
-let gravaCounter = 0, arenaCounter = 0;
-function addTipoInsumo(tipo) {
-  const isgrava = tipo === 'grava';
-  const containerId = isgrava ? 'rows-grava' : 'rows-arena';
-  const nombre  = isgrava ? 'Grava' : 'Arena';
-  const color   = isgrava ? '#22c55e' : '#f97316';
-  const tag     = isgrava ? 'GRAVA' : 'ARENA';
-  const idx     = isgrava ? gravaCounter++ : arenaCounter++;
-  const gid     = `grp_${tipo}_${idx}`;
-  const unidad  = 'Tn';
-
-  // Get types from catalog (Grava or Arena sub-items)
-  const tiposCat = (S.catalog.insumos || FALLBACK.insumos)
-    .filter(i => i.Nombre.toLowerCase().startsWith(nombre.toLowerCase()) && i.Nombre !== nombre);
-
-  // If catalog has sub-types, use them; otherwise free text
-  let selectorHTML = '';
-  if (tiposCat.length) {
-    selectorHTML = `<select class="ig-type-sel" id="${gid}-tipo">
-      ${tiposCat.map(t => `<option value="${t.Nombre}">${t.Nombre}</option>`).join('')}
-    </select>`;
-  } else {
-    selectorHTML = `<input type="text" class="ig-type-sel" id="${gid}-tipo" placeholder="Tipo de ${nombre}">`;
+/* Photos per dest */
+async function handleDestPhoto(rid,input){
+  if(!S.destPhotoStore[rid])S.destPhotoStore[rid]=[];
+  for(const file of Array.from(input.files)){
+    const b64=await compressImage(file);
+    if(b64)S.destPhotoStore[rid].push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
   }
-
-  const destinos  = getDestinos(nombre);
-  const opciones  = destinos.filter(d => d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()!=='VERDADERO');
-
-  const opcsHTML = opciones.length ? `<div class="add-dest-row">
-    ${opciones.map(d => `<button class="btn-add-dest"
-        id="btn-add-${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}"
-        onclick="addDestToGroup('${gid}','${d.Destino}','${unidad}')">+ ${d.Destino}</button>`).join('')}
-  </div>` : '';
-
-  const html = `<div class="insumo-group" id="${gid}" data-nombre="${nombre}" data-unidad="${unidad}">
-    <div class="insumo-group-head">
-      <span class="ig-tag" style="background:${color}22;color:${color}">${tag}</span>
-      ${selectorHTML}
-      <span class="ig-total" id="${gid}-total">— ${unidad}</span>
-      <button class="btn-del-dest" onclick="document.getElementById('${gid}').remove()" style="margin-left:4px">✕</button>
-    </div>
-    <div id="${gid}-dests">
-      ${buildDestRow(`${gid}_total`, 'Total', unidad, true)}
-    </div>
-    <div id="${gid}-opts"></div>
-    ${opcsHTML}
-    <div class="group-photo-row"><div class="photo-row">
-      <div id="${gid}-thumbs" class="thumbs-row"></div>
-      <button type="button" class="btn-photo"
-              onclick="document.getElementById('${gid}-photo').click()">📷 Foto</button>
-      <input type="file" id="${gid}-photo" accept="image/*" multiple style="display:none"
-             onchange="handleGroupPhotos('${gid}',this)">
-    </div></div>
-  </div>`;
-
-  document.getElementById(containerId).insertAdjacentHTML('beforeend', html);
+  renderDestThumbs(rid);input.value='';
 }
+function renderDestThumbs(rid){
+  const el=document.getElementById(`${rid}-thumbs`);if(!el)return;
+  const photos=S.destPhotoStore[rid]||[];
+  el.innerHTML=photos.map((p,i)=>`
+    <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
+      <button class="thumb-del" onclick="removeDestPhoto('${rid}',${i})" type="button">×</button>
+    </div>`).join('');
+}
+function removeDestPhoto(rid,idx){S.destPhotoStore[rid]?.splice(idx,1);renderDestThumbs(rid);}
 
-/* Collect all insumo rows for submission */
-function collectInsumos() {
-  const filas = [];
-  document.querySelectorAll('.insumo-group').forEach(group => {
-    const nombre = group.dataset.nombre;
-    const unidad = group.dataset.unidad;
-    const precio = parseFloat(group.dataset.precio) || 0;
-    const flete  = parseFloat(group.dataset.flete)  || 0;
-    const fotos  = (S.groupPhotoStore[group.id] || []).map(p => p.b64);
+/* Collect all insumo rows */
+function collectInsumos(){
+  const filas=[];
+  document.querySelectorAll('.insumo-group').forEach(group=>{
+    const nombre=group.dataset.nombre;
+    const unidad=group.dataset.unidad||'';
+    const precio=parseFloat(group.dataset.precio)||0;
+    const flete=parseFloat(group.dataset.flete)||0;
 
-    // Get display name (for grava/arena, use type selector value)
-    let displayNombre = nombre;
-    const tipoSel = document.getElementById(`${group.id}-tipo`);
-    if (tipoSel) displayNombre = tipoSel.value || nombre;
+    let displayNombre=nombre;
+    const tipoSel=document.getElementById(`${group.id}-tipo`);
+    if(tipoSel)displayNombre=tipoSel.value||nombre;
 
-    group.querySelectorAll('.dest-row').forEach(row => {
-      const rid     = row.id;
-      const destino = row.querySelector('.dest-label')?.textContent?.trim() || '';
-      const ini     = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
-      const ter     = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
-      if (ini === 0 && ter === 0) return; // skip empty rows
-      const usada = Math.max(0, ini - ter);
-      filas.push({ insumo: displayNombre, destino, ini, ter, usada, unidad, precio, flete, fotos });
+    group.querySelectorAll('.dest-row').forEach(row=>{
+      const rid=row.id;
+      const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+      const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+      if(ini===0&&ter===0)return;
+      const usada=Math.max(0,ini-ter);
+      // Get destination name
+      let destino='';
+      const label=row.querySelector('.dest-label');
+      const nameInput=row.querySelector('.dest-name-input');
+      const tolvaSel=row.querySelector('.tolva-sel');
+      if(tolvaSel)destino=tolvaSel.value||'';
+      else if(nameInput)destino=nameInput.value.trim();
+      else if(label)destino=label.textContent.trim();
+      const fotos=(S.destPhotoStore[rid]||[]).map(p=>p.b64);
+      filas.push({insumo:displayNombre,destino,ini,ter,usada,unidad,precio,flete,fotos});
     });
   });
   return filas;
 }
 
-function buildInsumosSummary() {
-  const filas = collectInsumos();
-  let html = '', hasWarn = false;
-  const grouped = {};
-  filas.forEach(f => {
-    if (!grouped[f.insumo]) grouped[f.insumo] = [];
-    grouped[f.insumo].push(f);
+function buildInsumosSummary(){
+  const filas=collectInsumos();
+  let html='',hasWarn=false;
+  const grouped={};
+  filas.forEach(f=>{if(!grouped[f.insumo])grouped[f.insumo]=[];grouped[f.insumo].push(f);});
+  Object.entries(grouped).forEach(([nombre,rows])=>{
+    const total=rows.reduce((s,r)=>s+r.usada,0);
+    html+=`<div class="sum-item">
+      <div class="sum-item-head"><strong>${nombre}</strong>
+        <span style="color:var(--sub);font-size:11px;margin-left:auto">${total.toFixed(2)} ${rows[0].unidad} total</span></div>
+      <div class="sum-item-body">${rows.map(r=>{
+        const warn=r.ini>0&&r.ter>r.ini;if(warn)hasWarn=true;
+        const fotos=r.fotos?.length?` · 📷 ${r.fotos.length}`:'';
+        return`<div style="margin-top:3px">${r.destino?'→ '+r.destino+': ':''}${r.ini} → ${r.ter} = <strong>${r.usada.toFixed(2)}</strong>${warn?' <span style="color:var(--red)">⚠️</span>':''}${fotos}</div>`;
+      }).join('')}</div></div>`;
   });
-  Object.entries(grouped).forEach(([nombre, rows]) => {
-    const totalUsado = rows.reduce((s,r) => s + r.usada, 0);
-    html += `<div class="sum-item">
-      <div class="sum-item-head"><strong>${nombre}</strong><span style="color:var(--sub);font-size:11px;margin-left:auto">${totalUsado.toFixed(2)} ${rows[0].unidad} total</span></div>
-      <div class="sum-item-body">
-        ${rows.map(r => {
-          const warn = r.ini > 0 && r.ter > r.ini;
-          if (warn) hasWarn = true;
-          return `<div style="margin-top:3px">${r.destino ? '→ '+r.destino+': ' : ''}${r.ini} → ${r.ter} = <strong>${r.usada.toFixed(2)}</strong>${warn?' <span style="color:var(--red)">⚠️</span>':''}</div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  });
-  return { html, hasWarn };
+  return{html,hasWarn};
 }
 
-function preSubmitInsumos() {
-  if (!S.activeProdId) { toast('Registra una producción primero', 'error'); return; }
-  const { html, hasWarn } = buildInsumosSummary();
-  const prodInfo = `<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+function preSubmitInsumos(){
+  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
+  const{html,hasWarn}=buildInsumosSummary();
+  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
     Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong>
-    ${hasWarn ? '<br><span style="color:#fbbf24;font-size:10px;font-weight:700">⚠️ Algunos insumos tienen inconsistencias. Puedes enviar así, pero no habrá cambios después.</span>' : ''}
+    ${hasWarn?'<br><span style="color:#fbbf24;font-size:10px;font-weight:700">⚠️ Hay inconsistencias. Puedes enviar así, pero no habrá cambios después.</span>':''}
   </div>`;
-  showModal('Resumen de Insumos', prodInfo + html, doSubmitInsumos,
-    hasWarn ? 'Enviar con advertencias' : 'Confirmar y enviar');
+  showModal('Resumen de Insumos',info+html,doSubmitInsumos,hasWarn?'Enviar con advertencias':'Confirmar y enviar');
 }
-
-async function doSubmitInsumos() {
-  const filas = collectInsumos();
-  if (!filas.length) { toast('Sin insumos con datos', 'error'); return; }
-  const payload = { action:'insumos', idProd: S.activeProdId, folderId: S.activeProdFolderId, filas };
-  await send(payload, 'btn-ins', async result => {
-    toast(`✅ ${result.filas} filas de insumos registradas`, 'success');
-  });
-}
-
-/* Group photos */
-async function handleGroupPhotos(gid, input) {
-  if (!S.groupPhotoStore[gid]) S.groupPhotoStore[gid] = [];
-  for (const file of Array.from(input.files)) {
-    const b64 = await compressImage(file);
-    if (b64) S.groupPhotoStore[gid].push({ b64, dataUrl:'data:image/jpeg;base64,'+b64 });
-  }
-  renderGroupThumbs(gid);
-  input.value = '';
-}
-function renderGroupThumbs(gid) {
-  const el = document.getElementById(`${gid}-thumbs`);
-  if (!el) return;
-  const photos = S.groupPhotoStore[gid] || [];
-  el.innerHTML = photos.map((p,i) => `
-    <div class="thumb-wrap">
-      <img src="${p.dataUrl}" class="thumb" alt="">
-      <button class="thumb-del" onclick="removeGroupPhoto('${gid}',${i})" type="button">×</button>
-    </div>`).join('');
-}
-function removeGroupPhoto(gid, idx) {
-  S.groupPhotoStore[gid]?.splice(idx,1);
-  renderGroupThumbs(gid);
+async function doSubmitInsumos(){
+  const filas=collectInsumos();
+  if(!filas.length){toast('Sin insumos con datos','error');return;}
+  await send({action:'insumos',idProd:S.activeProdId,folderId:S.activeProdFolderId,filas},'btn-ins',
+    async r=>toast(`✅ ${r.filas} filas registradas`,'success'));
 }
 
 /* ══ TAB 3: BITÁCORA ════════════════════════════════════ */
-function cronIniciar() {
-  const now  = new Date();
-  document.getElementById('b-entrada').value =
-    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  S.cronSecs = 0; S.cronRunning = true;
+function cronIniciar(){
+  const now=new Date();
+  document.getElementById('b-entrada').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.cronSecs=0;
   document.getElementById('cron-display').classList.add('running');
-  document.getElementById('btn-cron-start').disabled = true;
-  document.getElementById('btn-cron-stop').disabled  = false;
-  S.cronTimer = setInterval(()=>{
+  document.getElementById('btn-cron-start').disabled=true;
+  document.getElementById('btn-cron-stop').disabled=false;
+  S.cronTimer=setInterval(()=>{
     S.cronSecs++;
-    const h=Math.floor(S.cronSecs/3600), m=Math.floor((S.cronSecs%3600)/60), s=S.cronSecs%60;
-    document.getElementById('cron-display').textContent =
-      `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    const h=Math.floor(S.cronSecs/3600),m=Math.floor((S.cronSecs%3600)/60),s=S.cronSecs%60;
+    document.getElementById('cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   },1000);
 }
-function cronDetener() {
-  clearInterval(S.cronTimer); S.cronRunning=false;
+function cronDetener(){
+  clearInterval(S.cronTimer);
   const now=new Date();
-  document.getElementById('b-salida').value=
-    `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('b-salida').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   document.getElementById('cron-display').classList.remove('running');
   document.getElementById('btn-cron-start').disabled=false;
   document.getElementById('btn-cron-stop').disabled=true;
 }
-function resetCron() {
-  clearInterval(S.cronTimer); S.cronRunning=false; S.cronSecs=0;
+function resetCron(){
+  clearInterval(S.cronTimer);S.cronSecs=0;
   document.getElementById('cron-display').textContent='00:00:00';
   document.getElementById('cron-display').classList.remove('running');
   document.getElementById('btn-cron-start').disabled=false;
   document.getElementById('btn-cron-stop').disabled=true;
 }
 
-async function handleTruckPhoto(tipo, input) {
-  const file = input.files[0];
-  if (!file) return;
-  const b64 = await compressImage(file);
-  if (!b64) return;
-  S.truckPhotos[tipo] = { b64, dataUrl:'data:image/jpeg;base64,'+b64 };
-  const slot  = document.getElementById(`slot-${tipo}`);
-  const thumb = document.getElementById(`thumb-${tipo}`);
-  if (slot && thumb) {
-    thumb.src = S.truckPhotos[tipo].dataUrl;
-    slot.classList.add('has-photo');
-  }
+/* Truck photos — camera opens by default, gallery is secondary button */
+document.addEventListener('DOMContentLoaded',()=>{
+  ['camion','nota'].forEach(tipo=>{
+    const slot=document.getElementById(`slot-${tipo}`);
+    if(slot)slot.onclick=e=>{
+      if(e.target.classList.contains('slot-gallery-btn'))return;
+      document.getElementById(`photo-${tipo}-cam`).click();
+    };
+  });
+});
+
+async function handleTruckPhoto(tipo,input){
+  const file=input.files[0];if(!file)return;
+  const b64=await compressImage(file);if(!b64)return;
+  S.truckPhotos[tipo]={b64,dataUrl:'data:image/jpeg;base64,'+b64};
+  const slot=document.getElementById(`slot-${tipo}`);
+  const thumb=document.getElementById(`thumb-${tipo}`);
+  if(slot&&thumb){thumb.src=S.truckPhotos[tipo].dataUrl;slot.classList.add('has-photo');}
   input.value='';
 }
 
-function updateCounter() {
-  const total = parseInt(document.getElementById('b-total')?.value)||0;
-  const count = S.trucks.length;
-  const el    = document.getElementById('truck-counter');
-  if (el) { el.textContent=`${count} / ${total||'—'}`; el.classList.toggle('ready', total>0 && count>=total); }
-  const btn = document.getElementById('btn-bit');
-  if (btn) btn.disabled = !(total>0 && count===total);
+function updateCounter(){
+  const total=parseInt(document.getElementById('b-total')?.value)||0;
+  const count=S.trucks.length;
+  const el=document.getElementById('truck-counter');
+  if(el){el.textContent=`${count} / ${total||'—'}`;el.classList.toggle('ready',total>0&&count>=total);}
+  const btn=document.getElementById('btn-bit');
+  if(btn)btn.disabled=!(total>0&&count===total);
 }
 
-function addTruck() {
-  const folio    = document.getElementById('b-folio').value.trim();
-  const placa    = document.getElementById('b-placa').value.trim();
-  const operador = document.getElementById('b-operador').value.trim();
-  const entrada  = document.getElementById('b-entrada').value;
-  const salida   = document.getElementById('b-salida').value;
-  const tons     = document.getElementById('b-tons').value.trim();
-  const m3       = document.getElementById('b-m3').value.trim();
-
-  const missing = [];
-  if (!folio)    missing.push('Folio');
-  if (!placa)    missing.push('Placa');
-  if (!operador) missing.push('Operador');
-  if (!entrada)  missing.push('Hora entrada');
-  if (!salida)   missing.push('Hora salida');
-  if (!tons && !m3) missing.push('Tons o m³');
-  if (missing.length) { toast('Falta: '+missing.join(', '),'error'); return; }
-
-  const truck = {
-    folio, placa, operador, horaEntrada:entrada, horaSalida:salida, tons, m3,
-    fotoCamion: S.truckPhotos.camion?.b64 || null,
-    fotoNota:   S.truckPhotos.nota?.b64   || null,
-  };
-
-  if (S.editTruckIdx !== null) {
-    S.trucks.splice(S.editTruckIdx, 0, truck);
-    S.editTruckIdx = null;
-    document.getElementById('truck-form-label').textContent = 'Agregar camión';
-    document.getElementById('btn-add-truck').textContent    = '+ Agregar camión';
-  } else {
-    S.trucks.push(truck);
-  }
-
-  ['b-folio','b-placa','b-operador','b-entrada','b-salida','b-tons','b-m3']
-    .forEach(id => document.getElementById(id).value='');
-  S.truckPhotos = { camion:null, nota:null };
-  ['camion','nota'].forEach(t => {
-    document.getElementById(`slot-${t}`)?.classList.remove('has-photo');
-    const th = document.getElementById(`thumb-${t}`);
-    if (th) th.src='';
-  });
-  resetCron();
-  renderTruckList();
-  toast(`✅ ${placa} agregado`,'success');
+function addTruck(){
+  const folio=document.getElementById('b-folio').value.trim();
+  const placa=document.getElementById('b-placa').value.trim();
+  const operador=document.getElementById('b-operador').value.trim();
+  const entrada=document.getElementById('b-entrada').value;
+  const salida=document.getElementById('b-salida').value;
+  const tons=document.getElementById('b-tons').value.trim();
+  const m3=document.getElementById('b-m3').value.trim();
+  const missing=[];
+  if(!folio)missing.push('Folio');if(!placa)missing.push('Placa');
+  if(!operador)missing.push('Operador');if(!entrada)missing.push('Hora entrada');
+  if(!salida)missing.push('Hora salida');if(!tons&&!m3)missing.push('Tons o m³');
+  if(missing.length){toast('Falta: '+missing.join(', '),'error');return;}
+  const truck={folio,placa,operador,horaEntrada:entrada,horaSalida:salida,tons,m3,
+    fotoCamion:S.truckPhotos.camion?.b64||null,fotoNota:S.truckPhotos.nota?.b64||null};
+  if(S.editTruckIdx!==null){
+    S.trucks.splice(S.editTruckIdx,0,truck);S.editTruckIdx=null;
+    document.getElementById('truck-form-label').textContent='Registrar camión';
+    document.getElementById('btn-add-truck').textContent='✅ Registrar camión';
+  }else{S.trucks.push(truck);}
+  ['b-folio','b-placa','b-operador','b-entrada','b-salida','b-tons','b-m3'].forEach(id=>document.getElementById(id).value='');
+  S.truckPhotos={camion:null,nota:null};
+  ['camion','nota'].forEach(t=>{document.getElementById(`slot-${t}`)?.classList.remove('has-photo');const th=document.getElementById(`thumb-${t}`);if(th)th.src='';});
+  resetCron();renderTruckList();toast(`✅ ${placa} registrado`,'success');
 }
 
-function renderTruckList() {
-  const el = document.getElementById('truck-list');
-  if (!S.trucks.length) {
-    el.innerHTML='<div style="font-size:11px;color:var(--muted)">Ningún camión agregado aún.</div>';
-    updateCounter(); return;
-  }
-  el.innerHTML = S.trucks.map((t,i) => {
-    const qty=[t.tons?t.tons+' Tn':'', t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
+function renderTruckList(){
+  const el=document.getElementById('truck-list');
+  if(!S.trucks.length){el.innerHTML='<div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>';updateCounter();return;}
+  el.innerHTML=S.trucks.map((t,i)=>{
+    const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
     const fotos=[t.fotoCamion?'📷 camión':'',t.fotoNota?'🧾 nota':''].filter(Boolean).join(' ');
-    return `<div class="truck-card">
+    return`<div class="truck-card">
       <div class="truck-head">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
           <span class="truck-num">${i+1}</span>
@@ -1301,231 +1202,180 @@ function renderTruckList() {
           <button class="btn-truck del" onclick="deleteTruck(${i})">🗑</button>
         </div>
       </div>
-      <div class="truck-body">
-        ${t.horaEntrada} → ${t.horaSalida}
-        ${qty?' · '+qty:''}
-        · Folio: ${t.folio}
-        ${fotos?' · '+fotos:''}
-      </div>
+      <div class="truck-body">${t.horaEntrada} → ${t.horaSalida}${qty?' · '+qty:''} · Folio: ${t.folio}${fotos?' · '+fotos:''}</div>
     </div>`;
   }).join('');
   updateCounter();
 }
 
-function editTruck(idx) {
+function editTruck(idx){
   const t=S.trucks[idx];
-  document.getElementById('b-folio').value    = t.folio;
-  document.getElementById('b-placa').value    = t.placa;
-  document.getElementById('b-operador').value = t.operador;
-  document.getElementById('b-entrada').value  = t.horaEntrada;
-  document.getElementById('b-salida').value   = t.horaSalida;
-  document.getElementById('b-tons').value     = t.tons;
-  document.getElementById('b-m3').value       = t.m3;
-  S.truckPhotos = {
-    camion: t.fotoCamion ? {b64:t.fotoCamion,dataUrl:'data:image/jpeg;base64,'+t.fotoCamion} : null,
-    nota:   t.fotoNota   ? {b64:t.fotoNota,  dataUrl:'data:image/jpeg;base64,'+t.fotoNota}   : null,
+  document.getElementById('b-folio').value=t.folio;document.getElementById('b-placa').value=t.placa;
+  document.getElementById('b-operador').value=t.operador;document.getElementById('b-entrada').value=t.horaEntrada;
+  document.getElementById('b-salida').value=t.horaSalida;document.getElementById('b-tons').value=t.tons;
+  document.getElementById('b-m3').value=t.m3;
+  S.truckPhotos={
+    camion:t.fotoCamion?{b64:t.fotoCamion,dataUrl:'data:image/jpeg;base64,'+t.fotoCamion}:null,
+    nota:t.fotoNota?{b64:t.fotoNota,dataUrl:'data:image/jpeg;base64,'+t.fotoNota}:null,
   };
-  ['camion','nota'].forEach(tipo => {
-    const slot=document.getElementById(`slot-${tipo}`);
-    const thumb=document.getElementById(`thumb-${tipo}`);
-    if (S.truckPhotos[tipo]) { slot?.classList.add('has-photo'); if(thumb) thumb.src=S.truckPhotos[tipo].dataUrl; }
-    else { slot?.classList.remove('has-photo'); if(thumb) thumb.src=''; }
+  ['camion','nota'].forEach(tipo=>{
+    const slot=document.getElementById(`slot-${tipo}`),thumb=document.getElementById(`thumb-${tipo}`);
+    if(S.truckPhotos[tipo]){slot?.classList.add('has-photo');if(thumb)thumb.src=S.truckPhotos[tipo].dataUrl;}
+    else{slot?.classList.remove('has-photo');if(thumb)thumb.src='';}
   });
-  S.editTruckIdx=idx;
-  S.trucks.splice(idx,1);
-  renderTruckList();
+  S.editTruckIdx=idx;S.trucks.splice(idx,1);renderTruckList();
   document.getElementById('truck-form-label').textContent=`Editando: ${t.placa}`;
   document.getElementById('btn-add-truck').textContent='💾 Guardar cambios';
   document.getElementById('truck-form-card').scrollIntoView({behavior:'smooth'});
 }
+function deleteTruck(idx){const p=S.trucks[idx]?.placa||'';S.trucks.splice(idx,1);renderTruckList();toast(`🗑 ${p} eliminado`,'info');}
 
-function deleteTruck(idx) {
-  const placa=S.trucks[idx]?.placa||'';
-  S.trucks.splice(idx,1);
-  renderTruckList();
-  toast(`🗑 ${placa} eliminado`,'info');
-}
-
-function preSubmitBitacora() {
-  if (!S.activeProdId) { toast('Registra una producción primero','error'); return; }
+function preSubmitBitacora(){
+  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
   const total=parseInt(document.getElementById('b-total').value)||0;
-  if (!total || S.trucks.length!==total) { toast(`Registra los ${total} camiones primero`,'error'); return; }
-  const prodInfo=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
-    Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong>
-    · <strong>${S.trucks.length} camiones</strong></div>`;
+  if(!total||S.trucks.length!==total){toast(`Registra los ${total} camiones primero`,'error');return;}
+  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+    Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong> · <strong>${S.trucks.length} camiones</strong></div>`;
   const html=S.trucks.map((t,i)=>{
     const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
-    return `<div class="sum-item">
-      <div class="sum-item-head"><span class="truck-num">${i+1}</span>
-        <strong class="truck-placa">${t.placa}</strong><span class="truck-op">${t.operador}</span></div>
-      <div class="sum-item-body">${t.horaEntrada} → ${t.horaSalida} · ${qty} · Folio: ${t.folio}</div>
-    </div>`;
+    return`<div class="sum-item"><div class="sum-item-head"><span class="truck-num">${i+1}</span><strong class="truck-placa">${t.placa}</strong><span class="truck-op">${t.operador}</span></div>
+    <div class="sum-item-body">${t.horaEntrada} → ${t.horaSalida} · ${qty} · Folio: ${t.folio}</div></div>`;
   }).join('');
-  showModal('Bitácora completa', prodInfo+html, doSubmitBitacora);
+  showModal('Bitácora completa',info+html,doSubmitBitacora);
 }
-
-async function doSubmitBitacora() {
-  const payload={action:'bitacora',idProd:S.activeProdId,folderId:S.activeProdFolderId,camiones:S.trucks};
-  await send(payload,'btn-bit', async result=>{
-    toast(`✅ ${result.camiones} camiones registrados`,'success');
-    S.trucks=[];
-    document.getElementById('b-total').value='';
-    renderTruckList(); updateCounter();
-  });
+async function doSubmitBitacora(){
+  await send({action:'bitacora',idProd:S.activeProdId,folderId:S.activeProdFolderId,camiones:S.trucks},'btn-bit',
+    async r=>{toast(`✅ ${r.camiones} camiones registrados`,'success');S.trucks=[];document.getElementById('b-total').value='';renderTruckList();updateCounter();});
 }
 
 /* ══ TAB 4: ENTRADAS ════════════════════════════════════ */
-function initEntrada() {
-  document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);
+function initEntrada(){document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);}
+
+function onEntradaInsumoChange(){
+  const info=getInsumoInfo(document.getElementById('e-insumo').value);
+  if(info.Unidad)document.getElementById('e-unidad').value=info.Unidad;
 }
 
-async function handleEntradaPhotos(input) {
-  for (const file of Array.from(input.files)) {
-    const b64=await compressImage(file);
-    if (b64) S.entradaPhotos.push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+function calcEntradaTotals(){
+  const precio=parseFloat(document.getElementById('e-precio').value)||0;
+  const addIva=document.getElementById('e-iva-check').checked;
+  const ivaFields=document.getElementById('iva-fields');
+  ivaFields.style.display=addIva?'grid':'none';
+  if(addIva){
+    const iva=Math.round(precio*0.16*100)/100;
+    const total=Math.round((precio+iva)*100)/100;
+    document.getElementById('e-iva-monto').value=iva>0?iva:'';
+    document.getElementById('e-precio-total').value=total>0?total:'';
   }
-  renderEntradaThumbs(); input.value='';
 }
-function renderEntradaThumbs() {
-  const el=document.getElementById('entrada-thumbs');
-  if (!el) return;
+
+async function handleEntradaPhotos(input){
+  for(const file of Array.from(input.files)){
+    const b64=await compressImage(file);
+    if(b64)S.entradaPhotos.push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+  }
+  renderEntradaThumbs();input.value='';
+}
+function renderEntradaThumbs(){
+  const el=document.getElementById('entrada-thumbs');if(!el)return;
   el.innerHTML=S.entradaPhotos.map((p,i)=>`
     <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
       <button class="thumb-del" onclick="S.entradaPhotos.splice(${i},1);renderEntradaThumbs()" type="button">×</button>
     </div>`).join('');
 }
 
-async function submitEntrada() {
-  const insumo = document.getElementById('e-insumo').value;
-  const cant   = parseFloat(document.getElementById('e-cantidad').value);
-  if (!insumo || !cant) { toast('Insumo y cantidad son obligatorios','error'); return; }
-
-  const payload={action:'entrada', entrada:{
-    fecha:    document.getElementById('e-fecha').value,
-    insumo,
-    cantidad: String(cant),
-    unidad:   document.getElementById('e-unidad').value,
-    precio:   document.getElementById('e-precio').value||'0',
-    flete:    document.getElementById('e-flete').value||'0',
-    fotos:    S.entradaPhotos.map(p=>p.b64),
+async function submitEntrada(){
+  const insumo=document.getElementById('e-insumo').value;
+  const cant=parseFloat(document.getElementById('e-cantidad').value);
+  if(!insumo||!cant){toast('Insumo y cantidad son obligatorios','error');return;}
+  const precio=parseFloat(document.getElementById('e-precio').value)||0;
+  const addIva=document.getElementById('e-iva-check').checked;
+  const iva=addIva?Math.round(precio*0.16*100)/100:0;
+  const payload={action:'entrada',entrada:{
+    fecha:document.getElementById('e-fecha').value,
+    insumo,cantidad:String(cant),
+    unidad:document.getElementById('e-unidad').value,
+    precio:String(precio),iva:String(iva),
+    flete:document.getElementById('e-flete').value||'0',
+    fotos:S.entradaPhotos.map(p=>p.b64),
   }};
-
-  await send(payload,'btn-ent', async ()=>{
-    toast('✅ Entrada registrada','success'); resetEntrada();
-  });
+  await send(payload,'btn-ent',async()=>{toast('✅ Entrada registrada','success');resetEntrada();});
 }
 
-function resetEntrada() {
+function resetEntrada(){
   ['e-cantidad','e-precio','e-flete'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);
   document.getElementById('e-insumo').selectedIndex=0;
   document.getElementById('e-unidad').value='Tn';
-  S.entradaPhotos=[]; renderEntradaThumbs();
+  document.getElementById('e-iva-check').checked=false;
+  document.getElementById('iva-fields').style.display='none';
+  document.getElementById('e-iva-monto').value='';
+  document.getElementById('e-precio-total').value='';
+  S.entradaPhotos=[];renderEntradaThumbs();
 }
 
 /* ══ SEND + QUEUE ════════════════════════════════════════ */
-async function send(payload, btnId, onSuccess) {
-  const icon=document.getElementById(`${btnId}-icon`);
-  const txt =document.getElementById(`${btnId}-txt`);
-  const btn =document.getElementById(btnId);
-  btn.disabled=true;
-  if(icon) icon.textContent='⏳';
-  if(txt)  txt.textContent='Enviando…';
-
-  if (!S.online) { enqueue(payload); toast('📶 Sin conexión — guardado en cola','info'); resetBtn(btnId); return; }
-
-  try {
-    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',
-      headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
-    const result=await res.json().catch(()=>({status:'error',message:'Respuesta inválida'}));
-    if (result.status==='ok') { await onSuccess(result); }
-    else { toast('❌ '+(result.message||'Error en Apps Script'),'error'); console.error(result); }
-  } catch(err) { console.error(err); enqueue(payload); toast('❌ Error de red — guardado en cola','error'); }
-  finally { resetBtn(btnId); }
-}
-
-const BTN_DEF={
-  'btn-prod':{icon:'✅',txt:'Registrar producción'},
-  'btn-ins': {icon:'👁',txt:'Revisar y enviar insumos'},
-  'btn-bit': {icon:'✅',txt:'Enviar bitácora completa'},
-  'btn-ent': {icon:'✅',txt:'Registrar entrada'},
-};
-function resetBtn(btnId) {
-  const d=BTN_DEF[btnId]||{icon:'✅',txt:'Enviar'};
-  document.getElementById(btnId).disabled = btnId==='btn-bit';
+async function send(payload,btnId,onSuccess){
   const icon=document.getElementById(`${btnId}-icon`);
   const txt=document.getElementById(`${btnId}-txt`);
-  if(icon) icon.textContent=d.icon;
-  if(txt)  txt.textContent=d.txt;
-  if(btnId==='btn-bit') updateCounter();
+  const btn=document.getElementById(btnId);
+  btn.disabled=true;if(icon)icon.textContent='⏳';if(txt)txt.textContent='Enviando…';
+  if(!S.online){enqueue(payload);toast('📶 Sin conexión — guardado en cola','info');resetBtn(btnId);return;}
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    const result=await res.json().catch(()=>({status:'error',message:'Respuesta inválida'}));
+    if(result.status==='ok'){await onSuccess(result);}
+    else{toast('❌ '+(result.message||'Error en Apps Script'),'error');console.error(result);}
+  }catch(err){console.error(err);enqueue(payload);toast('❌ Error de red — guardado en cola','error');}
+  finally{resetBtn(btnId);}
 }
-
-function enqueue(payload) {
-  S.pendingQueue.push({payload,ts:Date.now()});
-  localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));
-  updatePendingBadge();
+const BTN_DEF={'btn-prod':{icon:'✅',txt:'Registrar producción'},'btn-ins':{icon:'📋',txt:'Revisar y enviar insumos'},'btn-bit':{icon:'✅',txt:'Enviar bitácora completa'},'btn-ent':{icon:'✅',txt:'Registrar entrada'}};
+function resetBtn(btnId){
+  const d=BTN_DEF[btnId]||{icon:'✅',txt:'Enviar'};
+  document.getElementById(btnId).disabled=btnId==='btn-bit';
+  const icon=document.getElementById(`${btnId}-icon`),txt=document.getElementById(`${btnId}-txt`);
+  if(icon)icon.textContent=d.icon;if(txt)txt.textContent=d.txt;
+  if(btnId==='btn-bit')updateCounter();
 }
-async function processQueue() {
-  if (!S.online||!S.pendingQueue.length) return;
-  const queue=[...S.pendingQueue]; S.pendingQueue=[];
-  for (const item of queue) {
-    try {
-      const res=await fetch(APPS_SCRIPT_URL,{method:'POST',
-        headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload)});
+function enqueue(payload){S.pendingQueue.push({payload,ts:Date.now()});localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();}
+async function processQueue(){
+  if(!S.online||!S.pendingQueue.length)return;
+  const queue=[...S.pendingQueue];S.pendingQueue=[];
+  for(const item of queue){
+    try{const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload)});
       const result=await res.json().catch(()=>({status:'error'}));
-      if (result.status!=='ok') S.pendingQueue.push(item);
-    } catch { S.pendingQueue.push(item); break; }
+      if(result.status!=='ok')S.pendingQueue.push(item);
+    }catch{S.pendingQueue.push(item);break;}
   }
-  localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));
-  updatePendingBadge();
+  localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();
   const sent=queue.length-S.pendingQueue.length;
-  if(sent>0) toast(`✅ ${sent} registro(s) enviado(s)`,'success');
+  if(sent>0)toast(`✅ ${sent} registro(s) enviado(s)`,'success');
 }
-function updatePendingBadge() {
-  const n=S.pendingQueue.length;
-  const el=document.getElementById('pendingBadge');
-  el.textContent=`${n} pend.`;
-  el.classList.toggle('show',n>0);
-}
+function updatePendingBadge(){const n=S.pendingQueue.length;const el=document.getElementById('pendingBadge');el.textContent=`${n} pend.`;el.classList.toggle('show',n>0);}
 
 /* ══ ONLINE ══════════════════════════════════════════════ */
-function setupOnline() {
-  const update=online=>{
-    S.online=online;
-    const el=document.getElementById('connDot');
-    el.textContent=online?'En línea':'Sin conexión';
-    el.classList.toggle('offline',!online);
-    if(online) processQueue();
-  };
-  window.addEventListener('online', ()=>update(true));
-  window.addEventListener('offline',()=>update(false));
-  update(navigator.onLine);
+function setupOnline(){
+  const update=online=>{S.online=online;const el=document.getElementById('connDot');el.textContent=online?'En línea':'Sin conexión';el.classList.toggle('offline',!online);if(online)processQueue();};
+  window.addEventListener('online',()=>update(true));window.addEventListener('offline',()=>update(false));update(navigator.onLine);
 }
 
 /* ══ PHOTOS ══════════════════════════════════════════════ */
-async function compressImage(file, maxW=1024, quality=0.78) {
+async function compressImage(file,maxW=1024,quality=0.78){
   return new Promise(resolve=>{
-    const img=new Image(); const url=URL.createObjectURL(file);
+    const img=new Image();const url=URL.createObjectURL(file);
     img.onload=()=>{
-      URL.revokeObjectURL(url);
-      let {width:w,height:h}=img;
+      URL.revokeObjectURL(url);let{width:w,height:h}=img;
       if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
-      const canvas=document.createElement('canvas');
-      canvas.width=w;canvas.height=h;
+      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
       canvas.getContext('2d').drawImage(img,0,0,w,h);
-      canvas.toBlob(blob=>{
-        const r=new FileReader();
-        r.onloadend=()=>resolve(r.result.split(',')[1]);
-        r.readAsDataURL(blob);
-      },'image/jpeg',quality);
+      canvas.toBlob(blob=>{const r=new FileReader();r.onloadend=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(blob);},'image/jpeg',quality);
     };
-    img.onerror=()=>resolve(null);
-    img.src=url;
+    img.onerror=()=>resolve(null);img.src=url;
   });
 }
 
 /* ══ MODAL ═══════════════════════════════════════════════ */
-function showModal(title,bodyHtml,onConfirm,confirmLabel='Confirmar y enviar') {
+function showModal(title,bodyHtml,onConfirm,confirmLabel='Confirmar y enviar'){
   document.getElementById('modal-title').textContent=title;
   document.getElementById('modal-body').innerHTML=bodyHtml;
   document.getElementById('modal-confirm').textContent=confirmLabel;
@@ -1536,12 +1386,7 @@ function closeModal(){document.getElementById('modal').classList.remove('show');
 
 /* ══ TOAST ═══════════════════════════════════════════════ */
 let toastTimer;
-function toast(msg,tipo='success'){
-  const el=document.getElementById('toast');
-  clearTimeout(toastTimer);
-  el.textContent=msg;el.className=`${tipo} show`;
-  toastTimer=setTimeout(()=>{el.className='';},3500);
-}
+function toast(msg,tipo='success'){const el=document.getElementById('toast');clearTimeout(toastTimer);el.textContent=msg;el.className=`${tipo} show`;toastTimer=setTimeout(()=>{el.className='';},3500);}
 
 /* ══ START ═══════════════════════════════════════════════ */
 init();
