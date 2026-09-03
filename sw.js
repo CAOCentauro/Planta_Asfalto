@@ -3,7 +3,7 @@
  * Cachea el app shell para que funcione sin internet.
  */
 
-const CACHE_NAME = 'planta-v4';
+const CACHE_NAME = 'planta-v5';
 const APP_SHELL  = ['/', '/index.html', '/manifest.json', '/sw.js'];
 
 // Instalación: cachear app shell
