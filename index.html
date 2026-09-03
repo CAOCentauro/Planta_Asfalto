@@ -314,10 +314,10 @@
 </header>
 
 <nav class="tab-nav">
-  <button class="tab-btn active" data-tab="produccion">Producción</button>
-  <button class="tab-btn"        data-tab="insumos">Insumos</button>
-  <button class="tab-btn"        data-tab="bitacora">Bitácora</button>
-  <button class="tab-btn"        data-tab="entradas">Entradas</button>
+  <button class="tab-btn active" data-tab="produccion">🏗 Producción</button>
+  <button class="tab-btn"        data-tab="insumos">🧪 Insumos</button>
+  <button class="tab-btn"        data-tab="bitacora">🚛 Bitácora</button>
+  <button class="tab-btn"        data-tab="entradas">📦 Entradas</button>
 </nav>
 
 <div id="activeProdBar">
@@ -579,7 +579,7 @@
 <script>
 'use strict';
 
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzUaUkjjM8JGltMg91-Mx9kQJGzjTVM-AoViJgHvNbjPpQABAeWzztDvqgY7OPuHBDG/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwNrK__SjhqXX86xVBSYbNC04qHy6mbR32wLEGmboHI-6N9_ieS_EV0UgVfMbgaVpsc/exec';
 const TOLVAS = ['Tolva 1','Tolva 2','Tolva 3','Tolva 4'];
 const INSUMO_ORDER = ['Cemento Asfáltico','Combustible Alterno','Diesel','Gasolina','Gas','Agua'];
 
@@ -617,6 +617,7 @@ const S = {
   usedTolvas:{},           // { 'Tolva 1': rid_that_uses_it }
   trucks:[], truckPhotos:{camion:null,nota:null},
   editTruckIdx:null, cronTimer:null, cronSecs:0,
+  generadorCron:{timer:null,secs:0},
   entradaPhotos:[],
 };
 
@@ -627,6 +628,7 @@ async function init() {
   checkDraftBanner();
   await loadCatalog();
   renderInsumos(); populateMezclas(); populateInsumoSelect();
+  injectGeneradorCron();
   updateActiveProdBar(); updateCounter();
 }
 function loadState() {
@@ -1094,8 +1096,85 @@ function preSubmitInsumos(){
 async function doSubmitInsumos(){
   const filas=collectInsumos();
   if(!filas.length){toast('Sin insumos con datos','error');return;}
-  await send({action:'insumos',idProd:S.activeProdId,folderId:S.activeProdFolderId,filas},'btn-ins',
+  const generador=collectGenerador();
+  await send({action:'insumos',idProd:S.activeProdId,folderId:S.activeProdFolderId,filas,generador},'btn-ins',
     async r=>toast(`✅ ${r.filas} filas registradas`,'success'));
+}
+
+/* ══ GENERADOR DIESEL CRONÓMETRO ════════════════════════ */
+function injectGeneradorCron(){
+  const rid='grp_Diesel_Generador_Grande';
+  const row=document.getElementById(rid);
+  if(!row)return;
+  row.insertAdjacentHTML('beforeend',`
+    <div style="margin-top:8px;padding:10px 12px;border-top:1px solid var(--border);background:#1a1a1a;border-radius:0 0 8px 8px">
+      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">⏱ Tiempo de encendido del generador</div>
+      <div id="gen-cron-display" style="font-size:28px;font-weight:800;color:var(--amber);font-family:monospace;text-align:center;margin-bottom:8px">00:00:00</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="qty-label" style="margin-bottom:3px">Hora encendido</div>
+          <input type="time" id="gen-hora-ini" oninput="calcGenMins()"
+                 style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text)">
+        </div>
+        <div>
+          <div class="qty-label" style="margin-bottom:3px">Hora apagado</div>
+          <input type="time" id="gen-hora-fin" oninput="calcGenMins()"
+                 style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text)">
+        </div>
+      </div>
+      <div id="gen-mins-display" style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn-cron btn-cron-start" id="btn-gen-start" onclick="genCronIniciar()" style="flex:1;padding:8px;font-size:12px">▶ Encender</button>
+        <button class="btn-cron btn-cron-stop"  id="btn-gen-stop"  onclick="genCronDetener()" style="flex:1;padding:8px;font-size:12px" disabled>■ Apagar</button>
+      </div>
+      <input type="text" id="gen-obs" placeholder="Observaciones del generador (opcional)"
+             style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text)">
+    </div>`);
+}
+
+function genCronIniciar(){
+  const now=new Date();
+  document.getElementById('gen-hora-ini').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.generadorCron.secs=0;
+  document.getElementById('gen-cron-display').style.color='var(--green)';
+  document.getElementById('btn-gen-start').disabled=true;
+  document.getElementById('btn-gen-stop').disabled=false;
+  S.generadorCron.timer=setInterval(()=>{
+    S.generadorCron.secs++;
+    const h=Math.floor(S.generadorCron.secs/3600),m=Math.floor((S.generadorCron.secs%3600)/60),s=S.generadorCron.secs%60;
+    document.getElementById('gen-cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+}
+
+function genCronDetener(){
+  clearInterval(S.generadorCron.timer);
+  const now=new Date();
+  document.getElementById('gen-hora-fin').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('gen-cron-display').style.color='var(--amber)';
+  document.getElementById('btn-gen-start').disabled=false;
+  document.getElementById('btn-gen-stop').disabled=true;
+  calcGenMins();
+}
+
+function calcGenMins(){
+  const h1=document.getElementById('gen-hora-ini')?.value;
+  const h2=document.getElementById('gen-hora-fin')?.value;
+  const el=document.getElementById('gen-mins-display');
+  if(!el)return;
+  if(h1&&h2){
+    const[a,b]=h1.split(':').map(Number),[c,d]=h2.split(':').map(Number);
+    const mins=(c*60+d)-(a*60+b);
+    el.textContent=mins>=0?`${mins} minutos encendido`:'';
+  }else{el.textContent='';}
+}
+
+function collectGenerador(){
+  const horaIni=document.getElementById('gen-hora-ini')?.value;
+  const horaFin=document.getElementById('gen-hora-fin')?.value;
+  if(!horaIni&&!horaFin)return null;
+  let mins='';
+  if(horaIni&&horaFin){const[a,b]=horaIni.split(':').map(Number),[c,d]=horaFin.split(':').map(Number);const diff=(c*60+d)-(a*60+b);if(diff>=0)mins=diff;}
+  return{fecha:new Date().toISOString().slice(0,10),horaEncendido:horaIni||'',horaApagado:horaFin||'',tiempoMin:mins,observaciones:document.getElementById('gen-obs')?.value||''};
 }
 
 /* ══ TAB 3: BITÁCORA ════════════════════════════════════ */
