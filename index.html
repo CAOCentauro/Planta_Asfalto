@@ -1,548 +1,1474 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <!--
-    ╔══════════════════════════════════════════════════════════╗
-    ║  NOTAS DE VIAJE — Registro de choferes                  ║
-    ║  Archivo: index.html                                     ║
-    ║  Despliegue: GitHub Pages (archivo estático)             ║
-    ╚══════════════════════════════════════════════════════════╝
-  -->
-
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Notas Diesel" />
-  <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="theme-color" content="#0C1B33" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛽</text></svg>" />
-  <link rel="manifest" href="manifest.json" />
-  <title>Diesel</title>
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Planta de Asfalto</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#f59e0b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <style>
     :root {
-      --navy:          #000000;
-      --amber:         #F59E0B;
-      --amber-dark:    #D97706;
-      --amber-pale:    #FEF3C7;
-      --fondo:         #F1F5F9;
-      --blanco:        #FFFFFF;
-      --texto:         #0F172A;
-      --texto-suave:   #64748B;
-      --borde:         #E2E8F0;
-      --verde:         #16A34A;
-      --rojo:          #DC2626;
-      --radio-md:      14px;
-      --radio-lg:      20px;
-      --sombra:        0 1px 3px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
+      --page:#141414; --asphalt:#1e1e1e; --surface:#2a2a2a; --border:#383838;
+      --text:#e8e8e8; --sub:#8a8a8a; --muted:#5a5a5a;
+      --amber:#f59e0b; --amber-d:#d97706; --green:#22c55e;
+      --red:#ef4444; --blue:#3b82f6; --orange:#f97316;
+      --header-h:56px; --tabs-h:46px;
     }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+         background:var(--page);color:var(--text);-webkit-tap-highlight-color:transparent}
 
-    *, *::before, *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
+    header{position:sticky;top:0;z-index:100;height:var(--header-h);
+           background:var(--asphalt);border-bottom:2px solid var(--amber);
+           display:flex;align-items:center;padding:0 14px;gap:10px}
+    .h-icon{width:36px;height:36px;background:var(--amber);border-radius:8px;
+            display:grid;place-items:center;font-size:18px;flex-shrink:0}
+    .h-title{font-size:14px;font-weight:800}
+    .h-sub{font-size:10px;color:var(--sub);margin-top:1px}
+    #connDot{margin-left:auto;display:flex;align-items:center;gap:5px;
+             font-size:10px;font-weight:700;color:var(--green);white-space:nowrap}
+    #connDot::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor}
+    #connDot.offline{color:var(--red)}
+    #pendingBadge{background:var(--red);color:#fff;border-radius:20px;
+                  padding:2px 8px;font-size:10px;font-weight:800;display:none}
+    #pendingBadge.show{display:block}
 
-    html, body { height: 100%; }
+    .tab-nav{position:sticky;top:var(--header-h);z-index:99;height:var(--tabs-h);
+             background:var(--asphalt);border-bottom:1px solid var(--border);
+             display:flex;overflow-x:auto;scrollbar-width:none}
+    .tab-nav::-webkit-scrollbar{display:none}
+    .tab-btn{flex:1;min-width:80px;background:none;border:none;color:var(--sub);
+             font-size:11px;font-weight:700;cursor:pointer;padding:0 4px;
+             border-bottom:2.5px solid transparent;white-space:nowrap;
+             transition:color .15s,border-color .15s}
+    .tab-btn.active{color:var(--amber);border-bottom-color:var(--amber)}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: var(--fondo);
-      color: var(--texto);
-      min-height: 100%;
-      overscroll-behavior: none;
-    }
+    #activeProdBar{background:#2e2a1a;border-bottom:1px solid #4a3f1a;
+                   padding:7px 14px;display:none;align-items:center;gap:8px;font-size:11px}
+    #activeProdBar.show{display:flex}
+    #activeProdLabel{font-weight:800;color:var(--amber);font-family:monospace}
+    .btn-cambiar{margin-left:auto;background:none;border:1px solid var(--muted);
+                 color:var(--sub);border-radius:6px;padding:3px 8px;
+                 font-size:10px;font-weight:700;cursor:pointer}
 
-    .app-header {
-      background: var(--navy);
-      padding: 22px 20px 18px;
-      text-align: center;
-      position: sticky;
-      top: 0;
-      z-index: 10;
-    }
-    .app-header__logo   { font-size: 1.9rem; display: block; margin-bottom: 5px; line-height: 1; }
-    .app-header__titulo { font-size: 1rem; font-weight: 800; color: var(--blanco); letter-spacing: 0.06em; text-transform: uppercase; }
-    .app-header__sub    { font-size: 0.7rem; color: rgba(255,255,255,0.45); margin-top: 2px; letter-spacing: 0.08em; text-transform: uppercase; }
+    #draftBanner{background:#1a2e1a;border:1px solid var(--green);border-radius:10px;
+                 padding:10px 14px;margin:12px 12px 0;font-size:12px;color:#86efac;
+                 display:none;align-items:center;justify-content:space-between;gap:10px}
+    #draftBanner.show{display:flex}
+    .btn-draft{padding:5px 12px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;border:none}
+    .btn-draft-yes{background:var(--green);color:#fff}
+    .btn-draft-no{background:none;border:1px solid var(--muted);color:var(--sub)}
 
-    main {
-      padding: 20px 16px 48px;
-      max-width: 460px;
-      margin: 0 auto;
-      width: 100%;
-    }
+    main{padding:12px;max-width:700px;margin:0 auto;padding-bottom:40px}
+    .tab-panel{display:none}
+    .tab-panel.active{display:block}
 
-    .card {
-      background: var(--blanco);
-      border-radius: var(--radio-lg);
-      padding: 24px 20px;
-      box-shadow: var(--sombra);
-    }
+    .card{background:var(--asphalt);border:1px solid var(--border);
+          border-radius:12px;overflow:hidden;margin-bottom:10px}
+    .card-head{background:var(--surface);border-bottom:1px solid var(--border);
+               padding:10px 14px;display:flex;align-items:center;gap:7px;
+               font-size:11px;font-weight:800;color:var(--sub);
+               text-transform:uppercase;letter-spacing:1px}
+    .card-dot{width:6px;height:6px;border-radius:50%;background:var(--amber);flex-shrink:0}
+    .card-body{padding:14px}
 
-    .campo { margin-bottom: 22px; }
+    .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    @media(max-width:480px){.grid-2,.grid-3{grid-template-columns:1fr}}
+    .gap{margin-bottom:10px}
+    .field{display:flex;flex-direction:column;gap:4px}
+    .field label{font-size:10px;font-weight:700;color:var(--muted);
+                 text-transform:uppercase;letter-spacing:.8px}
+    .field input,.field select,.field textarea{
+      background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+      padding:10px 12px;font-size:14px;color:var(--text);
+      transition:border-color .15s;-webkit-appearance:none;width:100%}
+    .field input:focus,.field select:focus,.field textarea:focus{
+      outline:none;border-color:var(--amber);background:#2c2818}
+    .field input[readonly]{color:var(--amber);font-weight:700;cursor:default;
+                           font-family:monospace;font-size:13px}
+    .field textarea{resize:vertical;min-height:80px;font-size:13px}
+    .field select option{background:var(--asphalt)}
+    input::placeholder,textarea::placeholder{color:var(--muted)}
+    input[type=number]{-moz-appearance:textfield}
+    input[type=number]::-webkit-inner-spin-button{display:none}
 
-    .campo__label {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.75rem;
-      font-weight: 700;
-      letter-spacing: 0.09em;
-      text-transform: uppercase;
-      color: var(--texto-suave);
-      margin-bottom: 8px;
-    }
+    /* Checkbox row */
+    .check-row{display:flex;align-items:center;gap:8px;padding:6px 0}
+    .check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--amber);cursor:pointer;flex-shrink:0}
+    .check-row label{font-size:13px;color:var(--text);cursor:pointer}
 
-    .campo__opcional {
-      font-size: 0.68rem;
-      font-weight: 500;
-      background: var(--borde);
-      color: var(--texto-suave);
-      padding: 1px 7px;
-      border-radius: 4px;
-      text-transform: lowercase;
-      letter-spacing: 0.02em;
-    }
+    .section-title{font-size:10px;font-weight:800;color:var(--muted);
+                   text-transform:uppercase;letter-spacing:1px;
+                   margin:14px 0 7px;display:flex;align-items:center;gap:8px}
+    .section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+    .warn-soft{background:#2a1f00;border:1px solid #ca8a04;border-radius:8px;
+               padding:9px 12px;font-size:11px;color:#fbbf24;margin-bottom:10px}
 
-    select, textarea {
-      width: 100%;
-      padding: 15px 16px;
-      border: 2px solid var(--borde);
-      border-radius: var(--radio-md);
-      font-size: 1rem;
-      font-family: inherit;
-      color: var(--texto);
-      background: var(--blanco);
-      transition: border-color 0.15s ease;
-      -webkit-appearance: none;
-      appearance: none;
-    }
+    /* ═══ INSUMO GROUPS ═══════════════════════════════ */
+    .insumo-group{background:var(--surface);border:1.5px solid var(--border);
+                  border-radius:12px;margin-bottom:10px;overflow:hidden}
+    .insumo-group-head{display:flex;align-items:center;gap:8px;
+                       padding:10px 12px;background:var(--asphalt);
+                       border-bottom:1px solid var(--border)}
+    .ig-tag{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;
+            text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
+    .ig-name{font-size:13px;font-weight:700;flex:1}
+    .ig-total{font-size:11px;color:var(--amber);font-weight:700;
+              margin-left:auto;font-family:monospace;white-space:nowrap}
 
-    select {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748B' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 46px;
-      cursor: pointer;
-    }
+    /* Destination rows */
+    .dest-row{padding:10px 12px;border-bottom:1px solid var(--border)}
+    .dest-row:last-of-type{border-bottom:none}
+    .dest-row-head{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+    .dest-label{font-size:12px;font-weight:700;color:var(--sub);flex:1}
+    .dest-fixed-badge{font-size:8px;font-weight:800;color:var(--muted);
+                      text-transform:uppercase;letter-spacing:.5px}
+    .dest-name-input{flex:1;background:var(--asphalt);border:1px solid var(--border);
+                     border-radius:6px;padding:5px 8px;font-size:12px;
+                     color:var(--text);-webkit-appearance:none}
+    .dest-name-input:focus{outline:none;border-color:var(--amber)}
+    .btn-del-dest{background:none;border:none;color:var(--muted);font-size:14px;
+                  cursor:pointer;padding:2px 4px;border-radius:4px;flex-shrink:0;
+                  transition:color .1s,background .1s}
+    .btn-del-dest:hover{color:var(--red);background:rgba(239,68,68,.1)}
 
-    textarea { resize: none; height: 96px; line-height: 1.5; }
+    .dest-qty{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
+    .qty-field{display:flex;flex-direction:column;gap:3px}
+    .qty-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .qty-wrap{position:relative}
+    .qty-inp{width:100%;background:var(--asphalt);border:1px solid var(--border);
+             border-radius:6px;padding:8px 32px 8px 10px;font-size:14px;color:var(--text);
+             -moz-appearance:textfield}
+    .qty-inp:focus{outline:none;border-color:var(--amber)}
+    .qty-inp::-webkit-inner-spin-button{display:none}
+    .qty-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);
+              font-size:10px;color:var(--muted);font-weight:700;pointer-events:none}
+    .dest-used{font-size:11px;color:var(--amber);font-weight:700}
+    .dest-warn{font-size:10px;color:var(--red);font-weight:700;margin-left:8px;display:none}
 
-    select:focus, textarea:focus { outline: none; border-color: var(--amber); }
+    /* Tolva selector */
+    .tolva-sel{flex:1;background:var(--asphalt);border:1px solid var(--border);
+               border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);
+               -webkit-appearance:none}
+    .tolva-sel:focus{outline:none;border-color:var(--amber)}
+    .tolva-sel option:disabled{color:var(--muted)}
 
-    .scan-zone {
-      position: relative;
-      border: 2.5px dashed var(--amber);
-      border-radius: var(--radio-md);
-      background: var(--amber-pale);
-      padding: 36px 20px;
-      text-align: center;
-      cursor: pointer;
-      transition: background 0.15s ease;
-      user-select: none;
-    }
-    .scan-zone:active { background: #FDE68A; }
-    .scan-zone__icono { font-size: 2.8rem; display: block; margin-bottom: 10px; line-height: 1; }
-    .scan-zone__label { font-size: 1rem; font-weight: 700; color: var(--navy); display: block; }
-    .scan-zone__hint  { font-size: 0.8rem; color: var(--texto-suave); margin-top: 4px; display: block; }
+    /* Per-dest photos */
+    .dest-photo-row{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+    .dest-thumbs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0}
+    .thumb-wrap{position:relative}
+    .thumb{width:48px;height:48px;object-fit:cover;border-radius:6px;
+           border:1.5px solid var(--border);display:block}
+    .thumb-del{position:absolute;top:-4px;right:-4px;width:16px;height:16px;
+               background:var(--red);color:#fff;border:none;border-radius:50%;
+               font-size:10px;cursor:pointer;display:flex;align-items:center;
+               justify-content:center;font-weight:700}
+    .photo-btns{display:flex;gap:6px;flex-wrap:wrap}
+    .btn-photo-sm{display:inline-flex;align-items:center;gap:4px;background:none;
+                  border:1.5px dashed var(--border);border-radius:6px;padding:4px 9px;
+                  font-size:11px;font-weight:700;color:var(--sub);cursor:pointer;
+                  transition:border-color .15s,color .15s}
+    .btn-photo-sm:hover{border-color:var(--amber);color:var(--amber)}
 
-    #inputFoto {
-      position: absolute;
-      inset: 0;
-      width: 100%;
-      height: 100%;
-      opacity: 0;
-      cursor: pointer;
-    }
+    /* Add dest / tipo buttons */
+    .add-dest-row{padding:8px 12px;border-top:1px solid var(--border);
+                  display:flex;flex-wrap:wrap;gap:6px}
+    .btn-add-dest{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
+                  border-radius:6px;border:1.5px dashed var(--border);
+                  font-size:10px;font-weight:700;cursor:pointer;background:transparent;
+                  color:var(--sub);transition:border-color .15s,color .15s}
+    .btn-add-dest:hover{border-color:var(--amber);color:var(--amber)}
 
-    #previewContainer { display: none; }
+    /* Tipo selector for grava/arena */
+    .ig-type-sel{flex:1;background:var(--surface);border:1px solid var(--border);
+                 border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);
+                 -webkit-appearance:none}
+    .ig-type-sel:focus{outline:none;border-color:var(--amber)}
 
-    .preview-wrap { position: relative; border-radius: var(--radio-md); overflow: hidden; background: #000; }
+    .add-btns{display:flex;flex-wrap:wrap;gap:7px;margin:4px 0 8px}
+    .btn-add{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;
+             border-radius:7px;border:1.5px dashed;font-size:11px;font-weight:700;
+             cursor:pointer;background:transparent;transition:background .15s}
+    .btn-add-grava{border-color:#22c55e;color:#22c55e}
+    .btn-add-grava:hover{background:rgba(34,197,94,.1)}
+    .btn-add-arena{border-color:#f97316;color:#f97316}
+    .btn-add-arena:hover{background:rgba(249,115,22,.1)}
 
-    #previewImg { width: 100%; max-height: 240px; object-fit: cover; display: block; border-radius: var(--radio-md); }
+    /* Cronómetro */
+    .cron-wrap{text-align:center;padding:8px 0 12px}
+    .cron-time{font-size:44px;font-weight:800;color:var(--amber);
+               font-family:monospace;letter-spacing:2px;line-height:1}
+    .cron-time.running{color:var(--green)}
+    .cron-btns{display:flex;gap:8px;margin-top:10px}
+    .btn-cron{flex:1;padding:11px;border:none;border-radius:8px;
+              font-size:13px;font-weight:800;cursor:pointer;transition:opacity .15s}
+    .btn-cron:disabled{opacity:.3;cursor:not-allowed}
+    .btn-cron-start{background:var(--green);color:#fff}
+    .btn-cron-stop{background:var(--red);color:#fff}
 
-    .btn-quitar-foto {
-      position: absolute;
-      top: 10px; right: 10px;
-      width: 38px; height: 38px;
-      border-radius: 50%;
-      border: none;
-      background: rgba(15,23,42,0.72);
-      color: white;
-      font-size: 1rem;
-      cursor: pointer;
-      display: flex; align-items: center; justify-content: center;
-      backdrop-filter: blur(4px);
-      -webkit-backdrop-filter: blur(4px);
-    }
+    /* Truck */
+    .truck-counter{font-size:30px;font-weight:800;color:var(--sub);
+                   text-align:center;margin-top:4px;font-family:monospace}
+    .truck-counter.ready{color:var(--green)}
+    .truck-card{background:var(--surface);border:1px solid var(--border);
+                border-radius:10px;padding:11px 12px;margin-bottom:7px}
+    .truck-head{display:flex;align-items:center;justify-content:space-between;
+                gap:8px;margin-bottom:5px}
+    .truck-num{display:inline-flex;align-items:center;justify-content:center;
+               width:20px;height:20px;background:var(--amber);color:#111;
+               border-radius:50%;font-size:10px;font-weight:800;margin-right:5px}
+    .truck-placa{font-family:monospace;font-weight:800;color:var(--amber);font-size:13px}
+    .truck-op{color:var(--sub);font-size:12px;margin-left:5px}
+    .truck-acts{display:flex;gap:4px;flex-shrink:0}
+    .btn-truck{background:none;border:1px solid var(--border);border-radius:6px;
+               padding:3px 7px;font-size:11px;cursor:pointer;color:var(--sub);
+               transition:border-color .1s,color .1s}
+    .btn-truck:hover{border-color:var(--amber);color:var(--amber)}
+    .btn-truck.del:hover{border-color:var(--red);color:var(--red)}
+    .truck-body{font-size:11px;color:var(--sub)}
 
-    .foto-info { font-size: 0.76rem; color: var(--texto-suave); text-align: center; margin-top: 8px; }
+    /* Truck photo slots */
+    .truck-photos{display:flex;gap:8px;margin-top:10px}
+    .truck-photo-slot{flex:1;background:var(--asphalt);border:1.5px dashed var(--border);
+                      border-radius:8px;padding:10px 8px;text-align:center;
+                      cursor:pointer;transition:border-color .15s}
+    .truck-photo-slot:hover{border-color:var(--amber)}
+    .truck-photo-slot.has-photo{border-style:solid;border-color:var(--green)}
+    .truck-photo-label{font-size:10px;color:var(--sub);font-weight:700;margin-top:4px}
+    .truck-photo-thumb{width:100%;height:56px;object-fit:cover;border-radius:5px;display:none}
+    .truck-photo-slot.has-photo .truck-photo-thumb{display:block}
+    .truck-photo-slot.has-photo .truck-photo-icon{display:none}
+    .truck-photo-icon{font-size:20px}
+    /* Mini gallery button inside slot */
+    .slot-gallery-btn{display:block;margin-top:4px;font-size:9px;color:var(--muted);
+                      background:none;border:none;cursor:pointer;text-decoration:underline}
 
-    .separator { height: 1px; background: var(--borde); margin: 24px 0; }
+    /* Submit */
+    .btn-submit{width:100%;padding:14px;background:var(--amber);color:#111;
+                border:none;border-radius:10px;font-size:15px;font-weight:800;
+                cursor:pointer;display:flex;align-items:center;justify-content:center;
+                gap:7px;transition:background .15s,transform .1s}
+    .btn-submit:hover:not(:disabled){background:var(--amber-d);transform:translateY(-1px)}
+    .btn-submit:disabled{background:var(--border);color:var(--muted);
+                         cursor:not-allowed;transform:none}
+    .btn-reset{width:100%;margin-top:8px;padding:10px;background:none;
+               border:1.5px solid var(--border);color:var(--muted);border-radius:8px;
+               font-size:12px;font-weight:600;cursor:pointer}
+    .btn-reset:hover{border-color:var(--sub);color:var(--text)}
+    .btn-primary{padding:10px 16px;background:var(--amber);color:#111;border:none;
+                 border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;
+                 width:100%}
+    .btn-primary:hover{background:var(--amber-d)}
 
-    .btn-enviar {
-      width: 100%;
-      padding: 18px;
-      background: var(--amber);
-      color: var(--navy);
-      border: none;
-      border-radius: var(--radio-md);
-      font-size: 1rem;
-      font-weight: 800;
-      font-family: inherit;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-      cursor: pointer;
-      transition: background 0.15s ease, transform 0.1s ease;
-    }
-    .btn-enviar:active:not(:disabled) { background: var(--amber-dark); transform: scale(0.98); }
-    .btn-enviar:disabled { background: var(--borde); color: var(--texto-suave); cursor: not-allowed; transform: none; }
+    /* Modal */
+    .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);
+                   display:none;place-items:center;padding:16px}
+    .modal-overlay.show{display:grid}
+    .modal-box{background:var(--asphalt);border:1px solid var(--border);border-radius:16px;
+               width:100%;max-width:560px;max-height:82vh;
+               display:flex;flex-direction:column;overflow:hidden}
+    .modal-head{background:var(--surface);border-bottom:1px solid var(--border);
+                padding:13px 16px;font-weight:800;font-size:14px;
+                display:flex;align-items:center;justify-content:space-between}
+    .btn-modal-x{background:none;border:none;color:var(--muted);
+                 font-size:20px;cursor:pointer;line-height:1;padding:0 2px}
+    .modal-scroll{overflow-y:auto;padding:14px 16px;flex:1;-webkit-overflow-scrolling:touch}
+    .modal-foot{border-top:1px solid var(--border);padding:12px 16px;display:flex;gap:8px}
+    .btn-modal-back{flex:1;padding:11px;background:none;border:1.5px solid var(--border);
+                    border-radius:8px;color:var(--sub);font-size:13px;font-weight:700;cursor:pointer}
+    .btn-modal-ok{flex:2;padding:11px;background:var(--amber);color:#111;border:none;
+                  border-radius:8px;font-size:13px;font-weight:800;cursor:pointer}
+    .sum-item{background:var(--surface);border:1px solid var(--border);
+              border-radius:8px;padding:10px 12px;margin-bottom:8px}
+    .sum-item.has-warn{border-color:#ca8a04}
+    .sum-item-head{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
+    .sum-item-body{font-size:12px;color:var(--sub);line-height:1.5}
 
-    .pantalla {
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: calc(100vh - 140px);
-      text-align: center;
-      padding: 24px;
-    }
-    .pantalla.activa { display: flex; }
-    .pantalla__icono  { font-size: 5rem; margin-bottom: 20px; line-height: 1; }
-    .pantalla__titulo { font-size: 1.5rem; font-weight: 800; color: var(--texto); margin-bottom: 10px; }
-    .pantalla__texto  { font-size: 0.95rem; color: var(--texto-suave); line-height: 1.65; max-width: 280px; }
-
-    .btn-secundario {
-      margin-top: 28px;
-      padding: 15px 32px;
-      border: 2.5px solid var(--navy);
-      background: transparent;
-      color: var(--navy);
-      border-radius: var(--radio-md);
-      font-size: 0.9rem;
-      font-weight: 700;
-      font-family: inherit;
-      cursor: pointer;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      transition: background 0.15s ease;
-    }
-    .btn-secundario:active { background: rgba(12,27,51,0.08); }
-
-    @keyframes girar { to { transform: rotate(360deg); } }
-
-    .spinner {
-      width: 52px; height: 52px;
-      border: 4px solid var(--borde);
-      border-top-color: var(--amber);
-      border-radius: 50%;
-      animation: girar 0.75s linear infinite;
-      margin-bottom: 20px;
-    }
-
-    .pantalla__cargando-texto { font-size: 0.9rem; color: var(--texto-suave); line-height: 1.65; }
+    /* Toast */
+    #toast{position:fixed;bottom:20px;left:50%;
+           transform:translateX(-50%) translateY(60px);z-index:9999;
+           padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;
+           white-space:nowrap;pointer-events:none;opacity:0;
+           box-shadow:0 8px 24px rgba(0,0,0,.5);
+           transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s}
+    #toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+    #toast.success{background:var(--green);color:#fff}
+    #toast.error{background:var(--red);color:#fff}
+    #toast.info{background:var(--blue);color:#fff}
+    #toast.warn{background:#ca8a04;color:#fff}
   </style>
 </head>
-
 <body>
 
-  <header class="app-header">
-    <span class="app-header__logo">⛽</span>
-    <div class="app-header__titulo">Notas de Diesel</div>
-    <div class="app-header__sub">Registro de Diesel</div>
-  </header>
-
-  <!-- Banner de conexión — se muestra si el catálogo no cargó del servidor -->
-  <div id="bannerConexion" style="display:none;background:#FEF9C3;border-bottom:1.5px solid #F59E0B;padding:9px 20px;font-size:0.8rem;color:#92400E;text-align:center;">
-    ⚠️ Sin conexión al servidor — usando lista de respaldo. Los datos podrían no estar actualizados.
+<header>
+  <div class="h-icon">🏗</div>
+  <div>
+    <div class="h-title">Planta de Asfalto</div>
+    <div class="h-sub" id="catalogStatus">Cargando catálogo…</div>
   </div>
+  <div id="connDot">En línea</div>
+  <div id="pendingBadge">0 pend.</div>
+</header>
 
-  <main>
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="produccion">🏗 Producción</button>
+  <button class="tab-btn"        data-tab="insumos">🧪 Insumos</button>
+  <button class="tab-btn"        data-tab="bitacora">🚛 Bitácora</button>
+  <button class="tab-btn"        data-tab="entradas">📦 Entradas</button>
+</nav>
 
-    <div id="pantallaFormulario">
-      <div class="card">
+<div id="activeProdBar">
+  <span style="color:var(--sub);font-size:11px">Prod. activa:</span>
+  <strong id="activeProdLabel">—</strong>
+  <button class="btn-cambiar" onclick="promptCambiarProd()">Cambiar</button>
+</div>
 
-        <!-- ① CHOFER -->
-        <div class="campo">
-          <div class="campo__label">👤 Chofer</div>
-          <select id="selectChofer" disabled>
-            <option value="">Cargando…</option>
-          </select>
-        </div>
+<div id="draftBanner">
+  <span>📝 Hay un borrador guardado. ¿Restaurarlo?</span>
+  <div style="display:flex;gap:6px;flex-shrink:0">
+    <button class="btn-draft btn-draft-yes" onclick="restoreDraft()">Sí</button>
+    <button class="btn-draft btn-draft-no"  onclick="discardDraft()">No</button>
+  </div>
+</div>
 
-        <!-- ② UNIDAD -->
-        <div class="campo">
-          <div class="campo__label">🚛 Unidad</div>
-          <select id="selectUnidad" disabled>
-    <option value="">Cargando…</option>
-  </select>
-        </div>
+<main>
 
-        <!-- ③ DESCRIPCIÓN -->
-        <div class="campo">
-          <div class="campo__label">
-            📝 Descripción
-            <span class="campo__opcional">opcional</span>
-          </div>
-          <textarea id="descripcion" placeholder="Ej: Entrega en sucursal norte, ruta México-Querétaro…"></textarea>
-        </div>
-
-        <!-- ④ FOTO -->
-        <div class="campo">
-          <div class="campo__label">📷 Foto de la nota</div>
-          <div class="scan-zone" id="zonaCaptura">
-            <span class="scan-zone__icono">📄</span>
-            <span class="scan-zone__label">Fotografiar la nota</span>
-            <span class="scan-zone__hint">Toca aquí para abrir la cámara</span>
-            <input type="file" id="inputFoto" accept="image/*" capture="environment" />
-          </div>
-          <div id="previewContainer">
-            <div class="preview-wrap">
-              <img id="previewImg" alt="Vista previa de la nota" />
-              <button class="btn-quitar-foto" id="btnQuitarFoto" title="Quitar foto">✕</button>
-            </div>
-            <p class="foto-info" id="fotoInfo"></p>
-          </div>
-        </div>
-
-        <div class="separator"></div>
-
-        <!-- ⑤ BOTÓN ENVIAR -->
-        <button class="btn-enviar" id="btnEnviar">Enviar nota →</button>
-
+<!-- ══ TAB 1: PRODUCCIÓN ═══════════════════════════════════ -->
+<section id="tab-produccion" class="tab-panel active">
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Datos de producción</div>
+    <div class="card-body">
+      <div class="grid-2 gap">
+        <div class="field"><label>ID Producción</label><input type="text" id="p-id" readonly></div>
+        <div class="field"><label>Fecha / Hora</label>
+          <input type="datetime-local" id="p-fecha" required oninput="onFechaChange();saveDraft()"></div>
+      </div>
+      <div class="grid-2 gap">
+        <div class="field"><label>Cliente</label>
+          <input type="text" id="p-cliente" placeholder="Nombre del cliente" oninput="saveDraft()"></div>
+        <div class="field"><label>Obra</label>
+          <input type="text" id="p-obra" placeholder="Nombre o clave de la obra" oninput="saveDraft()"></div>
+      </div>
+      <div class="grid-2 gap">
+        <div class="field"><label>Residente</label>
+          <input type="text" id="p-residente" placeholder="Nombre del residente" oninput="saveDraft()"></div>
+        <div class="field"><label>Mezcla / Tipo de Asfalto</label>
+          <select id="p-mezcla" onchange="saveDraft()"><option value="">— Seleccionar —</option></select></div>
+      </div>
+      <div class="grid-2 gap">
+        <div class="field"><label>Toneladas</label>
+          <input type="number" id="p-tn" placeholder="0" step="0.01" min="0.01" oninput="saveDraft()"></div>
+        <div class="field"><label>Lote (opcional)</label>
+          <input type="text" id="p-lote" placeholder="Ej: LOTE-SEP-01" oninput="saveDraft()"></div>
+      </div>
+      <div class="field">
+        <label>Notas / Observaciones</label>
+        <textarea id="p-notas" placeholder="Temperatura de salida, incidentes…" oninput="saveDraft()"></textarea>
       </div>
     </div>
+  </div>
+  <button class="btn-submit" id="btn-prod" onclick="submitProduccion()">
+    <span id="btn-prod-icon">✅</span><span id="btn-prod-txt">Registrar producción</span>
+  </button>
+  <button class="btn-reset" onclick="resetProduccion()">Limpiar formulario</button>
+</section>
 
-    <!-- CARGANDO -->
-    <div class="pantalla" id="pantallaCargando">
-      <div class="spinner"></div>
-      <p class="pantalla__cargando-texto">Enviando tu nota…<br>No cierres la app</p>
+<!-- ══ TAB 2: INSUMOS ══════════════════════════════════════ -->
+<section id="tab-insumos" class="tab-panel">
+  <div id="warn-ins" class="warn-soft" style="display:none">
+    ⚠️ Sin producción activa — puedes llenar los datos, pero no podrás enviar hasta registrar una producción.
+  </div>
+  <div id="insumos-container"></div>
+
+  <div class="section-title">Grava</div>
+  <div id="rows-grava"></div>
+  <div class="add-btns">
+    <button class="btn-add btn-add-grava" onclick="addTipoInsumo('grava')">+ Agregar Grava</button>
+  </div>
+
+  <div class="section-title">Arena</div>
+  <div id="rows-arena"></div>
+  <div class="add-btns">
+    <button class="btn-add btn-add-arena" onclick="addTipoInsumo('arena')">+ Agregar Arena</button>
+  </div>
+
+  <div style="margin-top:16px">
+    <button class="btn-submit" id="btn-ins" onclick="preSubmitInsumos()">
+      <span id="btn-ins-icon">📋</span><span id="btn-ins-txt">Revisar y enviar insumos</span>
+    </button>
+  </div>
+</section>
+
+<!-- ══ TAB 3: BITÁCORA ═════════════════════════════════════ -->
+<section id="tab-bitacora" class="tab-panel">
+  <div id="warn-bit" class="warn-soft" style="display:none">
+    ⚠️ Sin producción activa — puedes registrar camiones, pero no podrás enviar hasta registrar una producción.
+  </div>
+
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Total de camiones a despachar</div>
+    <div class="card-body">
+      <input type="number" id="b-total" placeholder="0" min="1" step="1"
+             style="background:var(--surface);border:1.5px solid var(--border);border-radius:8px;
+                    padding:10px 12px;font-size:22px;font-weight:800;color:var(--text);
+                    width:100%;text-align:center;-moz-appearance:textfield"
+             oninput="updateCounter()">
+      <div class="truck-counter" id="truck-counter">0 / —</div>
     </div>
+  </div>
 
-    <!-- ÉXITO -->
-    <div class="pantalla" id="pantallaExito">
-      <div class="pantalla__icono">✅</div>
-      <h2 class="pantalla__titulo">¡Nota registrada!</h2>
-      <p class="pantalla__texto">La foto fue guardada en Drive<br>y el registro está en la hoja de cálculo.</p>
-      <button class="btn-secundario" id="btnNuevaNotaExito">Registrar otra nota</button>
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Cronómetro</div>
+    <div class="card-body">
+      <div class="cron-wrap">
+        <div class="cron-time" id="cron-display">00:00:00</div>
+        <div class="cron-btns">
+          <button class="btn-cron btn-cron-start" id="btn-cron-start" onclick="cronIniciar()">▶ Iniciar</button>
+          <button class="btn-cron btn-cron-stop"  id="btn-cron-stop"  onclick="cronDetener()" disabled>■ Detener</button>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <!-- ERROR -->
-    <div class="pantalla" id="pantallaError">
-      <div class="pantalla__icono">❌</div>
-      <h2 class="pantalla__titulo">No se pudo enviar</h2>
-      <p class="pantalla__texto" id="mensajeError">Revisa tu conexión a internet e intenta de nuevo.</p>
-      <button class="btn-secundario" id="btnReintentar">Reintentar</button>
+  <div class="card" id="truck-form-card">
+    <div class="card-head"><div class="card-dot"></div><span id="truck-form-label">Registrar camión</span></div>
+    <div class="card-body">
+      <div class="grid-2 gap">
+        <div class="field"><label>Folio Nota Remisión</label>
+          <input type="text" id="b-folio" placeholder="NR-00001"></div>
+        <div class="field"><label>Placa</label>
+          <input type="text" id="b-placa" placeholder="ABC-1234" maxlength="10"
+                 oninput="this.value=this.value.toUpperCase()"></div>
+      </div>
+      <div class="field gap"><label>Nombre del Operador</label>
+        <input type="text" id="b-operador" placeholder="Nombre completo"></div>
+      <div class="grid-2 gap">
+        <div class="field"><label>Hora de Entrada</label><input type="time" id="b-entrada"></div>
+        <div class="field"><label>Hora de Salida</label><input type="time" id="b-salida"></div>
+      </div>
+      <div class="section-title">Cantidad despachada</div>
+      <div class="grid-2 gap">
+        <div class="field"><label>Toneladas</label>
+          <input type="number" id="b-tons" placeholder="—" step="0.01" min="0"></div>
+        <div class="field"><label>Metros Cúbicos (m³)</label>
+          <input type="number" id="b-m3" placeholder="—" step="0.01" min="0"></div>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:-6px;margin-bottom:12px">
+        Al menos uno de los dos campos es obligatorio
+      </div>
+      <div class="section-title">Fotos</div>
+      <div class="truck-photos">
+        <!-- Slot camión -->
+        <div class="truck-photo-slot" id="slot-camion">
+          <div class="truck-photo-icon">📷</div>
+          <img class="truck-photo-thumb" id="thumb-camion" alt="">
+          <div class="truck-photo-label">Foto camión</div>
+          <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-camion-gal').click()">Elegir de galería</button>
+        </div>
+        <!-- Slot nota -->
+        <div class="truck-photo-slot" id="slot-nota">
+          <div class="truck-photo-icon">🧾</div>
+          <img class="truck-photo-thumb" id="thumb-nota" alt="">
+          <div class="truck-photo-label">Foto nota</div>
+          <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-nota-gal').click()">Elegir de galería</button>
+        </div>
+      </div>
+      <!-- Hidden file inputs for truck photos -->
+      <input type="file" id="photo-camion-cam" accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('camion',this)">
+      <input type="file" id="photo-camion-gal" accept="image/*"                       style="display:none" onchange="handleTruckPhoto('camion',this)">
+      <input type="file" id="photo-nota-cam"   accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('nota',this)">
+      <input type="file" id="photo-nota-gal"   accept="image/*"                       style="display:none" onchange="handleTruckPhoto('nota',this)">
     </div>
+    <div style="padding:0 14px 14px">
+      <button class="btn-primary" id="btn-add-truck" onclick="addTruck()">✅ Registrar camión</button>
+    </div>
+  </div>
 
-  </main>
+  <div class="section-title">Camiones registrados</div>
+  <div id="truck-list"><div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div></div>
 
-  <script>
+  <div style="margin-top:14px">
+    <button class="btn-submit" id="btn-bit" onclick="preSubmitBitacora()" disabled>
+      <span id="btn-bit-icon">✅</span><span id="btn-bit-txt">Enviar bitácora completa</span>
+    </button>
+  </div>
+</section>
 
-    // ── Configuración ─────────────────────────────────────────────
-    const BACKEND_URL   = 'https://script.google.com/macros/s/AKfycbzjMRXk9isshJ05TyGShojZHpXAiub8aotRQItlfhNM5oEvu7hb5125C08Hva307UCOhQ/exec';
-    const IMG_ANCHO_MAX = 1280;
-    const IMG_CALIDAD   = 0.78;
+<!-- ══ TAB 4: ENTRADAS ═════════════════════════════════════ -->
+<section id="tab-entradas" class="tab-panel">
+  <div class="card">
+    <div class="card-head"><div class="card-dot"></div>Entrada de material</div>
+    <div class="card-body">
+      <div class="grid-2 gap">
+        <div class="field"><label>Fecha</label><input type="date" id="e-fecha"></div>
+        <div class="field"><label>Material / Insumo</label>
+          <select id="e-insumo" onchange="onEntradaInsumoChange()">
+            <option value="">— Seleccionar —</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid-3 gap">
+        <div class="field"><label>Cantidad</label>
+          <input type="number" id="e-cantidad" placeholder="0" step="0.01" min="0.01"></div>
+        <div class="field"><label>Unidad</label>
+          <select id="e-unidad">
+            <option value="Tn">Tn</option><option value="Kg">Kg</option>
+            <option value="L">L</option><option value="Gal">Gal</option>
+            <option value="m³">m³</option><option value="pza">pza</option>
+          </select>
+        </div>
+        <div class="field"><label>Precio Unit. ($)</label>
+          <input type="number" id="e-precio" placeholder="0" step="0.01" min="0"
+                 oninput="calcEntradaTotals()"></div>
+      </div>
+      <!-- IVA -->
+      <div class="check-row gap">
+        <input type="checkbox" id="e-iva-check" onchange="calcEntradaTotals()">
+        <label for="e-iva-check">Agregar IVA (16%)</label>
+      </div>
+      <div class="grid-2 gap" id="iva-fields" style="display:none">
+        <div class="field"><label>IVA ($)</label>
+          <input type="number" id="e-iva-monto" readonly placeholder="—"></div>
+        <div class="field"><label>Precio Total / Unit. ($)</label>
+          <input type="number" id="e-precio-total" readonly placeholder="—"></div>
+      </div>
+      <!-- Flete -->
+      <div class="field gap"><label>Flete ($) <span style="font-weight:400;text-transform:none">(opcional)</span></label>
+        <input type="number" id="e-flete" placeholder="0" step="0.01" min="0"></div>
+      <!-- Foto -->
+      <div class="section-title">Comprobante</div>
+      <div id="entrada-thumbs" class="dest-thumbs" style="margin-bottom:6px"></div>
+      <div class="photo-btns">
+        <button type="button" class="btn-photo-sm"
+                onclick="document.getElementById('entrada-cam').click()">📷 Cámara</button>
+        <button type="button" class="btn-photo-sm"
+                onclick="document.getElementById('entrada-gal').click()">🖼 Galería</button>
+        <input type="file" id="entrada-cam" accept="image/*" capture="environment" multiple
+               style="display:none" onchange="handleEntradaPhotos(this)">
+        <input type="file" id="entrada-gal" accept="image/*" multiple
+               style="display:none" onchange="handleEntradaPhotos(this)">
+      </div>
+    </div>
+  </div>
+  <button class="btn-submit" id="btn-ent" onclick="submitEntrada()">
+    <span id="btn-ent-icon">✅</span><span id="btn-ent-txt">Registrar entrada</span>
+  </button>
+  <button class="btn-reset" onclick="resetEntrada()">Limpiar</button>
+</section>
+</main>
 
-    // ── Referencias DOM ───────────────────────────────────────────
-    const selectChofer     = document.getElementById('selectChofer');
-    const selectUnidad     = document.getElementById('selectUnidad');
-    const descripcion      = document.getElementById('descripcion');
-    const inputFoto        = document.getElementById('inputFoto');
-    const zonaCaptura      = document.getElementById('zonaCaptura');
-    const previewContainer = document.getElementById('previewContainer');
-    const previewImg       = document.getElementById('previewImg');
-    const fotoInfo         = document.getElementById('fotoInfo');
-    const btnQuitarFoto    = document.getElementById('btnQuitarFoto');
-    const btnEnviar        = document.getElementById('btnEnviar');
-    const pantallaFormulario = document.getElementById('pantallaFormulario');
-    const pantallaCargando   = document.getElementById('pantallaCargando');
-    const pantallaExito      = document.getElementById('pantallaExito');
-    const pantallaError      = document.getElementById('pantallaError');
-    const mensajeError       = document.getElementById('mensajeError');
-    const btnNuevaNotaExito  = document.getElementById('btnNuevaNotaExito');
-    const btnReintentar      = document.getElementById('btnReintentar');
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span id="modal-title">Resumen</span>
+      <button class="btn-modal-x" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-scroll" id="modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn-modal-back" onclick="closeModal()">← Revisar</button>
+      <button class="btn-modal-ok" id="modal-confirm">Confirmar y enviar</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
 
-    // ── Estado ────────────────────────────────────────────────────
-    let fotoBase64 = null;
+<script>
+'use strict';
 
-    // ── Pantallas ─────────────────────────────────────────────────
-    function mostrarPantalla(cual) {
-      pantallaFormulario.style.display = cual === 'formulario' ? 'block' : 'none';
-      pantallaCargando.classList.toggle('activa', cual === 'cargando');
-      pantallaExito   .classList.toggle('activa', cual === 'exito');
-      pantallaError   .classList.toggle('activa', cual === 'error');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoSZ1Ft4ZmQJWRGpwHs9NP4n97w3bjWm7OayTzzNnHQsn4EXsbXHahex0shtLM0z2K/exec';
+const TOLVAS = ['Tolva 1','Tolva 2','Tolva 3','Tolva 4'];
+const INSUMO_ORDER = ['Cemento Asfáltico','Combustible Alterno','Diesel','Gasolina','Gas','Agua'];
+
+const FALLBACK = {
+  insumos:[
+    {Nombre:'Cemento Asfáltico',Unidad:'Tn','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Combustible Alterno',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Diesel',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gasolina',Unidad:'L','Tipo de Captura (L/pct)':'pct','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gas',Unidad:'Kg','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Agua',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+  ],
+  destinos:[
+    {Insumo:'Cemento Asfáltico',Destino:'Tanque 1','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Cemento Asfáltico',Destino:'Tanque 2','Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 1 CA','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 2 CA','Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Diesel',Destino:'Generador Grande','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',Destino:'Quemador','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',Destino:'Pachara','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Gasolina',Destino:'Generador Chico','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+  ],
+  mezclas:[
+    {Tipo:'HMA 1/2"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'HMA 3/8"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'Concreto Asfáltico',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+  ],
+};
+
+const S = {
+  catalog:FALLBACK, activeProdId:'', activeProdFolderId:'',
+  pendingQueue:[], online:navigator.onLine,
+  rowCounter:0,
+  destPhotoStore:{},       // { rid: [{b64,dataUrl}] }
+  usedTolvas:{},           // { 'Tolva 1': rid_that_uses_it }
+  trucks:[], truckPhotos:{camion:null,nota:null},
+  editTruckIdx:null, cronTimer:null, cronSecs:0,
+  generadorCron:{timer:null,secs:0},
+  entradaPhotos:[],
+};
+
+/* ══ INIT ══════════════════════════════════════════════ */
+async function init() {
+  loadState(); setupTabs(); setupOnline(); registerSW();
+  initProduccion(); initEntrada();
+  checkDraftBanner();
+  await loadCatalog();
+  renderInsumos(); populateMezclas(); populateInsumoSelect();
+  injectGeneradorCron();
+  updateActiveProdBar(); updateCounter();
+}
+function loadState() {
+  S.activeProdId       = localStorage.getItem('activeProdId')||'';
+  S.activeProdFolderId = localStorage.getItem('activeProdFolderId')||'';
+  try{S.pendingQueue=JSON.parse(localStorage.getItem('pendingQueue')||'[]');}catch{S.pendingQueue=[];}
+  try{const cc=localStorage.getItem('catalog');if(cc)S.catalog=JSON.parse(cc);}catch{}
+  updatePendingBadge();
+}
+function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});}
+
+/* ══ TABS ══════════════════════════════════════════════ */
+function setupTabs(){
+  document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+}
+function switchTab(tab){
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
+  const np=tab==='insumos'||tab==='bitacora';
+  document.getElementById('activeProdBar').classList.toggle('show',np);
+  if(tab==='insumos') document.getElementById('warn-ins').style.display=S.activeProdId?'none':'block';
+  if(tab==='bitacora')document.getElementById('warn-bit').style.display=S.activeProdId?'none':'block';
+}
+
+/* ══ CATALOG ════════════════════════════════════════════ */
+async function loadCatalog(){
+  document.getElementById('catalogStatus').textContent='Cargando catálogo…';
+  if(!S.online){document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';return;}
+  try{
+    const res=await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
+    const data=await res.json();
+    if(data.status==='ok'&&data.catalogo){
+      S.catalog=data.catalogo;
+      localStorage.setItem('catalog',JSON.stringify(S.catalog));
+      document.getElementById('catalogStatus').textContent='✅ Catálogo listo';
     }
+  }catch{document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';}
+}
+function getDestinos(nombre){return(S.catalog.destinos||FALLBACK.destinos).filter(d=>d.Insumo===nombre);}
+function getInsumoInfo(nombre){return(S.catalog.insumos||FALLBACK.insumos).find(i=>i.Nombre===nombre)||{};}
+function populateMezclas(){
+  const sel=document.getElementById('p-mezcla');
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  (S.catalog.mezclas||FALLBACK.mezclas).forEach(m=>{
+    const o=document.createElement('option');o.value=o.textContent=m.Tipo;sel.appendChild(o);
+  });
+}
+function populateInsumoSelect(){
+  const sel=document.getElementById('e-insumo');
+  sel.innerHTML='<option value="">— Seleccionar —</option>';
+  (S.catalog.insumos||FALLBACK.insumos).forEach(ins=>{
+    const o=document.createElement('option');o.value=o.textContent=ins.Nombre;sel.appendChild(o);
+  });
+}
 
-    // ── Comprimir imagen ──────────────────────────────────────────
-    function procesarImagen(file) {
-      return new Promise((resolver, rechazar) => {
-        const lector = new FileReader();
-        lector.onload = function(evento) {
-          const img = new Image();
-          img.onload = function() {
-            let ancho = img.width, alto = img.height;
-            if (ancho > IMG_ANCHO_MAX) {
-              alto  = Math.round(alto * IMG_ANCHO_MAX / ancho);
-              ancho = IMG_ANCHO_MAX;
-            }
-            const canvas   = document.createElement('canvas');
-            canvas.width   = ancho;
-            canvas.height  = alto;
-            canvas.getContext('2d').drawImage(img, 0, 0, ancho, alto);
-            resolver(canvas.toDataURL('image/jpeg', IMG_CALIDAD));
-          };
-          img.onerror = () => rechazar(new Error('No se pudo leer la imagen.'));
-          img.src = evento.target.result;
-        };
-        lector.onerror = () => rechazar(new Error('Error al acceder al archivo.'));
-        lector.readAsDataURL(file);
-      });
-    }
+/* ══ ACTIVE PRODUCTION ══════════════════════════════════ */
+function setActiveProd(id,folderId=''){
+  S.activeProdId=id;S.activeProdFolderId=folderId;
+  localStorage.setItem('activeProdId',id);
+  localStorage.setItem('activeProdFolderId',folderId);
+  updateActiveProdBar();
+  document.getElementById('warn-ins').style.display=id?'none':'block';
+  document.getElementById('warn-bit').style.display=id?'none':'block';
+}
+function updateActiveProdBar(){document.getElementById('activeProdLabel').textContent=S.activeProdId||'—';}
+function promptCambiarProd(){const v=prompt('ID de producción:',S.activeProdId);if(v!==null&&v.trim())setActiveProd(v.trim(),'');}
 
-    // ── Foto seleccionada ─────────────────────────────────────────
-    inputFoto.addEventListener('change', async function() {
-      const archivo = this.files[0];
-      if (!archivo) return;
-      try {
-        fotoBase64 = await procesarImagen(archivo);
-        previewImg.src = fotoBase64;
-        zonaCaptura    .style.display = 'none';
-        previewContainer.style.display = 'block';
-        const kb = (archivo.size / 1024).toFixed(0);
-        fotoInfo.textContent = `📎 ${archivo.name} · ${kb} KB (original)`;
-      } catch (err) {
-        alert('⚠️ Error al procesar la imagen:\n' + err.message);
-      }
+/* ══ DRAFT ══════════════════════════════════════════════ */
+function saveDraft(){
+  try{localStorage.setItem('draft_prod',JSON.stringify({
+    p_fecha:document.getElementById('p-fecha')?.value,
+    p_cliente:document.getElementById('p-cliente')?.value,
+    p_obra:document.getElementById('p-obra')?.value,
+    p_residente:document.getElementById('p-residente')?.value,
+    p_mezcla:document.getElementById('p-mezcla')?.value,
+    p_tn:document.getElementById('p-tn')?.value,
+    p_lote:document.getElementById('p-lote')?.value,
+    p_notas:document.getElementById('p-notas')?.value,
+    ts:Date.now()
+  }));}catch{}
+}
+function checkDraftBanner(){
+  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');
+  if(d&&d.ts&&(Date.now()-d.ts)<86400000&&d.p_cliente)
+    document.getElementById('draftBanner').classList.add('show');}catch{}
+}
+function restoreDraft(){
+  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');if(!d)return;
+  ['p_fecha','p_cliente','p_obra','p_residente','p_mezcla','p_tn','p_lote','p_notas'].forEach(k=>{
+    const el=document.getElementById(k.replace('_','-'));if(el&&d[k])el.value=d[k];
+  });updateProdId();}catch{}
+  document.getElementById('draftBanner').classList.remove('show');
+  toast('Borrador restaurado','success');
+}
+function discardDraft(){localStorage.removeItem('draft_prod');document.getElementById('draftBanner').classList.remove('show');}
+
+/* ══ TAB 1: PRODUCCIÓN ══════════════════════════════════ */
+function initProduccion(){setNow();updateProdId();}
+function setNow(){const now=new Date();const local=new Date(now-now.getTimezoneOffset()*60000);document.getElementById('p-fecha').value=local.toISOString().slice(0,16);}
+function onFechaChange(){updateProdId();}
+function updateProdId(){const val=document.getElementById('p-fecha').value;document.getElementById('p-id').value=genProdId(val?new Date(val):new Date());}
+function genProdId(d){const DD=String(d.getDate()).padStart(2,'0'),MM=String(d.getMonth()+1).padStart(2,'0'),YY=String(d.getFullYear()).slice(-2),HH=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');return`PROD-${DD}${MM}${YY}-${HH}${mm}`;}
+
+async function submitProduccion(){
+  const id=document.getElementById('p-id').value;
+  const cliente=document.getElementById('p-cliente').value.trim();
+  const obra=document.getElementById('p-obra').value.trim();
+  const mezcla=document.getElementById('p-mezcla').value;
+  const tn=parseFloat(document.getElementById('p-tn').value);
+  if(!cliente||!obra||!mezcla||!tn){toast('Completa los campos obligatorios','error');return;}
+  const payload={action:'produccion',produccion:{
+    id,fechaHora:document.getElementById('p-fecha').value,
+    cliente,obra,residente:document.getElementById('p-residente').value.trim(),
+    mezcla,toneladas:String(tn),
+    lote:document.getElementById('p-lote').value.trim(),
+    notas:document.getElementById('p-notas').value.trim(),
+  }};
+  await send(payload,'btn-prod',async result=>{
+    toast(`✅ ${id} registrada`,'success');
+    setActiveProd(result.id||id,result.carpetaId||'');
+    localStorage.removeItem('draft_prod');
+    setTimeout(()=>{resetProduccion();switchTab('insumos');},1400);
+  });
+}
+function resetProduccion(){
+  ['p-cliente','p-obra','p-residente','p-tn','p-lote','p-notas'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-mezcla').selectedIndex=0;
+  setNow();updateProdId();window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ══ TAB 2: INSUMOS ════════════════════════════════════ */
+function renderInsumos(){
+  const container=document.getElementById('insumos-container');
+  container.innerHTML='';
+  INSUMO_ORDER.forEach(nombre=>{
+    const info=getInsumoInfo(nombre);
+    const destinos=getDestinos(nombre);
+    const fijos=destinos.filter(d=>d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()==='VERDADERO');
+    const unidad=info.Unidad||'L';
+    const gid='grp_'+nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    const colors={'Cemento Asfáltico':'#f59e0b','Combustible Alterno':'#f97316','Diesel':'#64748b','Gasolina':'#a855f7','Gas':'#22c55e','Agua':'#3b82f6'};
+    const color=colors[nombre]||'#8a8a8a';
+    const tagLabel=nombre.split(' ')[0].toUpperCase();
+
+    // Build fixed dest rows HTML
+    const fijosHTML=fijos.map(d=>{
+      const rid=`${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
+      return buildDestRow(rid,d.Destino,unidad,true);
+    }).join('');
+
+    const group=document.createElement('div');
+    group.className='insumo-group';group.id=gid;
+    group.dataset.nombre=nombre;group.dataset.unidad=unidad;
+    group.dataset.precio=info['Precio Base ($)']||0;
+    group.dataset.flete=info['Flete ($)']||0;
+
+    group.innerHTML=`
+      <div class="insumo-group-head">
+        <span class="ig-tag" style="background:${color}22;color:${color}">${tagLabel}</span>
+        <span class="ig-name">${nombre}</span>
+        <span class="ig-total" id="${gid}-total">— ${unidad}</span>
+      </div>
+      <div id="${gid}-dests">${fijosHTML}</div>
+      <div id="${gid}-opts"></div>
+      <div class="add-dest-row">
+        <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
+      </div>`;
+    container.appendChild(group);
+  });
+  // Initial grava and arena
+  addTipoInsumo('grava');
+  addTipoInsumo('arena');
+}
+
+/* Build a fixed or optional dest row */
+function buildDestRow(rid,destino,unidad,fijo){
+  return`<div class="dest-row" id="${rid}">
+    <div class="dest-row-head">
+      <span class="dest-label">${destino}</span>
+      <span class="dest-fixed-badge">${fijo?'FIJO':''}</span>
+      ${!fijo?`<button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>`:''}
+    </div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
+      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+/* Build a free-text "+Otro" dest row */
+function buildOtroDestRow(rid,unidad){
+  return`<div class="dest-row" id="${rid}">
+    <div class="dest-row-head">
+      <input type="text" class="dest-name-input" id="${rid}-name"
+             placeholder="Nombre del destino / uso">
+      <button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>
+    </div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
+      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+/* Build a tolva dest row (for grava/arena) */
+function buildTolvaDestRow(rid,unidad){
+  const opts=TOLVAS.map(t=>{
+    const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
+    return`<option value="${t}" ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+  }).join('');
+  return`<div class="dest-row" id="${rid}">
+    <div class="dest-row-head">
+      <select class="tolva-sel" id="${rid}-tolva" onchange="onTolvaChange('${rid}',this)">
+        <option value="">— Sin tolva asignada —</option>
+        ${opts}
+      </select>
+      <button class="btn-del-dest" onclick="delTolvaRow('${rid}')">✕</button>
+    </div>
+    ${buildQtyGrid(rid,unidad)}
+    <div style="margin-bottom:6px">
+      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
+    </div>
+    ${buildDestPhotoRow(rid)}
+  </div>`;
+}
+
+function buildQtyGrid(rid,unidad){
+  return`<div class="dest-qty">
+    <div class="qty-field">
+      <div class="qty-label">Inicio</div>
+      <div class="qty-wrap">
+        <input type="number" class="qty-inp" id="${rid}-ini" step="0.01" min="0"
+               placeholder="0" oninput="calcDest('${rid}')">
+        <span class="qty-unit">${unidad}</span>
+      </div>
+    </div>
+    <div class="qty-field">
+      <div class="qty-label">Término</div>
+      <div class="qty-wrap">
+        <input type="number" class="qty-inp" id="${rid}-ter" step="0.01" min="0"
+               placeholder="0" oninput="calcDest('${rid}')">
+        <span class="qty-unit">${unidad}</span>
+      </div>
+    </div>
+  </div>`;
+}
+
+function buildDestPhotoRow(rid){
+  return`<div class="dest-photo-row">
+    <div id="${rid}-thumbs" class="dest-thumbs"></div>
+    <div class="photo-btns">
+      <button type="button" class="btn-photo-sm"
+              onclick="document.getElementById('${rid}-cam').click()">📷 Cámara</button>
+      <button type="button" class="btn-photo-sm"
+              onclick="document.getElementById('${rid}-gal').click()">🖼 Galería</button>
+      <input type="file" id="${rid}-cam" accept="image/*" capture="environment" multiple
+             style="display:none" onchange="handleDestPhoto('${rid}',this)">
+      <input type="file" id="${rid}-gal" accept="image/*" multiple
+             style="display:none" onchange="handleDestPhoto('${rid}',this)">
+    </div>
+  </div>`;
+}
+
+/* Add "+Otro destino" free text row */
+function addOtroDest(gid,unidad){
+  const rid=`${gid}_otro_${S.rowCounter++}`;
+  document.getElementById(`${gid}-opts`).insertAdjacentHTML('beforeend',buildOtroDestRow(rid,unidad));
+}
+
+function delDestRow(rid){
+  document.getElementById(rid)?.remove();
+  delete S.destPhotoStore[rid];
+}
+
+/* Tolva exclusivity */
+function onTolvaChange(rid,sel){
+  // Remove previous usage from this row
+  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
+  // Set new usage
+  if(sel.value) S.usedTolvas[sel.value]=rid;
+  // Refresh all tolva selects
+  updateAllTolvaSelects();
+}
+
+function updateAllTolvaSelects(){
+  document.querySelectorAll('.tolva-sel').forEach(sel=>{
+    const rid=sel.id.replace('-tolva','');
+    const cur=sel.value;
+    const opts=TOLVAS.map(t=>{
+      const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
+      return`<option value="${t}" ${t===cur?'selected':''} ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+    }).join('');
+    sel.innerHTML=`<option value="" ${!cur?'selected':''}>— Sin tolva asignada —</option>${opts}`;
+  });
+}
+
+function delTolvaRow(rid){
+  // Free up the tolva
+  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
+  document.getElementById(rid)?.remove();
+  delete S.destPhotoStore[rid];
+  updateAllTolvaSelects();
+}
+
+/* Grava / Arena multi-tipo */
+let gravaCounter=0, arenaCounter=0;
+function addTipoInsumo(tipo){
+  const isg=tipo==='grava';
+  const nombre=isg?'Grava':'Arena';
+  const color=isg?'#22c55e':'#f97316';
+  const idx=isg?gravaCounter++:arenaCounter++;
+  const gid=`grp_${tipo}_${idx}`;
+  const unidad='Tn';
+
+  const tiposCat=(S.catalog.insumos||FALLBACK.insumos)
+    .filter(i=>i.Nombre.toLowerCase().startsWith(nombre.toLowerCase())&&i.Nombre!==nombre);
+
+  const selectorHTML=tiposCat.length
+    ?`<select class="ig-type-sel" id="${gid}-tipo">${tiposCat.map(t=>`<option value="${t.Nombre}">${t.Nombre}</option>`).join('')}</select>`
+    :`<input type="text" class="ig-type-sel" id="${gid}-tipo" placeholder="Tipo de ${nombre}">`;
+
+  const rid=`${gid}_tolva`;
+  const html=`<div class="insumo-group" id="${gid}" data-nombre="${nombre}" data-unidad="${unidad}">
+    <div class="insumo-group-head">
+      <span class="ig-tag" style="background:${color}22;color:${color}">${nombre.toUpperCase()}</span>
+      ${selectorHTML}
+      <span class="ig-total" id="${gid}-total">— ${unidad}</span>
+      <button class="btn-del-dest" onclick="delGravaArenaGroup('${gid}')" style="margin-left:4px">✕</button>
+    </div>
+    <div id="${gid}-dests">
+      ${buildTolvaDestRow(rid,unidad)}
+    </div>
+    <div id="${gid}-opts"></div>
+    <div class="add-dest-row">
+      <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
+    </div>
+  </div>`;
+  document.getElementById(`rows-${tipo}`).insertAdjacentHTML('beforeend',html);
+}
+
+function delGravaArenaGroup(gid){
+  // Free all tolvas used by this group
+  document.querySelectorAll(`#${gid} .tolva-sel`).forEach(sel=>{
+    if(sel.value) delete S.usedTolvas[sel.value];
+  });
+  document.getElementById(gid)?.remove();
+  updateAllTolvaSelects();
+}
+
+/* Calc */
+function calcDest(rid){
+  const row=document.getElementById(rid);if(!row)return;
+  const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+  const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+  const group=row.closest('.insumo-group');
+  const unidad=group?.dataset.unidad||'';
+  const err=ini>0&&ter>ini;
+  const used=err?0:Math.max(0,ini-ter);
+  document.getElementById(`${rid}-used`).textContent=used>0?`${used.toFixed(2)} ${unidad}`:`— ${unidad}`;
+  const w=document.getElementById(`${rid}-warn`);if(w)w.style.display=err?'inline':'none';
+  updateGroupTotal(group?.id);
+}
+
+function updateGroupTotal(gid){
+  if(!gid)return;
+  const group=document.getElementById(gid);if(!group)return;
+  const unidad=group.dataset.unidad||'';
+  let total=0;
+  group.querySelectorAll('.dest-row').forEach(row=>{
+    const rid=row.id;
+    const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+    const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+    if(!(ini>0&&ter>ini))total+=Math.max(0,ini-ter);
+  });
+  const el=document.getElementById(`${gid}-total`);
+  if(el)el.textContent=total>0?`${total.toFixed(2)} ${unidad} total`:`— ${unidad}`;
+}
+
+/* Photos per dest */
+async function handleDestPhoto(rid,input){
+  if(!S.destPhotoStore[rid])S.destPhotoStore[rid]=[];
+  for(const file of Array.from(input.files)){
+    const b64=await compressImage(file);
+    if(b64)S.destPhotoStore[rid].push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+  }
+  renderDestThumbs(rid);input.value='';
+}
+function renderDestThumbs(rid){
+  const el=document.getElementById(`${rid}-thumbs`);if(!el)return;
+  const photos=S.destPhotoStore[rid]||[];
+  el.innerHTML=photos.map((p,i)=>`
+    <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
+      <button class="thumb-del" onclick="removeDestPhoto('${rid}',${i})" type="button">×</button>
+    </div>`).join('');
+}
+function removeDestPhoto(rid,idx){S.destPhotoStore[rid]?.splice(idx,1);renderDestThumbs(rid);}
+
+/* Collect all insumo rows */
+function collectInsumos(){
+  const filas=[];
+  document.querySelectorAll('.insumo-group').forEach(group=>{
+    const nombre=group.dataset.nombre;
+    const unidad=group.dataset.unidad||'';
+    const precio=parseFloat(group.dataset.precio)||0;
+    const flete=parseFloat(group.dataset.flete)||0;
+
+    let displayNombre=nombre;
+    const tipoSel=document.getElementById(`${group.id}-tipo`);
+    if(tipoSel)displayNombre=tipoSel.value||nombre;
+
+    group.querySelectorAll('.dest-row').forEach(row=>{
+      const rid=row.id;
+      const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
+      const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
+      if(ini===0&&ter===0)return;
+      const usada=Math.max(0,ini-ter);
+      // Get destination name
+      let destino='';
+      const label=row.querySelector('.dest-label');
+      const nameInput=row.querySelector('.dest-name-input');
+      const tolvaSel=row.querySelector('.tolva-sel');
+      if(tolvaSel)destino=tolvaSel.value||'';
+      else if(nameInput)destino=nameInput.value.trim();
+      else if(label)destino=label.textContent.trim();
+      const fotos=(S.destPhotoStore[rid]||[]).map(p=>p.b64);
+      filas.push({insumo:displayNombre,destino,ini,ter,usada,unidad,precio,flete,fotos});
     });
+  });
+  return filas;
+}
 
-    // ── Quitar foto ───────────────────────────────────────────────
-    btnQuitarFoto.addEventListener('click', function() {
-      fotoBase64                     = null;
-      previewImg.src                 = '';
-      inputFoto.value                = '';
-      zonaCaptura    .style.display  = 'block';
-      previewContainer.style.display = 'none';
-    });
+function buildInsumosSummary(){
+  const filas=collectInsumos();
+  let html='',hasWarn=false;
+  const grouped={};
+  filas.forEach(f=>{if(!grouped[f.insumo])grouped[f.insumo]=[];grouped[f.insumo].push(f);});
+  Object.entries(grouped).forEach(([nombre,rows])=>{
+    const total=rows.reduce((s,r)=>s+r.usada,0);
+    html+=`<div class="sum-item">
+      <div class="sum-item-head"><strong>${nombre}</strong>
+        <span style="color:var(--sub);font-size:11px;margin-left:auto">${total.toFixed(2)} ${rows[0].unidad} total</span></div>
+      <div class="sum-item-body">${rows.map(r=>{
+        const warn=r.ini>0&&r.ter>r.ini;if(warn)hasWarn=true;
+        const fotos=r.fotos?.length?` · 📷 ${r.fotos.length}`:'';
+        return`<div style="margin-top:3px">${r.destino?'→ '+r.destino+': ':''}${r.ini} → ${r.ter} = <strong>${r.usada.toFixed(2)}</strong>${warn?' <span style="color:var(--red)">⚠️</span>':''}${fotos}</div>`;
+      }).join('')}</div></div>`;
+  });
+  return{html,hasWarn};
+}
 
-    // ── Enviar ────────────────────────────────────────────────────
-    btnEnviar.addEventListener('click', async function() {
+function preSubmitInsumos(){
+  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
+  const{html,hasWarn}=buildInsumosSummary();
+  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+    Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong>
+    ${hasWarn?'<br><span style="color:#fbbf24;font-size:10px;font-weight:700">⚠️ Hay inconsistencias. Puedes enviar así, pero no habrá cambios después.</span>':''}
+  </div>`;
+  showModal('Resumen de Insumos',info+html,doSubmitInsumos,hasWarn?'Enviar con advertencias':'Confirmar y enviar');
+}
+async function doSubmitInsumos(){
+  const filas=collectInsumos();
+  if(!filas.length){toast('Sin insumos con datos','error');return;}
+  const generador=collectGenerador();
+  await send({action:'insumos',idProd:S.activeProdId,folderId:S.activeProdFolderId,filas,generador},'btn-ins',
+    async r=>toast(`✅ ${r.filas} filas registradas`,'success'));
+}
 
-      if (!selectChofer.value) {
-        alert('⚠️ Por favor selecciona tu nombre.');
-        selectChofer.focus();
-        return;
-      }
+/* ══ GENERADOR DIESEL CRONÓMETRO ════════════════════════ */
+function injectGeneradorCron(){
+  const rid='grp_Diesel_Generador_Grande';
+  const row=document.getElementById(rid);
+  if(!row)return;
+  row.insertAdjacentHTML('beforeend',`
+    <div style="margin-top:8px;padding:10px 12px;border-top:1px solid var(--border);background:#1a1a1a;border-radius:0 0 8px 8px">
+      <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">⏱ Tiempo de encendido del generador</div>
+      <div id="gen-cron-display" style="font-size:28px;font-weight:800;color:var(--amber);font-family:monospace;text-align:center;margin-bottom:8px">00:00:00</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <div class="qty-label" style="margin-bottom:3px">Hora encendido</div>
+          <input type="time" id="gen-hora-ini" oninput="calcGenMins()"
+                 style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text)">
+        </div>
+        <div>
+          <div class="qty-label" style="margin-bottom:3px">Hora apagado</div>
+          <input type="time" id="gen-hora-fin" oninput="calcGenMins()"
+                 style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:13px;color:var(--text)">
+        </div>
+      </div>
+      <div id="gen-mins-display" style="font-size:11px;color:var(--sub);text-align:center;margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button class="btn-cron btn-cron-start" id="btn-gen-start" onclick="genCronIniciar()" style="flex:1;padding:8px;font-size:12px">▶ Encender</button>
+        <button class="btn-cron btn-cron-stop"  id="btn-gen-stop"  onclick="genCronDetener()" style="flex:1;padding:8px;font-size:12px" disabled>■ Apagar</button>
+      </div>
+      <input type="text" id="gen-obs" placeholder="Observaciones del generador (opcional)"
+             style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text)">
+    </div>`);
+}
 
-      if (!selectUnidad.value) {
-        alert('⚠️ Por favor selecciona la unidad (camión).');
-        selectUnidad.focus();
-        return;
-      }
+function genCronIniciar(){
+  const now=new Date();
+  document.getElementById('gen-hora-ini').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.generadorCron.secs=0;
+  document.getElementById('gen-cron-display').style.color='var(--green)';
+  document.getElementById('btn-gen-start').disabled=true;
+  document.getElementById('btn-gen-stop').disabled=false;
+  S.generadorCron.timer=setInterval(()=>{
+    S.generadorCron.secs++;
+    const h=Math.floor(S.generadorCron.secs/3600),m=Math.floor((S.generadorCron.secs%3600)/60),s=S.generadorCron.secs%60;
+    document.getElementById('gen-cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+}
 
-      if (!fotoBase64) {
-        alert('⚠️ Por favor toma una foto de la nota.');
-        return;
-      }
+function genCronDetener(){
+  clearInterval(S.generadorCron.timer);
+  const now=new Date();
+  document.getElementById('gen-hora-fin').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('gen-cron-display').style.color='var(--amber)';
+  document.getElementById('btn-gen-start').disabled=false;
+  document.getElementById('btn-gen-stop').disabled=true;
+  calcGenMins();
+}
 
-      const datos = {
-        chofer:      selectChofer.value,
-        unidad:      selectUnidad.value,
-        descripcion: descripcion.value.trim(),
-        foto:        fotoBase64
-      };
+function calcGenMins(){
+  const h1=document.getElementById('gen-hora-ini')?.value;
+  const h2=document.getElementById('gen-hora-fin')?.value;
+  const el=document.getElementById('gen-mins-display');
+  if(!el)return;
+  if(h1&&h2){
+    const[a,b]=h1.split(':').map(Number),[c,d]=h2.split(':').map(Number);
+    const mins=(c*60+d)-(a*60+b);
+    el.textContent=mins>=0?`${mins} minutos encendido`:'';
+  }else{el.textContent='';}
+}
 
-      mostrarPantalla('cargando');
-      btnEnviar.disabled = true;
+function collectGenerador(){
+  const horaIni=document.getElementById('gen-hora-ini')?.value;
+  const horaFin=document.getElementById('gen-hora-fin')?.value;
+  if(!horaIni&&!horaFin)return null;
+  let mins='';
+  if(horaIni&&horaFin){const[a,b]=horaIni.split(':').map(Number),[c,d]=horaFin.split(':').map(Number);const diff=(c*60+d)-(a*60+b);if(diff>=0)mins=diff;}
+  return{fecha:new Date().toISOString().slice(0,10),horaEncendido:horaIni||'',horaApagado:horaFin||'',tiempoMin:mins,observaciones:document.getElementById('gen-obs')?.value||''};
+}
 
-      try {
-        const respuesta = await fetch(BACKEND_URL, {
-          method:  'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body:    JSON.stringify(datos)
-        });
+/* ══ TAB 3: BITÁCORA ════════════════════════════════════ */
+function cronIniciar(){
+  const now=new Date();
+  document.getElementById('b-entrada').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.cronSecs=0;
+  document.getElementById('cron-display').classList.add('running');
+  document.getElementById('btn-cron-start').disabled=true;
+  document.getElementById('btn-cron-stop').disabled=false;
+  S.cronTimer=setInterval(()=>{
+    S.cronSecs++;
+    const h=Math.floor(S.cronSecs/3600),m=Math.floor((S.cronSecs%3600)/60),s=S.cronSecs%60;
+    document.getElementById('cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  },1000);
+}
+function cronDetener(){
+  clearInterval(S.cronTimer);
+  const now=new Date();
+  document.getElementById('b-salida').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('cron-display').classList.remove('running');
+  document.getElementById('btn-cron-start').disabled=false;
+  document.getElementById('btn-cron-stop').disabled=true;
+}
+function resetCron(){
+  clearInterval(S.cronTimer);S.cronSecs=0;
+  document.getElementById('cron-display').textContent='00:00:00';
+  document.getElementById('cron-display').classList.remove('running');
+  document.getElementById('btn-cron-start').disabled=false;
+  document.getElementById('btn-cron-stop').disabled=true;
+}
 
-        if (!respuesta.ok) throw new Error(`El servidor respondió con error ${respuesta.status}.`);
+/* Truck photos — camera opens by default, gallery is secondary button */
+document.addEventListener('DOMContentLoaded',()=>{
+  ['camion','nota'].forEach(tipo=>{
+    const slot=document.getElementById(`slot-${tipo}`);
+    if(slot)slot.onclick=e=>{
+      if(e.target.classList.contains('slot-gallery-btn'))return;
+      document.getElementById(`photo-${tipo}-cam`).click();
+    };
+  });
+});
 
-        const resultado = await respuesta.json();
+async function handleTruckPhoto(tipo,input){
+  const file=input.files[0];if(!file)return;
+  const b64=await compressImage(file);if(!b64)return;
+  S.truckPhotos[tipo]={b64,dataUrl:'data:image/jpeg;base64,'+b64};
+  const slot=document.getElementById(`slot-${tipo}`);
+  const thumb=document.getElementById(`thumb-${tipo}`);
+  if(slot&&thumb){thumb.src=S.truckPhotos[tipo].dataUrl;slot.classList.add('has-photo');}
+  input.value='';
+}
 
-        if (resultado.exito) {
-          mostrarPantalla('exito');
-        } else {
-          throw new Error(resultado.mensaje || 'Error desconocido en el servidor.');
-        }
+function updateCounter(){
+  const total=parseInt(document.getElementById('b-total')?.value)||0;
+  const count=S.trucks.length;
+  const el=document.getElementById('truck-counter');
+  if(el){el.textContent=`${count} / ${total||'—'}`;el.classList.toggle('ready',total>0&&count>=total);}
+  const btn=document.getElementById('btn-bit');
+  if(btn)btn.disabled=!(total>0&&count===total);
+}
 
-      } catch (err) {
-        mensajeError.textContent = err.message || 'Revisa tu conexión e intenta de nuevo.';
-        mostrarPantalla('error');
-      } finally {
-        btnEnviar.disabled = false;
-      }
-    });
+function addTruck(){
+  const folio=document.getElementById('b-folio').value.trim();
+  const placa=document.getElementById('b-placa').value.trim();
+  const operador=document.getElementById('b-operador').value.trim();
+  const entrada=document.getElementById('b-entrada').value;
+  const salida=document.getElementById('b-salida').value;
+  const tons=document.getElementById('b-tons').value.trim();
+  const m3=document.getElementById('b-m3').value.trim();
+  const missing=[];
+  if(!folio)missing.push('Folio');if(!placa)missing.push('Placa');
+  if(!operador)missing.push('Operador');if(!entrada)missing.push('Hora entrada');
+  if(!salida)missing.push('Hora salida');if(!tons&&!m3)missing.push('Tons o m³');
+  if(missing.length){toast('Falta: '+missing.join(', '),'error');return;}
+  const truck={folio,placa,operador,horaEntrada:entrada,horaSalida:salida,tons,m3,
+    fotoCamion:S.truckPhotos.camion?.b64||null,fotoNota:S.truckPhotos.nota?.b64||null};
+  if(S.editTruckIdx!==null){
+    S.trucks.splice(S.editTruckIdx,0,truck);S.editTruckIdx=null;
+    document.getElementById('truck-form-label').textContent='Registrar camión';
+    document.getElementById('btn-add-truck').textContent='✅ Registrar camión';
+  }else{S.trucks.push(truck);}
+  ['b-folio','b-placa','b-operador','b-entrada','b-salida','b-tons','b-m3'].forEach(id=>document.getElementById(id).value='');
+  S.truckPhotos={camion:null,nota:null};
+  ['camion','nota'].forEach(t=>{document.getElementById(`slot-${t}`)?.classList.remove('has-photo');const th=document.getElementById(`thumb-${t}`);if(th)th.src='';});
+  resetCron();renderTruckList();toast(`✅ ${placa} registrado`,'success');
+}
 
-    // ── Reiniciar ─────────────────────────────────────────────────
-    function reiniciarFormulario() {
-      selectChofer.value             = '';
-      selectUnidad.value             = '';
-      descripcion.value              = '';
-      fotoBase64                     = null;
-      previewImg.src                 = '';
-      inputFoto.value                = '';
-      zonaCaptura    .style.display  = 'block';
-      previewContainer.style.display = 'none';
-      mostrarPantalla('formulario');
-    }
+function renderTruckList(){
+  const el=document.getElementById('truck-list');
+  if(!S.trucks.length){el.innerHTML='<div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>';updateCounter();return;}
+  el.innerHTML=S.trucks.map((t,i)=>{
+    const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
+    const fotos=[t.fotoCamion?'📷 camión':'',t.fotoNota?'🧾 nota':''].filter(Boolean).join(' ');
+    return`<div class="truck-card">
+      <div class="truck-head">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+          <span class="truck-num">${i+1}</span>
+          <span class="truck-placa">${t.placa}</span>
+          <span class="truck-op">${t.operador}</span>
+        </div>
+        <div class="truck-acts">
+          <button class="btn-truck" onclick="editTruck(${i})">✏️</button>
+          <button class="btn-truck del" onclick="deleteTruck(${i})">🗑</button>
+        </div>
+      </div>
+      <div class="truck-body">${t.horaEntrada} → ${t.horaSalida}${qty?' · '+qty:''} · Folio: ${t.folio}${fotos?' · '+fotos:''}</div>
+    </div>`;
+  }).join('');
+  updateCounter();
+}
 
-    btnNuevaNotaExito.addEventListener('click', reiniciarFormulario);
-    btnReintentar    .addEventListener('click', reiniciarFormulario);
+function editTruck(idx){
+  const t=S.trucks[idx];
+  document.getElementById('b-folio').value=t.folio;document.getElementById('b-placa').value=t.placa;
+  document.getElementById('b-operador').value=t.operador;document.getElementById('b-entrada').value=t.horaEntrada;
+  document.getElementById('b-salida').value=t.horaSalida;document.getElementById('b-tons').value=t.tons;
+  document.getElementById('b-m3').value=t.m3;
+  S.truckPhotos={
+    camion:t.fotoCamion?{b64:t.fotoCamion,dataUrl:'data:image/jpeg;base64,'+t.fotoCamion}:null,
+    nota:t.fotoNota?{b64:t.fotoNota,dataUrl:'data:image/jpeg;base64,'+t.fotoNota}:null,
+  };
+  ['camion','nota'].forEach(tipo=>{
+    const slot=document.getElementById(`slot-${tipo}`),thumb=document.getElementById(`thumb-${tipo}`);
+    if(S.truckPhotos[tipo]){slot?.classList.add('has-photo');if(thumb)thumb.src=S.truckPhotos[tipo].dataUrl;}
+    else{slot?.classList.remove('has-photo');if(thumb)thumb.src='';}
+  });
+  S.editTruckIdx=idx;S.trucks.splice(idx,1);renderTruckList();
+  document.getElementById('truck-form-label').textContent=`Editando: ${t.placa}`;
+  document.getElementById('btn-add-truck').textContent='💾 Guardar cambios';
+  document.getElementById('truck-form-card').scrollIntoView({behavior:'smooth'});
+}
+function deleteTruck(idx){const p=S.trucks[idx]?.placa||'';S.trucks.splice(idx,1);renderTruckList();toast(`🗑 ${p} eliminado`,'info');}
 
+function preSubmitBitacora(){
+  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
+  const total=parseInt(document.getElementById('b-total').value)||0;
+  if(!total||S.trucks.length!==total){toast(`Registra los ${total} camiones primero`,'error');return;}
+  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+    Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong> · <strong>${S.trucks.length} camiones</strong></div>`;
+  const html=S.trucks.map((t,i)=>{
+    const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
+    return`<div class="sum-item"><div class="sum-item-head"><span class="truck-num">${i+1}</span><strong class="truck-placa">${t.placa}</strong><span class="truck-op">${t.operador}</span></div>
+    <div class="sum-item-body">${t.horaEntrada} → ${t.horaSalida} · ${qty} · Folio: ${t.folio}</div></div>`;
+  }).join('');
+  showModal('Bitácora completa',info+html,doSubmitBitacora);
+}
+async function doSubmitBitacora(){
+  await send({action:'bitacora',idProd:S.activeProdId,folderId:S.activeProdFolderId,camiones:S.trucks},'btn-bit',
+    async r=>{toast(`✅ ${r.camiones} camiones registrados`,'success');S.trucks=[];document.getElementById('b-total').value='';renderTruckList();updateCounter();});
+}
 
+/* ══ TAB 4: ENTRADAS ════════════════════════════════════ */
+function initEntrada(){document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);}
 
-    // ── Catálogos dinámicos ───────────────────────────────────────
-    const FALLBACK_CHOFERES = ['Juan Sandoval','Noe Granados','Jose Gabribel','Juan Alvaro (el pollito)'];
-    const FALLBACK_UNIDADES = [
-      {valor:'KT5793A — VOLVO'},
-      {valor:'LB89559 — KENWORTH NARANJA'},
-      {valor:'LC99020 — KENWORTH BLANCO'},
-      {valor:'LB37970 — STERLING'}
-    ];
+function onEntradaInsumoChange(){
+  const info=getInsumoInfo(document.getElementById('e-insumo').value);
+  if(info.Unidad)document.getElementById('e-unidad').value=info.Unidad;
+}
 
-    function poblarSelects(choferes, unidades) {
-      selectChofer.innerHTML = '<option value="">— Selecciona tu nombre —</option>' +
-        choferes.map(c => `<option value="${c}">${c}</option>`).join('');
-      selectChofer.disabled = false;
-      selectUnidad.innerHTML = '<option value="">— Selecciona el camión —</option>' +
-        unidades.map(u => `<option value="${u.valor}">${u.valor}</option>`).join('');
-      selectUnidad.disabled = false;
-    }
+function calcEntradaTotals(){
+  const precio=parseFloat(document.getElementById('e-precio').value)||0;
+  const addIva=document.getElementById('e-iva-check').checked;
+  const ivaFields=document.getElementById('iva-fields');
+  ivaFields.style.display=addIva?'grid':'none';
+  if(addIva){
+    const iva=Math.round(precio*0.16*100)/100;
+    const total=Math.round((precio+iva)*100)/100;
+    document.getElementById('e-iva-monto').value=iva>0?iva:'';
+    document.getElementById('e-precio-total').value=total>0?total:'';
+  }
+}
 
-    async function inicializar() {
-      try {
-        const resp = await fetch(BACKEND_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
-          body: JSON.stringify({ accion: 'catalogos' })
-        });
-        const result = await resp.json();
-        if (result.exito) {
-          poblarSelects(
-            result.choferes && result.choferes.length ? result.choferes : FALLBACK_CHOFERES,
-            result.unidades && result.unidades.length ? result.unidades : FALLBACK_UNIDADES
-          );
-          return;
-        }
-      } catch (_) {}
-      document.getElementById('bannerConexion').style.display = 'block';
-      poblarSelects(FALLBACK_CHOFERES, FALLBACK_UNIDADES);
-    }
+async function handleEntradaPhotos(input){
+  for(const file of Array.from(input.files)){
+    const b64=await compressImage(file);
+    if(b64)S.entradaPhotos.push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+  }
+  renderEntradaThumbs();input.value='';
+}
+function renderEntradaThumbs(){
+  const el=document.getElementById('entrada-thumbs');if(!el)return;
+  el.innerHTML=S.entradaPhotos.map((p,i)=>`
+    <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
+      <button class="thumb-del" onclick="S.entradaPhotos.splice(${i},1);renderEntradaThumbs()" type="button">×</button>
+    </div>`).join('');
+}
 
-    // ── Inicio ──────────────────────────────────────────────────────────
-    mostrarPantalla('formulario');
-    inicializar();
+async function submitEntrada(){
+  const insumo=document.getElementById('e-insumo').value;
+  const cant=parseFloat(document.getElementById('e-cantidad').value);
+  if(!insumo||!cant){toast('Insumo y cantidad son obligatorios','error');return;}
+  const precio=parseFloat(document.getElementById('e-precio').value)||0;
+  const addIva=document.getElementById('e-iva-check').checked;
+  const iva=addIva?Math.round(precio*0.16*100)/100:0;
+  const payload={action:'entrada',entrada:{
+    fecha:document.getElementById('e-fecha').value,
+    insumo,cantidad:String(cant),
+    unidad:document.getElementById('e-unidad').value,
+    precio:String(precio),iva:String(iva),
+    flete:document.getElementById('e-flete').value||'0',
+    fotos:S.entradaPhotos.map(p=>p.b64),
+  }};
+  await send(payload,'btn-ent',async()=>{toast('✅ Entrada registrada','success');resetEntrada();});
+}
 
-  </script>
+function resetEntrada(){
+  ['e-cantidad','e-precio','e-flete'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);
+  document.getElementById('e-insumo').selectedIndex=0;
+  document.getElementById('e-unidad').value='Tn';
+  document.getElementById('e-iva-check').checked=false;
+  document.getElementById('iva-fields').style.display='none';
+  document.getElementById('e-iva-monto').value='';
+  document.getElementById('e-precio-total').value='';
+  S.entradaPhotos=[];renderEntradaThumbs();
+}
+
+/* ══ SEND + QUEUE ════════════════════════════════════════ */
+async function send(payload,btnId,onSuccess){
+  const icon=document.getElementById(`${btnId}-icon`);
+  const txt=document.getElementById(`${btnId}-txt`);
+  const btn=document.getElementById(btnId);
+  btn.disabled=true;if(icon)icon.textContent='⏳';if(txt)txt.textContent='Enviando…';
+  if(!S.online){enqueue(payload);toast('📶 Sin conexión — guardado en cola','info');resetBtn(btnId);return;}
+  try{
+    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
+    const result=await res.json().catch(()=>({status:'error',message:'Respuesta inválida'}));
+    if(result.status==='ok'){await onSuccess(result);}
+    else{toast('❌ '+(result.message||'Error en Apps Script'),'error');console.error(result);}
+  }catch(err){console.error(err);enqueue(payload);toast('❌ Error de red — guardado en cola','error');}
+  finally{resetBtn(btnId);}
+}
+const BTN_DEF={'btn-prod':{icon:'✅',txt:'Registrar producción'},'btn-ins':{icon:'📋',txt:'Revisar y enviar insumos'},'btn-bit':{icon:'✅',txt:'Enviar bitácora completa'},'btn-ent':{icon:'✅',txt:'Registrar entrada'}};
+function resetBtn(btnId){
+  const d=BTN_DEF[btnId]||{icon:'✅',txt:'Enviar'};
+  document.getElementById(btnId).disabled=btnId==='btn-bit';
+  const icon=document.getElementById(`${btnId}-icon`),txt=document.getElementById(`${btnId}-txt`);
+  if(icon)icon.textContent=d.icon;if(txt)txt.textContent=d.txt;
+  if(btnId==='btn-bit')updateCounter();
+}
+function enqueue(payload){S.pendingQueue.push({payload,ts:Date.now()});localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();}
+async function processQueue(){
+  if(!S.online||!S.pendingQueue.length)return;
+  const queue=[...S.pendingQueue];S.pendingQueue=[];
+  for(const item of queue){
+    try{const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload)});
+      const result=await res.json().catch(()=>({status:'error'}));
+      if(result.status!=='ok')S.pendingQueue.push(item);
+    }catch{S.pendingQueue.push(item);break;}
+  }
+  localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();
+  const sent=queue.length-S.pendingQueue.length;
+  if(sent>0)toast(`✅ ${sent} registro(s) enviado(s)`,'success');
+}
+function updatePendingBadge(){const n=S.pendingQueue.length;const el=document.getElementById('pendingBadge');el.textContent=`${n} pend.`;el.classList.toggle('show',n>0);}
+
+/* ══ ONLINE ══════════════════════════════════════════════ */
+function setupOnline(){
+  const update=online=>{S.online=online;const el=document.getElementById('connDot');el.textContent=online?'En línea':'Sin conexión';el.classList.toggle('offline',!online);if(online)processQueue();};
+  window.addEventListener('online',()=>update(true));window.addEventListener('offline',()=>update(false));update(navigator.onLine);
+}
+
+/* ══ PHOTOS ══════════════════════════════════════════════ */
+async function compressImage(file,maxW=1024,quality=0.78){
+  return new Promise(resolve=>{
+    const img=new Image();const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);let{width:w,height:h}=img;
+      if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
+      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      canvas.toBlob(blob=>{const r=new FileReader();r.onloadend=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(blob);},'image/jpeg',quality);
+    };
+    img.onerror=()=>resolve(null);img.src=url;
+  });
+}
+
+/* ══ MODAL ═══════════════════════════════════════════════ */
+function showModal(title,bodyHtml,onConfirm,confirmLabel='Confirmar y enviar'){
+  document.getElementById('modal-title').textContent=title;
+  document.getElementById('modal-body').innerHTML=bodyHtml;
+  document.getElementById('modal-confirm').textContent=confirmLabel;
+  document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};
+  document.getElementById('modal').classList.add('show');
+}
+function closeModal(){document.getElementById('modal').classList.remove('show');}
+
+/* ══ TOAST ═══════════════════════════════════════════════ */
+let toastTimer;
+function toast(msg,tipo='success'){const el=document.getElementById('toast');clearTimeout(toastTimer);el.textContent=msg;el.className=`${tipo} show`;toastTimer=setTimeout(()=>{el.className='';},3500);}
+
+/* ══ START ═══════════════════════════════════════════════ */
+init();
+</script>
 </body>
 </html>
