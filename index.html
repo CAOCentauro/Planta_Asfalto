@@ -95,7 +95,6 @@
     input[type=number]{-moz-appearance:textfield}
     input[type=number]::-webkit-inner-spin-button{display:none}
 
-    /* Checkbox row */
     .check-row{display:flex;align-items:center;gap:8px;padding:6px 0}
     .check-row input[type=checkbox]{width:18px;height:18px;accent-color:var(--amber);cursor:pointer;flex-shrink:0}
     .check-row label{font-size:13px;color:var(--text);cursor:pointer}
@@ -110,12 +109,16 @@
     /* ═══ INSUMO GROUPS ═══════════════════════════════ */
     .insumo-group{background:var(--surface);border:1.5px solid var(--border);
                   border-radius:12px;margin-bottom:10px;overflow:hidden}
-    .insumo-group-head{display:flex;align-items:center;gap:8px;
+    .insumo-group-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;
                        padding:10px 12px;background:var(--asphalt);
                        border-bottom:1px solid var(--border)}
     .ig-tag{padding:2px 8px;border-radius:4px;font-size:9px;font-weight:800;
             text-transform:uppercase;letter-spacing:.4px;flex-shrink:0}
     .ig-name{font-size:13px;font-weight:700;flex:1}
+    /* Fase 2b — precio de referencia */
+    .ig-precio-ref{font-size:9px;color:var(--blue);font-family:monospace;
+                   padding:2px 6px;background:rgba(59,130,246,.12);
+                   border-radius:3px;white-space:nowrap;display:none}
     .ig-total{font-size:11px;color:var(--amber);font-weight:700;
               margin-left:auto;font-family:monospace;white-space:nowrap}
 
@@ -135,6 +138,11 @@
                   transition:color .1s,background .1s}
     .btn-del-dest:hover{color:var(--red);background:rgba(239,68,68,.1)}
 
+    /* Fase 2c — continuidad hint */
+    .cont-hint{font-size:10px;color:var(--blue);background:#0f1e2e;
+               border-left:2px solid var(--blue);border-radius:4px;
+               padding:4px 8px;margin-bottom:6px;line-height:1.5}
+
     .dest-qty{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:6px}
     .qty-field{display:flex;flex-direction:column;gap:3px}
     .qty-label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase}
@@ -149,14 +157,12 @@
     .dest-used{font-size:11px;color:var(--amber);font-weight:700}
     .dest-warn{font-size:10px;color:var(--red);font-weight:700;margin-left:8px;display:none}
 
-    /* Tolva selector */
     .tolva-sel{flex:1;background:var(--asphalt);border:1px solid var(--border);
                border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text);
                -webkit-appearance:none}
     .tolva-sel:focus{outline:none;border-color:var(--amber)}
     .tolva-sel option:disabled{color:var(--muted)}
 
-    /* Per-dest photos */
     .dest-photo-row{margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
     .dest-thumbs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;min-height:0}
     .thumb-wrap{position:relative}
@@ -173,7 +179,6 @@
                   transition:border-color .15s,color .15s}
     .btn-photo-sm:hover{border-color:var(--amber);color:var(--amber)}
 
-    /* Add dest / tipo buttons */
     .add-dest-row{padding:8px 12px;border-top:1px solid var(--border);
                   display:flex;flex-wrap:wrap;gap:6px}
     .btn-add-dest{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;
@@ -182,7 +187,6 @@
                   color:var(--sub);transition:border-color .15s,color .15s}
     .btn-add-dest:hover{border-color:var(--amber);color:var(--amber)}
 
-    /* Tipo selector for grava/arena */
     .ig-type-sel{flex:1;background:var(--surface);border:1px solid var(--border);
                  border-radius:6px;padding:7px 10px;font-size:13px;color:var(--text);
                  -webkit-appearance:none}
@@ -197,7 +201,6 @@
     .btn-add-arena{border-color:#f97316;color:#f97316}
     .btn-add-arena:hover{background:rgba(249,115,22,.1)}
 
-    /* Cronómetro */
     .cron-wrap{text-align:center;padding:8px 0 12px}
     .cron-time{font-size:44px;font-weight:800;color:var(--amber);
                font-family:monospace;letter-spacing:2px;line-height:1}
@@ -209,7 +212,6 @@
     .btn-cron-start{background:var(--green);color:#fff}
     .btn-cron-stop{background:var(--red);color:#fff}
 
-    /* Truck */
     .truck-counter{font-size:30px;font-weight:800;color:var(--sub);
                    text-align:center;margin-top:4px;font-family:monospace}
     .truck-counter.ready{color:var(--green)}
@@ -230,7 +232,6 @@
     .btn-truck.del:hover{border-color:var(--red);color:var(--red)}
     .truck-body{font-size:11px;color:var(--sub)}
 
-    /* Truck photo slots */
     .truck-photos{display:flex;gap:8px;margin-top:10px}
     .truck-photo-slot{flex:1;background:var(--asphalt);border:1.5px dashed var(--border);
                       border-radius:8px;padding:10px 8px;text-align:center;
@@ -242,11 +243,16 @@
     .truck-photo-slot.has-photo .truck-photo-thumb{display:block}
     .truck-photo-slot.has-photo .truck-photo-icon{display:none}
     .truck-photo-icon{font-size:20px}
-    /* Mini gallery button inside slot */
     .slot-gallery-btn{display:block;margin-top:4px;font-size:9px;color:var(--muted);
                       background:none;border:none;cursor:pointer;text-decoration:underline}
 
-    /* Submit */
+    /* Costo total suministro */
+    .sumi-total{padding:10px 12px;background:rgba(245,158,11,.08);
+                border-radius:8px;border:1px solid rgba(245,158,11,.2);
+                display:flex;align-items:center;justify-content:space-between;
+                margin-bottom:10px;font-size:12px;color:var(--sub)}
+    .sumi-total-val{font-size:16px;font-weight:800;font-family:monospace;color:var(--amber)}
+
     .btn-submit{width:100%;padding:14px;background:var(--amber);color:#111;
                 border:none;border-radius:10px;font-size:15px;font-weight:800;
                 cursor:pointer;display:flex;align-items:center;justify-content:center;
@@ -259,11 +265,9 @@
                font-size:12px;font-weight:600;cursor:pointer}
     .btn-reset:hover{border-color:var(--sub);color:var(--text)}
     .btn-primary{padding:10px 16px;background:var(--amber);color:#111;border:none;
-                 border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;
-                 width:100%}
+                 border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;width:100%}
     .btn-primary:hover{background:var(--amber-d)}
 
-    /* Modal */
     .modal-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.85);
                    display:none;place-items:center;padding:16px}
     .modal-overlay.show{display:grid}
@@ -287,7 +291,6 @@
     .sum-item-head{display:flex;align-items:center;gap:7px;margin-bottom:5px;flex-wrap:wrap}
     .sum-item-body{font-size:12px;color:var(--sub);line-height:1.5}
 
-    /* Toast */
     #toast{position:fixed;bottom:20px;left:50%;
            transform:translateX(-50%) translateY(60px);z-index:9999;
            padding:11px 18px;border-radius:10px;font-size:13px;font-weight:700;
@@ -317,7 +320,7 @@
   <button class="tab-btn active" data-tab="produccion">🏗 Producción</button>
   <button class="tab-btn"        data-tab="insumos">🧪 Insumos</button>
   <button class="tab-btn"        data-tab="bitacora">🚛 Bitácora</button>
-  <button class="tab-btn"        data-tab="entradas">📦 Entradas</button>
+  <button class="tab-btn"        data-tab="suministros">📦 Suministros</button>
 </nav>
 
 <div id="activeProdBar">
@@ -461,14 +464,12 @@
       </div>
       <div class="section-title">Fotos</div>
       <div class="truck-photos">
-        <!-- Slot camión -->
         <div class="truck-photo-slot" id="slot-camion">
           <div class="truck-photo-icon">📷</div>
           <img class="truck-photo-thumb" id="thumb-camion" alt="">
           <div class="truck-photo-label">Foto camión</div>
           <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-camion-gal').click()">Elegir de galería</button>
         </div>
-        <!-- Slot nota -->
         <div class="truck-photo-slot" id="slot-nota">
           <div class="truck-photo-icon">🧾</div>
           <img class="truck-photo-thumb" id="thumb-nota" alt="">
@@ -476,7 +477,6 @@
           <button class="slot-gallery-btn" onclick="event.stopPropagation();document.getElementById('photo-nota-gal').click()">Elegir de galería</button>
         </div>
       </div>
-      <!-- Hidden file inputs for truck photos -->
       <input type="file" id="photo-camion-cam" accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('camion',this)">
       <input type="file" id="photo-camion-gal" accept="image/*"                       style="display:none" onchange="handleTruckPhoto('camion',this)">
       <input type="file" id="photo-nota-cam"   accept="image/*" capture="environment" style="display:none" onchange="handleTruckPhoto('nota',this)">
@@ -497,8 +497,8 @@
   </div>
 </section>
 
-<!-- ══ TAB 4: ENTRADAS ═════════════════════════════════════ -->
-<section id="tab-entradas" class="tab-panel">
+<!-- ══ TAB 4: SUMINISTROS ══════════════════════════════════ -->
+<section id="tab-suministros" class="tab-panel">
   <div class="card">
     <div class="card-head"><div class="card-dot"></div>Entrada de material</div>
     <div class="card-body">
@@ -512,7 +512,8 @@
       </div>
       <div class="grid-3 gap">
         <div class="field"><label>Cantidad</label>
-          <input type="number" id="e-cantidad" placeholder="0" step="0.01" min="0.01"></div>
+          <input type="number" id="e-cantidad" placeholder="0" step="0.01" min="0.01"
+                 oninput="calcEntradaTotals()"></div>
         <div class="field"><label>Unidad</label>
           <select id="e-unidad">
             <option value="Tn">Tn</option><option value="Kg">Kg</option>
@@ -535,9 +536,17 @@
         <div class="field"><label>Precio Total / Unit. ($)</label>
           <input type="number" id="e-precio-total" readonly placeholder="—"></div>
       </div>
-      <!-- Flete -->
-      <div class="field gap"><label>Flete ($) <span style="font-weight:400;text-transform:none">(opcional)</span></label>
-        <input type="number" id="e-flete" placeholder="0" step="0.01" min="0"></div>
+      <!-- Flete — tarifa fija por entrega -->
+      <div class="field gap">
+        <label>Flete ($) <span style="font-weight:400;text-transform:none">(tarifa fija por entrega)</span></label>
+        <input type="number" id="e-flete" placeholder="0" step="0.01" min="0"
+               oninput="calcEntradaTotals()">
+      </div>
+      <!-- Costo total estimado -->
+      <div class="sumi-total">
+        <span>Costo total estimado</span>
+        <span class="sumi-total-val" id="e-costo-total">—</span>
+      </div>
       <!-- Foto -->
       <div class="section-title">Comprobante</div>
       <div id="entrada-thumbs" class="dest-thumbs" style="margin-bottom:6px"></div>
@@ -554,10 +563,11 @@
     </div>
   </div>
   <button class="btn-submit" id="btn-ent" onclick="submitEntrada()">
-    <span id="btn-ent-icon">✅</span><span id="btn-ent-txt">Registrar entrada</span>
+    <span id="btn-ent-icon">✅</span><span id="btn-ent-txt">Registrar suministro</span>
   </button>
   <button class="btn-reset" onclick="resetEntrada()">Limpiar</button>
 </section>
+
 </main>
 
 <!-- Modal -->
@@ -583,42 +593,62 @@ const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwoSZ1Ft4ZmQJWR
 const TOLVAS = ['Tolva 1','Tolva 2','Tolva 3','Tolva 4'];
 const INSUMO_ORDER = ['Cemento Asfáltico','Combustible Alterno','Diesel','Gasolina','Gas','Agua'];
 
+// ── FALLBACK offline completo (incluye recipientes para Fase 2a) ─────
 const FALLBACK = {
   insumos:[
-    {Nombre:'Cemento Asfáltico',Unidad:'Tn','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
-    {Nombre:'Combustible Alterno',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
-    {Nombre:'Diesel',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
-    {Nombre:'Gasolina',Unidad:'L','Tipo de Captura (L/pct)':'pct','Precio Base ($)':0,'Flete ($)':0},
-    {Nombre:'Gas',Unidad:'Kg','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
-    {Nombre:'Agua',Unidad:'L','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Cemento Asfáltico',   Unidad:'Tn','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Combustible Alterno', Unidad:'L', 'Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Diesel',              Unidad:'L', 'Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gasolina',            Unidad:'L', 'Tipo de Captura (L/pct)':'pct','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Gas',                 Unidad:'Kg','Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
+    {Nombre:'Agua',                Unidad:'L', 'Tipo de Captura (L/pct)':'L','Precio Base ($)':0,'Flete ($)':0},
   ],
   destinos:[
-    {Insumo:'Cemento Asfáltico',Destino:'Tanque 1','Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Cemento Asfáltico',Destino:'Tanque 2','Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Combustible Alterno',Destino:'Tanque 1 CA','Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Combustible Alterno',Destino:'Tanque 2 CA','Fijo (VERDADERO/FALSO)':'FALSO'},
-    {Insumo:'Diesel',Destino:'Generador Grande','Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Diesel',Destino:'Quemador','Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Diesel',Destino:'Pachara','Fijo (VERDADERO/FALSO)':'VERDADERO'},
-    {Insumo:'Gasolina',Destino:'Generador Chico','Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Cemento Asfáltico',  Destino:'Tanque 1',         'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Cemento Asfáltico',  Destino:'Tanque 2',         'Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 1 CA',      'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Combustible Alterno',Destino:'Tanque 2 CA',      'Fijo (VERDADERO/FALSO)':'FALSO'},
+    {Insumo:'Diesel',             Destino:'Generador Grande', 'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',             Destino:'Quemador',         'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Diesel',             Destino:'Pachara',          'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+    {Insumo:'Gasolina',           Destino:'Generador Chico',  'Fijo (VERDADERO/FALSO)':'VERDADERO'},
+  ],
+  // Fase 2a — tipos de captura y capacidades
+  recipientes:[
+    {Nombre:'Tanque 1',        'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tanque 2',        'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tanque 1 CA',     'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tanque 2 CA',     'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Generador Grande','Capacidad Máxima (L)':500,'Tipo de Captura (L/pct/cm)':'pct'},
+    {Nombre:'Generador Chico', 'Capacidad Máxima (L)':45, 'Tipo de Captura (L/pct/cm)':'pct'},
+    {Nombre:'Quemador',        'Capacidad Máxima (L)':480,'Tipo de Captura (L/pct/cm)':'pct'},
+    {Nombre:'Pachara',         'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tinaco',          'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tolva 1',         'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tolva 2',         'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tolva 3',         'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
+    {Nombre:'Tolva 4',         'Capacidad Máxima (L)':0,  'Tipo de Captura (L/pct/cm)':'L'},
   ],
   mezclas:[
-    {Tipo:'HMA 1/2"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
-    {Tipo:'HMA 3/8"',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'HMA 1/2"',          Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
+    {Tipo:'HMA 3/8"',          Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
     {Tipo:'Concreto Asfáltico',Descripción:'',Unidad:'Tn','Precio Unitario Mínimo ($)':0},
   ],
 };
 
 const S = {
-  catalog:FALLBACK, activeProdId:'', activeProdFolderId:'',
-  pendingQueue:[], online:navigator.onLine,
-  rowCounter:0,
-  destPhotoStore:{},       // { rid: [{b64,dataUrl}] }
-  usedTolvas:{},           // { 'Tolva 1': rid_that_uses_it }
-  trucks:[], truckPhotos:{camion:null,nota:null},
-  editTruckIdx:null, cronTimer:null, cronSecs:0,
-  generadorCron:{timer:null,secs:0},
-  entradaPhotos:[],
+  catalog: FALLBACK,
+  activeProdId: '', activeProdFolderId: '',
+  pendingQueue: [], online: navigator.onLine,
+  rowCounter: 0,
+  destPhotoStore: {},    // { rid: [{b64,dataUrl}] }
+  usedTolvas: {},        // { 'Tolva 1': rid }
+  trucks: [], truckPhotos: {camion:null, nota:null},
+  editTruckIdx: null, cronTimer: null, cronSecs: 0,
+  generadorCron: {timer:null, secs:0},
+  entradaPhotos: [],
+  preciosRef: {},        // { insumoNombre: {precioBase, flete, precioFinal, tipo} } — Fase 2b
+  continuidad: {},       // { 'insumo|destino': {termino, unidad} } — Fase 2c
 };
 
 /* ══ INIT ══════════════════════════════════════════════ */
@@ -632,163 +662,290 @@ async function init() {
   updateActiveProdBar(); updateCounter();
 }
 function loadState() {
-  S.activeProdId       = localStorage.getItem('activeProdId')||'';
-  S.activeProdFolderId = localStorage.getItem('activeProdFolderId')||'';
-  try{S.pendingQueue=JSON.parse(localStorage.getItem('pendingQueue')||'[]');}catch{S.pendingQueue=[];}
-  try{const cc=localStorage.getItem('catalog');if(cc)S.catalog=JSON.parse(cc);}catch{}
+  S.activeProdId       = localStorage.getItem('activeProdId') || '';
+  S.activeProdFolderId = localStorage.getItem('activeProdFolderId') || '';
+  try { S.pendingQueue = JSON.parse(localStorage.getItem('pendingQueue') || '[]'); } catch { S.pendingQueue = []; }
+  try { const cc = localStorage.getItem('catalog'); if (cc) S.catalog = JSON.parse(cc); } catch {}
   updatePendingBadge();
 }
-function registerSW(){if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});}
+function registerSW() { if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(()=>{}); }
 
 /* ══ TABS ══════════════════════════════════════════════ */
-function setupTabs(){
-  document.querySelectorAll('.tab-btn').forEach(btn=>btn.addEventListener('click',()=>switchTab(btn.dataset.tab)));
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn =>
+    btn.addEventListener('click', () => switchTab(btn.dataset.tab))
+  );
 }
-function switchTab(tab){
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
-  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active',p.id==='tab-'+tab));
-  const np=tab==='insumos'||tab==='bitacora';
-  document.getElementById('activeProdBar').classList.toggle('show',np);
-  if(tab==='insumos') document.getElementById('warn-ins').style.display=S.activeProdId?'none':'block';
-  if(tab==='bitacora')document.getElementById('warn-bit').style.display=S.activeProdId?'none':'block';
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + tab));
+  const np = tab === 'insumos' || tab === 'bitacora';
+  document.getElementById('activeProdBar').classList.toggle('show', np);
+  if (tab === 'insumos') {
+    document.getElementById('warn-ins').style.display = S.activeProdId ? 'none' : 'block';
+    // Fase 2: cargar precios de referencia y continuidad al abrir la pestaña
+    if (S.online) {
+      loadPreciosRef();
+      if (S.activeProdId) loadContinuidad();
+    }
+  }
+  if (tab === 'bitacora') {
+    document.getElementById('warn-bit').style.display = S.activeProdId ? 'none' : 'block';
+  }
 }
 
 /* ══ CATALOG ════════════════════════════════════════════ */
-async function loadCatalog(){
-  document.getElementById('catalogStatus').textContent='Cargando catálogo…';
-  if(!S.online){document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';return;}
-  try{
-    const res=await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
-    const data=await res.json();
-    if(data.status==='ok'&&data.catalogo){
-      S.catalog=data.catalogo;
-      localStorage.setItem('catalog',JSON.stringify(S.catalog));
-      document.getElementById('catalogStatus').textContent='✅ Catálogo listo';
+async function loadCatalog() {
+  document.getElementById('catalogStatus').textContent = 'Cargando catálogo…';
+  if (!S.online) { document.getElementById('catalogStatus').textContent = '📦 Catálogo desde caché'; return; }
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=catalogo`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.catalogo) {
+      S.catalog = data.catalogo;
+      localStorage.setItem('catalog', JSON.stringify(S.catalog));
+      document.getElementById('catalogStatus').textContent = '✅ Catálogo listo';
     }
-  }catch{document.getElementById('catalogStatus').textContent='📦 Catálogo desde caché';}
+  } catch { document.getElementById('catalogStatus').textContent = '📦 Catálogo desde caché'; }
 }
-function getDestinos(nombre){return(S.catalog.destinos||FALLBACK.destinos).filter(d=>d.Insumo===nombre);}
-function getInsumoInfo(nombre){return(S.catalog.insumos||FALLBACK.insumos).find(i=>i.Nombre===nombre)||{};}
-function populateMezclas(){
-  const sel=document.getElementById('p-mezcla');
-  sel.innerHTML='<option value="">— Seleccionar —</option>';
-  (S.catalog.mezclas||FALLBACK.mezclas).forEach(m=>{
-    const o=document.createElement('option');o.value=o.textContent=m.Tipo;sel.appendChild(o);
+function getDestinos(nombre) { return (S.catalog.destinos || FALLBACK.destinos).filter(d => d.Insumo === nombre); }
+function getInsumoInfo(nombre) { return (S.catalog.insumos || FALLBACK.insumos).find(i => i.Nombre === nombre) || {}; }
+function getRecipienteInfo(nombre) {
+  return (S.catalog.recipientes || FALLBACK.recipientes).find(r => r.Nombre === nombre) || null;
+}
+function populateMezclas() {
+  const sel = document.getElementById('p-mezcla');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  (S.catalog.mezclas || FALLBACK.mezclas).forEach(m => {
+    const o = document.createElement('option'); o.value = o.textContent = m.Tipo; sel.appendChild(o);
   });
 }
-function populateInsumoSelect(){
-  const sel=document.getElementById('e-insumo');
-  sel.innerHTML='<option value="">— Seleccionar —</option>';
-  (S.catalog.insumos||FALLBACK.insumos).forEach(ins=>{
-    const o=document.createElement('option');o.value=o.textContent=ins.Nombre;sel.appendChild(o);
+function populateInsumoSelect() {
+  const sel = document.getElementById('e-insumo');
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  (S.catalog.insumos || FALLBACK.insumos).forEach(ins => {
+    const o = document.createElement('option'); o.value = o.textContent = ins.Nombre; sel.appendChild(o);
+  });
+}
+
+/* ══ Fase 2b — Precios de referencia ════════════════════
+   Carga el promedio ponderado móvil desde Apps Script
+   y actualiza los spans ig-precio-ref en cada grupo.    */
+async function loadPreciosRef() {
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=precioActual`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.precios) {
+      S.preciosRef = data.precios;
+      renderPreciosRef();
+    }
+  } catch { /* silencioso — sin precios de ref no se bloquea nada */ }
+}
+function renderPreciosRef() {
+  document.querySelectorAll('.insumo-group').forEach(group => {
+    const nombre = group.dataset.nombre;
+    const el = document.getElementById(`${group.id}-precio-ref`);
+    if (!el) return;
+    const ref = S.preciosRef?.[nombre];
+    if (ref && ref.precioBase > 0) {
+      const tipo = ref.tipo === 'promedio_ponderado' ? 'prom.' : 'últ.';
+      const flt  = ref.flete > 0 ? ` +$${ref.flete.toFixed(2)} flete` : '';
+      el.textContent = `$${ref.precioBase.toFixed(2)}/u${flt} (${tipo})`;
+      el.style.display = '';
+    } else {
+      el.style.display = 'none';
+    }
+  });
+}
+
+/* ══ Fase 2c — Continuidad ══════════════════════════════
+   Carga el último término por insumo+destino de
+   producciones anteriores y muestra hints en cada fila. */
+async function loadContinuidad() {
+  if (!S.activeProdId) return;
+  try {
+    const res  = await fetch(`${APPS_SCRIPT_URL}?action=continuidad&idProd=${S.activeProdId}`);
+    const data = await res.json();
+    if (data.status === 'ok' && data.continuidad) {
+      S.continuidad = {};
+      data.continuidad.forEach(c => {
+        S.continuidad[`${c.insumo}|${c.destino}`] = c;
+      });
+      renderContinuidad();
+    }
+  } catch {}
+}
+function renderContinuidad() {
+  document.querySelectorAll('.dest-row').forEach(row => {
+    const rid   = row.id;
+    const group = row.closest('.insumo-group');
+    if (!group) return;
+    const nombre = group.dataset.nombre;
+
+    // Determinar nombre de destino en esta fila
+    let destino = '';
+    const label     = row.querySelector('.dest-label');
+    const nameInput = row.querySelector('.dest-name-input');
+    const tolvaSel  = row.querySelector('.tolva-sel');
+    if (tolvaSel)       destino = tolvaSel.value || '';
+    else if (nameInput) destino = nameInput.value.trim();
+    else if (label)     destino = label.textContent.trim();
+
+    // Nombre del insumo (puede ser subtype para grava/arena)
+    let displayNombre = nombre;
+    const tipoSel = document.getElementById(`${group.id}-tipo`);
+    if (tipoSel) displayNombre = tipoSel.value || nombre;
+
+    const cont = S.continuidad[`${displayNombre}|${destino}`]
+               || S.continuidad[`${nombre}|${destino}`];
+    const hintEl = document.getElementById(`${rid}-cont-hint`);
+    if (!hintEl) return;
+
+    if (cont && destino) {
+      const capType   = row.dataset.captype || 'L';
+      const capacidad = parseFloat(row.dataset.capacidad) || 0;
+      let txt;
+      if (capType === 'pct' && capacidad > 0 && cont.termino >= 0) {
+        const pct = Math.round(cont.termino / capacidad * 100);
+        txt = `📌 Anterior terminó: ${cont.termino} L (≈${pct}%) — inicio esperado: ${pct}%`;
+      } else {
+        txt = `📌 Anterior terminó: ${cont.termino} ${cont.unidad} — inicio esperado`;
+      }
+      hintEl.textContent = txt;
+      hintEl.style.display = '';
+    } else {
+      hintEl.style.display = 'none';
+    }
   });
 }
 
 /* ══ ACTIVE PRODUCTION ══════════════════════════════════ */
-function setActiveProd(id,folderId=''){
-  S.activeProdId=id;S.activeProdFolderId=folderId;
-  localStorage.setItem('activeProdId',id);
-  localStorage.setItem('activeProdFolderId',folderId);
+function setActiveProd(id, folderId = '') {
+  S.activeProdId = id; S.activeProdFolderId = folderId;
+  localStorage.setItem('activeProdId', id);
+  localStorage.setItem('activeProdFolderId', folderId);
   updateActiveProdBar();
-  document.getElementById('warn-ins').style.display=id?'none':'block';
-  document.getElementById('warn-bit').style.display=id?'none':'block';
+  document.getElementById('warn-ins').style.display = id ? 'none' : 'block';
+  document.getElementById('warn-bit').style.display = id ? 'none' : 'block';
 }
-function updateActiveProdBar(){document.getElementById('activeProdLabel').textContent=S.activeProdId||'—';}
-function promptCambiarProd(){const v=prompt('ID de producción:',S.activeProdId);if(v!==null&&v.trim())setActiveProd(v.trim(),'');}
+function updateActiveProdBar() { document.getElementById('activeProdLabel').textContent = S.activeProdId || '—'; }
+function promptCambiarProd() {
+  const v = prompt('ID de producción:', S.activeProdId);
+  if (v !== null && v.trim()) setActiveProd(v.trim(), '');
+}
 
 /* ══ DRAFT ══════════════════════════════════════════════ */
-function saveDraft(){
-  try{localStorage.setItem('draft_prod',JSON.stringify({
-    p_fecha:document.getElementById('p-fecha')?.value,
-    p_cliente:document.getElementById('p-cliente')?.value,
-    p_obra:document.getElementById('p-obra')?.value,
-    p_residente:document.getElementById('p-residente')?.value,
-    p_mezcla:document.getElementById('p-mezcla')?.value,
-    p_tn:document.getElementById('p-tn')?.value,
-    p_lote:document.getElementById('p-lote')?.value,
-    p_notas:document.getElementById('p-notas')?.value,
-    ts:Date.now()
-  }));}catch{}
+function saveDraft() {
+  try {
+    localStorage.setItem('draft_prod', JSON.stringify({
+      p_fecha: document.getElementById('p-fecha')?.value,
+      p_cliente: document.getElementById('p-cliente')?.value,
+      p_obra: document.getElementById('p-obra')?.value,
+      p_residente: document.getElementById('p-residente')?.value,
+      p_mezcla: document.getElementById('p-mezcla')?.value,
+      p_tn: document.getElementById('p-tn')?.value,
+      p_lote: document.getElementById('p-lote')?.value,
+      p_notas: document.getElementById('p-notas')?.value,
+      ts: Date.now(),
+    }));
+  } catch {}
 }
-function checkDraftBanner(){
-  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');
-  if(d&&d.ts&&(Date.now()-d.ts)<86400000&&d.p_cliente)
-    document.getElementById('draftBanner').classList.add('show');}catch{}
+function checkDraftBanner() {
+  try {
+    const d = JSON.parse(localStorage.getItem('draft_prod') || 'null');
+    if (d && d.ts && (Date.now() - d.ts) < 86400000 && d.p_cliente)
+      document.getElementById('draftBanner').classList.add('show');
+  } catch {}
 }
-function restoreDraft(){
-  try{const d=JSON.parse(localStorage.getItem('draft_prod')||'null');if(!d)return;
-  ['p_fecha','p_cliente','p_obra','p_residente','p_mezcla','p_tn','p_lote','p_notas'].forEach(k=>{
-    const el=document.getElementById(k.replace('_','-'));if(el&&d[k])el.value=d[k];
-  });updateProdId();}catch{}
+function restoreDraft() {
+  try {
+    const d = JSON.parse(localStorage.getItem('draft_prod') || 'null'); if (!d) return;
+    ['p_fecha','p_cliente','p_obra','p_residente','p_mezcla','p_tn','p_lote','p_notas'].forEach(k => {
+      const el = document.getElementById(k.replace('_', '-')); if (el && d[k]) el.value = d[k];
+    }); updateProdId();
+  } catch {}
   document.getElementById('draftBanner').classList.remove('show');
-  toast('Borrador restaurado','success');
+  toast('Borrador restaurado', 'success');
 }
-function discardDraft(){localStorage.removeItem('draft_prod');document.getElementById('draftBanner').classList.remove('show');}
+function discardDraft() { localStorage.removeItem('draft_prod'); document.getElementById('draftBanner').classList.remove('show'); }
 
 /* ══ TAB 1: PRODUCCIÓN ══════════════════════════════════ */
-function initProduccion(){setNow();updateProdId();}
-function setNow(){const now=new Date();const local=new Date(now-now.getTimezoneOffset()*60000);document.getElementById('p-fecha').value=local.toISOString().slice(0,16);}
-function onFechaChange(){updateProdId();}
-function updateProdId(){const val=document.getElementById('p-fecha').value;document.getElementById('p-id').value=genProdId(val?new Date(val):new Date());}
-function genProdId(d){const DD=String(d.getDate()).padStart(2,'0'),MM=String(d.getMonth()+1).padStart(2,'0'),YY=String(d.getFullYear()).slice(-2),HH=String(d.getHours()).padStart(2,'0'),mm=String(d.getMinutes()).padStart(2,'0');return`PROD-${DD}${MM}${YY}-${HH}${mm}`;}
-
-async function submitProduccion(){
-  const id=document.getElementById('p-id').value;
-  const cliente=document.getElementById('p-cliente').value.trim();
-  const obra=document.getElementById('p-obra').value.trim();
-  const mezcla=document.getElementById('p-mezcla').value;
-  const tn=parseFloat(document.getElementById('p-tn').value);
-  if(!cliente||!obra||!mezcla||!tn){toast('Completa los campos obligatorios','error');return;}
-  const payload={action:'produccion',produccion:{
-    id,fechaHora:document.getElementById('p-fecha').value,
-    cliente,obra,residente:document.getElementById('p-residente').value.trim(),
-    mezcla,toneladas:String(tn),
-    lote:document.getElementById('p-lote').value.trim(),
-    notas:document.getElementById('p-notas').value.trim(),
+function initProduccion() { setNow(); updateProdId(); }
+function setNow() {
+  const now = new Date();
+  const local = new Date(now - now.getTimezoneOffset() * 60000);
+  document.getElementById('p-fecha').value = local.toISOString().slice(0, 16);
+}
+function onFechaChange() { updateProdId(); }
+function updateProdId() {
+  const val = document.getElementById('p-fecha').value;
+  document.getElementById('p-id').value = genProdId(val ? new Date(val) : new Date());
+}
+function genProdId(d) {
+  const DD = String(d.getDate()).padStart(2,'0'), MM = String(d.getMonth()+1).padStart(2,'0');
+  const YY = String(d.getFullYear()).slice(-2);
+  const HH = String(d.getHours()).padStart(2,'0'), mm = String(d.getMinutes()).padStart(2,'0');
+  return `PROD-${DD}${MM}${YY}-${HH}${mm}`;
+}
+async function submitProduccion() {
+  const id = document.getElementById('p-id').value;
+  const cliente = document.getElementById('p-cliente').value.trim();
+  const obra    = document.getElementById('p-obra').value.trim();
+  const mezcla  = document.getElementById('p-mezcla').value;
+  const tn      = parseFloat(document.getElementById('p-tn').value);
+  if (!cliente || !obra || !mezcla || !tn) { toast('Completa los campos obligatorios', 'error'); return; }
+  const payload = { action:'produccion', produccion:{
+    id, fechaHora: document.getElementById('p-fecha').value,
+    cliente, obra, residente: document.getElementById('p-residente').value.trim(),
+    mezcla, toneladas: String(tn),
+    lote: document.getElementById('p-lote').value.trim(),
+    notas: document.getElementById('p-notas').value.trim(),
   }};
-  await send(payload,'btn-prod',async result=>{
-    toast(`✅ ${id} registrada`,'success');
-    setActiveProd(result.id||id,result.carpetaId||'');
+  await send(payload, 'btn-prod', async result => {
+    toast(`✅ ${id} registrada`, 'success');
+    setActiveProd(result.id || id, result.carpetaId || '');
     localStorage.removeItem('draft_prod');
-    setTimeout(()=>{resetProduccion();switchTab('insumos');},1400);
+    setTimeout(() => { resetProduccion(); switchTab('insumos'); }, 1400);
   });
 }
-function resetProduccion(){
-  ['p-cliente','p-obra','p-residente','p-tn','p-lote','p-notas'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('p-mezcla').selectedIndex=0;
-  setNow();updateProdId();window.scrollTo({top:0,behavior:'smooth'});
+function resetProduccion() {
+  ['p-cliente','p-obra','p-residente','p-tn','p-lote','p-notas'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('p-mezcla').selectedIndex = 0;
+  setNow(); updateProdId(); window.scrollTo({ top:0, behavior:'smooth' });
 }
 
 /* ══ TAB 2: INSUMOS ════════════════════════════════════ */
-function renderInsumos(){
-  const container=document.getElementById('insumos-container');
-  container.innerHTML='';
-  INSUMO_ORDER.forEach(nombre=>{
-    const info=getInsumoInfo(nombre);
-    const destinos=getDestinos(nombre);
-    const fijos=destinos.filter(d=>d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase()==='VERDADERO');
-    const unidad=info.Unidad||'L';
-    const gid='grp_'+nombre.replace(/[^a-zA-Z0-9]/g,'_');
-    const colors={'Cemento Asfáltico':'#f59e0b','Combustible Alterno':'#f97316','Diesel':'#64748b','Gasolina':'#a855f7','Gas':'#22c55e','Agua':'#3b82f6'};
-    const color=colors[nombre]||'#8a8a8a';
-    const tagLabel=nombre.split(' ')[0].toUpperCase();
-
-    // Build fixed dest rows HTML
-    const fijosHTML=fijos.map(d=>{
-      const rid=`${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
-      return buildDestRow(rid,d.Destino,unidad,true);
+function renderInsumos() {
+  const container = document.getElementById('insumos-container');
+  container.innerHTML = '';
+  INSUMO_ORDER.forEach(nombre => {
+    const info    = getInsumoInfo(nombre);
+    const destinos = getDestinos(nombre);
+    const fijos   = destinos.filter(d => d['Fijo (VERDADERO/FALSO)'].toString().toUpperCase() === 'VERDADERO');
+    const unidad  = info.Unidad || 'L';
+    const gid     = 'grp_' + nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    const colors  = {
+      'Cemento Asfáltico':'#f59e0b','Combustible Alterno':'#f97316',
+      'Diesel':'#64748b','Gasolina':'#a855f7','Gas':'#22c55e','Agua':'#3b82f6',
+    };
+    const color    = colors[nombre] || '#8a8a8a';
+    const tagLabel = nombre.split(' ')[0].toUpperCase();
+    const fijosHTML = fijos.map(d => {
+      const rid = `${gid}_${d.Destino.replace(/[^a-zA-Z0-9]/g,'_')}`;
+      return buildDestRow(rid, d.Destino, unidad, true);
     }).join('');
 
-    const group=document.createElement('div');
-    group.className='insumo-group';group.id=gid;
-    group.dataset.nombre=nombre;group.dataset.unidad=unidad;
-    group.dataset.precio=info['Precio Base ($)']||0;
-    group.dataset.flete=info['Flete ($)']||0;
+    const group = document.createElement('div');
+    group.className = 'insumo-group'; group.id = gid;
+    group.dataset.nombre = nombre; group.dataset.unidad = unidad;
+    group.dataset.precio = info['Precio Base ($)'] || 0;
+    group.dataset.flete  = info['Flete ($)'] || 0;
 
-    group.innerHTML=`
+    group.innerHTML = `
       <div class="insumo-group-head">
         <span class="ig-tag" style="background:${color}22;color:${color}">${tagLabel}</span>
         <span class="ig-name">${nombre}</span>
+        <span class="ig-precio-ref" id="${gid}-precio-ref"></span>
         <span class="ig-total" id="${gid}-total">— ${unidad}</span>
       </div>
       <div id="${gid}-dests">${fijosHTML}</div>
@@ -798,37 +955,45 @@ function renderInsumos(){
       </div>`;
     container.appendChild(group);
   });
-  // Initial grava and arena
   addTipoInsumo('grava');
   addTipoInsumo('arena');
 }
 
-/* Build a fixed or optional dest row */
-function buildDestRow(rid,destino,unidad,fijo){
-  return`<div class="dest-row" id="${rid}">
+/* ── Fase 2a: buildDestRow con lookup de recipiente ────
+   Determina capType y capacidad desde Cat_Recipientes.
+   Almacena en data-captype / data-capacidad del row.    */
+function buildDestRow(rid, destino, unidad, fijo) {
+  const recip   = getRecipienteInfo(destino);
+  const capType = recip?.['Tipo de Captura (L/pct/cm)'] || 'L';
+  const capacidad = parseFloat(recip?.['Capacidad Máxima (L)']) || 0;
+  const capHint = (capType === 'pct' && capacidad > 0)
+    ? `<div style="font-size:9px;color:var(--muted);margin-bottom:4px">Cap. ${capacidad} L — ingresa en %</div>` : '';
+
+  return `<div class="dest-row" id="${rid}" data-captype="${capType}" data-capacidad="${capacidad}">
     <div class="dest-row-head">
       <span class="dest-label">${destino}</span>
-      <span class="dest-fixed-badge">${fijo?'FIJO':''}</span>
-      ${!fijo?`<button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>`:''}
+      <span class="dest-fixed-badge">${fijo ? 'FIJO' : ''}</span>
+      ${!fijo ? `<button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>` : ''}
     </div>
-    ${buildQtyGrid(rid,unidad)}
+    ${capHint}
+    <div id="${rid}-cont-hint" class="cont-hint" style="display:none"></div>
+    ${buildQtyGrid(rid, unidad, capType, capacidad)}
     <div style="margin-bottom:6px">
-      <span class="dest-used" id="${rid}-used">— ${unidad}</span>
+      <span class="dest-used" id="${rid}-used">— ${capType === 'pct' ? 'L' : unidad}</span>
       <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
     </div>
     ${buildDestPhotoRow(rid)}
   </div>`;
 }
 
-/* Build a free-text "+Otro" dest row */
-function buildOtroDestRow(rid,unidad){
-  return`<div class="dest-row" id="${rid}">
+function buildOtroDestRow(rid, unidad) {
+  return `<div class="dest-row" id="${rid}" data-captype="L" data-capacidad="0">
     <div class="dest-row-head">
-      <input type="text" class="dest-name-input" id="${rid}-name"
-             placeholder="Nombre del destino / uso">
+      <input type="text" class="dest-name-input" id="${rid}-name" placeholder="Nombre del destino / uso">
       <button class="btn-del-dest" onclick="delDestRow('${rid}')">✕</button>
     </div>
-    ${buildQtyGrid(rid,unidad)}
+    <div id="${rid}-cont-hint" class="cont-hint" style="display:none"></div>
+    ${buildQtyGrid(rid, unidad, 'L', 0)}
     <div style="margin-bottom:6px">
       <span class="dest-used" id="${rid}-used">— ${unidad}</span>
       <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
@@ -837,21 +1002,20 @@ function buildOtroDestRow(rid,unidad){
   </div>`;
 }
 
-/* Build a tolva dest row (for grava/arena) */
-function buildTolvaDestRow(rid,unidad){
-  const opts=TOLVAS.map(t=>{
-    const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
-    return`<option value="${t}" ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+function buildTolvaDestRow(rid, unidad) {
+  const opts = TOLVAS.map(t => {
+    const inUse = S.usedTolvas[t] && S.usedTolvas[t] !== rid;
+    return `<option value="${t}" ${inUse ? 'disabled' : ''} ${inUse ? 'style="color:var(--muted)"' : ''}>${t}${inUse ? ' (en uso)' : ''}</option>`;
   }).join('');
-  return`<div class="dest-row" id="${rid}">
+  return `<div class="dest-row" id="${rid}" data-captype="L" data-capacidad="0">
     <div class="dest-row-head">
       <select class="tolva-sel" id="${rid}-tolva" onchange="onTolvaChange('${rid}',this)">
-        <option value="">— Sin tolva asignada —</option>
-        ${opts}
+        <option value="">— Sin tolva asignada —</option>${opts}
       </select>
       <button class="btn-del-dest" onclick="delTolvaRow('${rid}')">✕</button>
     </div>
-    ${buildQtyGrid(rid,unidad)}
+    <div id="${rid}-cont-hint" class="cont-hint" style="display:none"></div>
+    ${buildQtyGrid(rid, unidad, 'L', 0)}
     <div style="margin-bottom:6px">
       <span class="dest-used" id="${rid}-used">— ${unidad}</span>
       <span class="dest-warn" id="${rid}-warn">⚠️ Término > Inicio</span>
@@ -860,29 +1024,33 @@ function buildTolvaDestRow(rid,unidad){
   </div>`;
 }
 
-function buildQtyGrid(rid,unidad){
-  return`<div class="dest-qty">
+/* Fase 2a — grid adaptado a capType */
+function buildQtyGrid(rid, unidad, capType, capacidad) {
+  const dUnit  = capType === 'pct' ? '%' : (capType === 'cm' ? 'cm' : unidad);
+  const maxA   = capType === 'pct' ? 'max="100"' : '';
+  const stepA  = capType === 'pct' ? 'step="1"' : 'step="0.01"';
+  return `<div class="dest-qty">
     <div class="qty-field">
       <div class="qty-label">Inicio</div>
       <div class="qty-wrap">
-        <input type="number" class="qty-inp" id="${rid}-ini" step="0.01" min="0"
+        <input type="number" class="qty-inp" id="${rid}-ini" ${stepA} min="0" ${maxA}
                placeholder="0" oninput="calcDest('${rid}')">
-        <span class="qty-unit">${unidad}</span>
+        <span class="qty-unit">${dUnit}</span>
       </div>
     </div>
     <div class="qty-field">
       <div class="qty-label">Término</div>
       <div class="qty-wrap">
-        <input type="number" class="qty-inp" id="${rid}-ter" step="0.01" min="0"
+        <input type="number" class="qty-inp" id="${rid}-ter" ${stepA} min="0" ${maxA}
                placeholder="0" oninput="calcDest('${rid}')">
-        <span class="qty-unit">${unidad}</span>
+        <span class="qty-unit">${dUnit}</span>
       </div>
     </div>
   </div>`;
 }
 
-function buildDestPhotoRow(rid){
-  return`<div class="dest-photo-row">
+function buildDestPhotoRow(rid) {
+  return `<div class="dest-photo-row">
     <div id="${rid}-thumbs" class="dest-thumbs"></div>
     <div class="photo-btns">
       <button type="button" class="btn-photo-sm"
@@ -897,216 +1065,248 @@ function buildDestPhotoRow(rid){
   </div>`;
 }
 
-/* Add "+Otro destino" free text row */
-function addOtroDest(gid,unidad){
-  const rid=`${gid}_otro_${S.rowCounter++}`;
-  document.getElementById(`${gid}-opts`).insertAdjacentHTML('beforeend',buildOtroDestRow(rid,unidad));
+function addOtroDest(gid, unidad) {
+  const rid = `${gid}_otro_${S.rowCounter++}`;
+  document.getElementById(`${gid}-opts`).insertAdjacentHTML('beforeend', buildOtroDestRow(rid, unidad));
 }
-
-function delDestRow(rid){
-  document.getElementById(rid)?.remove();
-  delete S.destPhotoStore[rid];
-}
+function delDestRow(rid) { document.getElementById(rid)?.remove(); delete S.destPhotoStore[rid]; }
 
 /* Tolva exclusivity */
-function onTolvaChange(rid,sel){
-  // Remove previous usage from this row
-  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
-  // Set new usage
-  if(sel.value) S.usedTolvas[sel.value]=rid;
-  // Refresh all tolva selects
+function onTolvaChange(rid, sel) {
+  Object.keys(S.usedTolvas).forEach(t => { if (S.usedTolvas[t] === rid) delete S.usedTolvas[t]; });
+  if (sel.value) S.usedTolvas[sel.value] = rid;
   updateAllTolvaSelects();
+  if (Object.keys(S.continuidad).length) renderContinuidad(); // actualizar hints
 }
-
-function updateAllTolvaSelects(){
-  document.querySelectorAll('.tolva-sel').forEach(sel=>{
-    const rid=sel.id.replace('-tolva','');
-    const cur=sel.value;
-    const opts=TOLVAS.map(t=>{
-      const inUse=S.usedTolvas[t]&&S.usedTolvas[t]!==rid;
-      return`<option value="${t}" ${t===cur?'selected':''} ${inUse?'disabled':''} ${inUse?'style="color:var(--muted)"':''}>${t}${inUse?' (en uso)':''}</option>`;
+function updateAllTolvaSelects() {
+  document.querySelectorAll('.tolva-sel').forEach(sel => {
+    const rid = sel.id.replace('-tolva', '');
+    const cur = sel.value;
+    const opts = TOLVAS.map(t => {
+      const inUse = S.usedTolvas[t] && S.usedTolvas[t] !== rid;
+      return `<option value="${t}" ${t === cur ? 'selected' : ''} ${inUse ? 'disabled' : ''} ${inUse ? 'style="color:var(--muted)"' : ''}>${t}${inUse ? ' (en uso)' : ''}</option>`;
     }).join('');
-    sel.innerHTML=`<option value="" ${!cur?'selected':''}>— Sin tolva asignada —</option>${opts}`;
+    sel.innerHTML = `<option value="" ${!cur ? 'selected' : ''}>— Sin tolva asignada —</option>${opts}`;
   });
 }
-
-function delTolvaRow(rid){
-  // Free up the tolva
-  Object.keys(S.usedTolvas).forEach(t=>{if(S.usedTolvas[t]===rid)delete S.usedTolvas[t];});
-  document.getElementById(rid)?.remove();
-  delete S.destPhotoStore[rid];
+function delTolvaRow(rid) {
+  Object.keys(S.usedTolvas).forEach(t => { if (S.usedTolvas[t] === rid) delete S.usedTolvas[t]; });
+  document.getElementById(rid)?.remove(); delete S.destPhotoStore[rid];
   updateAllTolvaSelects();
 }
 
-/* Grava / Arena multi-tipo */
-let gravaCounter=0, arenaCounter=0;
-function addTipoInsumo(tipo){
-  const isg=tipo==='grava';
-  const nombre=isg?'Grava':'Arena';
-  const color=isg?'#22c55e':'#f97316';
-  const idx=isg?gravaCounter++:arenaCounter++;
-  const gid=`grp_${tipo}_${idx}`;
-  const unidad='Tn';
+/* Grava / Arena */
+let gravaCounter = 0, arenaCounter = 0;
+function addTipoInsumo(tipo) {
+  const isg    = tipo === 'grava';
+  const nombre = isg ? 'Grava' : 'Arena';
+  const color  = isg ? '#22c55e' : '#f97316';
+  const idx    = isg ? gravaCounter++ : arenaCounter++;
+  const gid    = `grp_${tipo}_${idx}`;
+  const unidad = 'Tn';
 
-  const tiposCat=(S.catalog.insumos||FALLBACK.insumos)
-    .filter(i=>i.Nombre.toLowerCase().startsWith(nombre.toLowerCase())&&i.Nombre!==nombre);
+  const tiposCat = (S.catalog.insumos || FALLBACK.insumos)
+    .filter(i => i.Nombre.toLowerCase().startsWith(nombre.toLowerCase()) && i.Nombre !== nombre);
+  const selectorHTML = tiposCat.length
+    ? `<select class="ig-type-sel" id="${gid}-tipo">${tiposCat.map(t => `<option value="${t.Nombre}">${t.Nombre}</option>`).join('')}</select>`
+    : `<input type="text" class="ig-type-sel" id="${gid}-tipo" placeholder="Tipo de ${nombre}">`;
 
-  const selectorHTML=tiposCat.length
-    ?`<select class="ig-type-sel" id="${gid}-tipo">${tiposCat.map(t=>`<option value="${t.Nombre}">${t.Nombre}</option>`).join('')}</select>`
-    :`<input type="text" class="ig-type-sel" id="${gid}-tipo" placeholder="Tipo de ${nombre}">`;
-
-  const rid=`${gid}_tolva`;
-  const html=`<div class="insumo-group" id="${gid}" data-nombre="${nombre}" data-unidad="${unidad}">
-    <div class="insumo-group-head">
-      <span class="ig-tag" style="background:${color}22;color:${color}">${nombre.toUpperCase()}</span>
-      ${selectorHTML}
-      <span class="ig-total" id="${gid}-total">— ${unidad}</span>
-      <button class="btn-del-dest" onclick="delGravaArenaGroup('${gid}')" style="margin-left:4px">✕</button>
-    </div>
-    <div id="${gid}-dests">
-      ${buildTolvaDestRow(rid,unidad)}
-    </div>
-    <div id="${gid}-opts"></div>
-    <div class="add-dest-row">
-      <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
-    </div>
-  </div>`;
-  document.getElementById(`rows-${tipo}`).insertAdjacentHTML('beforeend',html);
+  const rid = `${gid}_tolva`;
+  document.getElementById(`rows-${tipo}`).insertAdjacentHTML('beforeend', `
+    <div class="insumo-group" id="${gid}" data-nombre="${nombre}" data-unidad="${unidad}">
+      <div class="insumo-group-head">
+        <span class="ig-tag" style="background:${color}22;color:${color}">${nombre.toUpperCase()}</span>
+        ${selectorHTML}
+        <span class="ig-precio-ref" id="${gid}-precio-ref"></span>
+        <span class="ig-total" id="${gid}-total">— ${unidad}</span>
+        <button class="btn-del-dest" onclick="delGravaArenaGroup('${gid}')" style="margin-left:4px">✕</button>
+      </div>
+      <div id="${gid}-dests">${buildTolvaDestRow(rid, unidad)}</div>
+      <div id="${gid}-opts"></div>
+      <div class="add-dest-row">
+        <button class="btn-add-dest" onclick="addOtroDest('${gid}','${unidad}')">+ Otro destino</button>
+      </div>
+    </div>`);
+}
+function delGravaArenaGroup(gid) {
+  document.querySelectorAll(`#${gid} .tolva-sel`).forEach(sel => { if (sel.value) delete S.usedTolvas[sel.value]; });
+  document.getElementById(gid)?.remove(); updateAllTolvaSelects();
 }
 
-function delGravaArenaGroup(gid){
-  // Free all tolvas used by this group
-  document.querySelectorAll(`#${gid} .tolva-sel`).forEach(sel=>{
-    if(sel.value) delete S.usedTolvas[sel.value];
-  });
-  document.getElementById(gid)?.remove();
-  updateAllTolvaSelects();
-}
+/* ── Fase 2a — calcDest con conversión pct → L ──────── */
+function calcDest(rid) {
+  const row = document.getElementById(rid); if (!row) return;
+  const capType   = row.dataset.captype || 'L';
+  const capacidad = parseFloat(row.dataset.capacidad) || 0;
+  const group     = row.closest('.insumo-group');
+  const unidad    = group?.dataset.unidad || '';
 
-/* Calc */
-function calcDest(rid){
-  const row=document.getElementById(rid);if(!row)return;
-  const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
-  const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
-  const group=row.closest('.insumo-group');
-  const unidad=group?.dataset.unidad||'';
-  const err=ini>0&&ter>ini;
-  const used=err?0:Math.max(0,ini-ter);
-  document.getElementById(`${rid}-used`).textContent=used>0?`${used.toFixed(2)} ${unidad}`:`— ${unidad}`;
-  const w=document.getElementById(`${rid}-warn`);if(w)w.style.display=err?'inline':'none';
+  const ini = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
+  const ter = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
+  const err = ini > 0 && ter > ini;
+
+  let usadaDisplay, dispUnit;
+  if (capType === 'pct' && capacidad > 0) {
+    const usadaL = err ? 0 : Math.max(0, (ini - ter) / 100 * capacidad);
+    usadaDisplay = usadaL;
+    dispUnit = 'L';
+  } else {
+    usadaDisplay = err ? 0 : Math.max(0, ini - ter);
+    dispUnit = capType === 'cm' ? 'cm' : unidad;
+  }
+
+  document.getElementById(`${rid}-used`).textContent =
+    usadaDisplay > 0 ? `${usadaDisplay.toFixed(2)} ${dispUnit}` : `— ${dispUnit}`;
+  const w = document.getElementById(`${rid}-warn`);
+  if (w) w.style.display = err ? 'inline' : 'none';
   updateGroupTotal(group?.id);
 }
 
-function updateGroupTotal(gid){
-  if(!gid)return;
-  const group=document.getElementById(gid);if(!group)return;
-  const unidad=group.dataset.unidad||'';
-  let total=0;
-  group.querySelectorAll('.dest-row').forEach(row=>{
-    const rid=row.id;
-    const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
-    const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
-    if(!(ini>0&&ter>ini))total+=Math.max(0,ini-ter);
+function updateGroupTotal(gid) {
+  if (!gid) return;
+  const group = document.getElementById(gid); if (!group) return;
+  const baseUnit = group.dataset.unidad || '';
+  let total = 0, totalUnit = baseUnit;
+
+  group.querySelectorAll('.dest-row').forEach(row => {
+    const rid     = row.id;
+    const ct      = row.dataset.captype || 'L';
+    const cap     = parseFloat(row.dataset.capacidad) || 0;
+    const ini     = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
+    const ter     = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
+    if (ini > 0 && ter > ini) return;
+    const diff = Math.max(0, ini - ter);
+    if (ct === 'pct' && cap > 0) { total += diff / 100 * cap; totalUnit = 'L'; }
+    else { total += diff; }
   });
-  const el=document.getElementById(`${gid}-total`);
-  if(el)el.textContent=total>0?`${total.toFixed(2)} ${unidad} total`:`— ${unidad}`;
+
+  const el = document.getElementById(`${gid}-total`);
+  if (el) el.textContent = total > 0 ? `${total.toFixed(2)} ${totalUnit} total` : `— ${totalUnit}`;
 }
 
 /* Photos per dest */
-async function handleDestPhoto(rid,input){
-  if(!S.destPhotoStore[rid])S.destPhotoStore[rid]=[];
-  for(const file of Array.from(input.files)){
-    const b64=await compressImage(file);
-    if(b64)S.destPhotoStore[rid].push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+async function handleDestPhoto(rid, input) {
+  if (!S.destPhotoStore[rid]) S.destPhotoStore[rid] = [];
+  for (const file of Array.from(input.files)) {
+    const b64 = await compressImage(file);
+    if (b64) S.destPhotoStore[rid].push({ b64, dataUrl: 'data:image/jpeg;base64,' + b64 });
   }
-  renderDestThumbs(rid);input.value='';
+  renderDestThumbs(rid); input.value = '';
 }
-function renderDestThumbs(rid){
-  const el=document.getElementById(`${rid}-thumbs`);if(!el)return;
-  const photos=S.destPhotoStore[rid]||[];
-  el.innerHTML=photos.map((p,i)=>`
+function renderDestThumbs(rid) {
+  const el = document.getElementById(`${rid}-thumbs`); if (!el) return;
+  el.innerHTML = (S.destPhotoStore[rid] || []).map((p, i) => `
     <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
       <button class="thumb-del" onclick="removeDestPhoto('${rid}',${i})" type="button">×</button>
     </div>`).join('');
 }
-function removeDestPhoto(rid,idx){S.destPhotoStore[rid]?.splice(idx,1);renderDestThumbs(rid);}
+function removeDestPhoto(rid, idx) { S.destPhotoStore[rid]?.splice(idx, 1); renderDestThumbs(rid); }
 
-/* Collect all insumo rows */
-function collectInsumos(){
-  const filas=[];
-  document.querySelectorAll('.insumo-group').forEach(group=>{
-    const nombre=group.dataset.nombre;
-    const unidad=group.dataset.unidad||'';
-    const precio=parseFloat(group.dataset.precio)||0;
-    const flete=parseFloat(group.dataset.flete)||0;
+/* ── Fase 2a/b — collectInsumos con conversión pct→L y preciosRef */
+function collectInsumos() {
+  const filas = [];
+  document.querySelectorAll('.insumo-group').forEach(group => {
+    const nombre = group.dataset.nombre;
+    const unidad = group.dataset.unidad || '';
 
-    let displayNombre=nombre;
-    const tipoSel=document.getElementById(`${group.id}-tipo`);
-    if(tipoSel)displayNombre=tipoSel.value||nombre;
+    let displayNombre = nombre;
+    const tipoSel = document.getElementById(`${group.id}-tipo`);
+    if (tipoSel) displayNombre = tipoSel.value || nombre;
 
-    group.querySelectorAll('.dest-row').forEach(row=>{
-      const rid=row.id;
-      const ini=parseFloat(document.getElementById(`${rid}-ini`)?.value)||0;
-      const ter=parseFloat(document.getElementById(`${rid}-ter`)?.value)||0;
-      if(ini===0&&ter===0)return;
-      const usada=Math.max(0,ini-ter);
-      // Get destination name
-      let destino='';
-      const label=row.querySelector('.dest-label');
-      const nameInput=row.querySelector('.dest-name-input');
-      const tolvaSel=row.querySelector('.tolva-sel');
-      if(tolvaSel)destino=tolvaSel.value||'';
-      else if(nameInput)destino=nameInput.value.trim();
-      else if(label)destino=label.textContent.trim();
-      const fotos=(S.destPhotoStore[rid]||[]).map(p=>p.b64);
-      filas.push({insumo:displayNombre,destino,ini,ter,usada,unidad,precio,flete,fotos});
+    // Fase 2b: usar precio de referencia si disponible
+    const precioRef = S.preciosRef?.[displayNombre] || S.preciosRef?.[nombre];
+    const precio = precioRef ? precioRef.precioBase : (parseFloat(group.dataset.precio) || 0);
+    const flete  = precioRef ? precioRef.flete       : (parseFloat(group.dataset.flete) || 0);
+
+    group.querySelectorAll('.dest-row').forEach(row => {
+      const rid       = row.id;
+      const capType   = row.dataset.captype || 'L';
+      const capacidad = parseFloat(row.dataset.capacidad) || 0;
+
+      const iniRaw = parseFloat(document.getElementById(`${rid}-ini`)?.value) || 0;
+      const terRaw = parseFloat(document.getElementById(`${rid}-ter`)?.value) || 0;
+      if (iniRaw === 0 && terRaw === 0) return;
+
+      // Fase 2a: convertir % → L antes de enviar
+      let iniVal, terVal, usadaVal, unitFinal;
+      if (capType === 'pct' && capacidad > 0) {
+        iniVal   = Math.round(iniRaw / 100 * capacidad * 100) / 100;
+        terVal   = Math.round(terRaw / 100 * capacidad * 100) / 100;
+        usadaVal = Math.max(0, iniVal - terVal);
+        unitFinal = 'L';
+      } else {
+        iniVal = iniRaw; terVal = terRaw;
+        usadaVal  = Math.max(0, iniVal - terVal);
+        unitFinal = unidad;
+      }
+
+      let destino = '';
+      const label     = row.querySelector('.dest-label');
+      const nameInput = row.querySelector('.dest-name-input');
+      const tolvaSel  = row.querySelector('.tolva-sel');
+      if (tolvaSel)       destino = tolvaSel.value || '';
+      else if (nameInput) destino = nameInput.value.trim();
+      else if (label)     destino = label.textContent.trim();
+
+      const fotos = (S.destPhotoStore[rid] || []).map(p => p.b64);
+      filas.push({
+        insumo: displayNombre, destino,
+        ini: iniVal, ter: terVal, usada: usadaVal,
+        unidad: unitFinal, precio, flete, fotos,
+        _display: { iniRaw, terRaw, capType },  // solo para el modal, el server lo ignora
+      });
     });
   });
   return filas;
 }
 
-function buildInsumosSummary(){
-  const filas=collectInsumos();
-  let html='',hasWarn=false;
-  const grouped={};
-  filas.forEach(f=>{if(!grouped[f.insumo])grouped[f.insumo]=[];grouped[f.insumo].push(f);});
-  Object.entries(grouped).forEach(([nombre,rows])=>{
-    const total=rows.reduce((s,r)=>s+r.usada,0);
-    html+=`<div class="sum-item">
+function buildInsumosSummary() {
+  const filas = collectInsumos();
+  let html = '', hasWarn = false;
+  const grouped = {};
+  filas.forEach(f => { if (!grouped[f.insumo]) grouped[f.insumo] = []; grouped[f.insumo].push(f); });
+
+  Object.entries(grouped).forEach(([nombre, rows]) => {
+    const total = rows.reduce((s, r) => s + r.usada, 0);
+    html += `<div class="sum-item">
       <div class="sum-item-head"><strong>${nombre}</strong>
-        <span style="color:var(--sub);font-size:11px;margin-left:auto">${total.toFixed(2)} ${rows[0].unidad} total</span></div>
-      <div class="sum-item-body">${rows.map(r=>{
-        const warn=r.ini>0&&r.ter>r.ini;if(warn)hasWarn=true;
-        const fotos=r.fotos?.length?` · 📷 ${r.fotos.length}`:'';
-        return`<div style="margin-top:3px">${r.destino?'→ '+r.destino+': ':''}${r.ini} → ${r.ter} = <strong>${r.usada.toFixed(2)}</strong>${warn?' <span style="color:var(--red)">⚠️</span>':''}${fotos}</div>`;
+        <span style="color:var(--sub);font-size:11px;margin-left:auto">${total.toFixed(2)} ${rows[0].unidad} total</span>
+      </div>
+      <div class="sum-item-body">${rows.map(r => {
+        const warn = r.ini > 0 && r.ter > r.ini; if (warn) hasWarn = true;
+        const fotos = r.fotos?.length ? ` · 📷 ${r.fotos.length}` : '';
+        // Fase 2a: mostrar valores originales en % si aplica
+        const fromStr = r._display?.capType === 'pct'
+          ? `${r._display.iniRaw}% → ${r._display.terRaw}%`
+          : `${r.ini} → ${r.ter}`;
+        return `<div style="margin-top:3px">${r.destino ? '→ ' + r.destino + ': ' : ''}${fromStr} = <strong>${r.usada.toFixed(2)} ${r.unidad}</strong>${warn ? ' <span style="color:var(--red)">⚠️</span>' : ''}${fotos}</div>`;
       }).join('')}</div></div>`;
   });
-  return{html,hasWarn};
+  return { html, hasWarn };
 }
 
-function preSubmitInsumos(){
-  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
-  const{html,hasWarn}=buildInsumosSummary();
-  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+function preSubmitInsumos() {
+  if (!S.activeProdId) { toast('Registra una producción primero', 'error'); return; }
+  const { html, hasWarn } = buildInsumosSummary();
+  const info = `<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
     Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong>
-    ${hasWarn?'<br><span style="color:#fbbf24;font-size:10px;font-weight:700">⚠️ Hay inconsistencias. Puedes enviar así, pero no habrá cambios después.</span>':''}
+    ${hasWarn ? '<br><span style="color:#fbbf24;font-size:10px;font-weight:700">⚠️ Hay inconsistencias.</span>' : ''}
   </div>`;
-  showModal('Resumen de Insumos',info+html,doSubmitInsumos,hasWarn?'Enviar con advertencias':'Confirmar y enviar');
+  showModal('Resumen de Insumos', info + html, doSubmitInsumos, hasWarn ? 'Enviar con advertencias' : 'Confirmar y enviar');
 }
-async function doSubmitInsumos(){
-  const filas=collectInsumos();
-  if(!filas.length){toast('Sin insumos con datos','error');return;}
-  const generador=collectGenerador();
-  await send({action:'insumos',idProd:S.activeProdId,folderId:S.activeProdFolderId,filas,generador},'btn-ins',
-    async r=>toast(`✅ ${r.filas} filas registradas`,'success'));
+async function doSubmitInsumos() {
+  const filas = collectInsumos();
+  if (!filas.length) { toast('Sin insumos con datos', 'error'); return; }
+  const generador = collectGenerador();
+  await send({ action:'insumos', idProd:S.activeProdId, folderId:S.activeProdFolderId, filas, generador }, 'btn-ins',
+    async r => toast(`✅ ${r.filas} filas registradas`, 'success'));
 }
 
 /* ══ GENERADOR DIESEL CRONÓMETRO ════════════════════════ */
-function injectGeneradorCron(){
-  const rid='grp_Diesel_Generador_Grande';
-  const row=document.getElementById(rid);
-  if(!row)return;
-  row.insertAdjacentHTML('beforeend',`
+function injectGeneradorCron() {
+  const rid = 'grp_Diesel_Generador_Grande';
+  const row = document.getElementById(rid); if (!row) return;
+  row.insertAdjacentHTML('beforeend', `
     <div style="margin-top:8px;padding:10px 12px;border-top:1px solid var(--border);background:#1a1a1a;border-radius:0 0 8px 8px">
       <div style="font-size:10px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">⏱ Tiempo de encendido del generador</div>
       <div id="gen-cron-display" style="font-size:28px;font-weight:800;color:var(--amber);font-family:monospace;text-align:center;margin-bottom:8px">00:00:00</div>
@@ -1131,145 +1331,141 @@ function injectGeneradorCron(){
              style="width:100%;background:var(--asphalt);border:1px solid var(--border);border-radius:6px;padding:8px 10px;font-size:12px;color:var(--text)">
     </div>`);
 }
-
-function genCronIniciar(){
-  const now=new Date();
-  document.getElementById('gen-hora-ini').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  S.generadorCron.secs=0;
-  document.getElementById('gen-cron-display').style.color='var(--green)';
-  document.getElementById('btn-gen-start').disabled=true;
-  document.getElementById('btn-gen-stop').disabled=false;
-  S.generadorCron.timer=setInterval(()=>{
+function genCronIniciar() {
+  const now = new Date();
+  document.getElementById('gen-hora-ini').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.generadorCron.secs = 0;
+  document.getElementById('gen-cron-display').style.color = 'var(--green)';
+  document.getElementById('btn-gen-start').disabled = true;
+  document.getElementById('btn-gen-stop').disabled = false;
+  S.generadorCron.timer = setInterval(() => {
     S.generadorCron.secs++;
-    const h=Math.floor(S.generadorCron.secs/3600),m=Math.floor((S.generadorCron.secs%3600)/60),s=S.generadorCron.secs%60;
-    document.getElementById('gen-cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  },1000);
+    const h = Math.floor(S.generadorCron.secs/3600), m = Math.floor((S.generadorCron.secs%3600)/60), s = S.generadorCron.secs%60;
+    document.getElementById('gen-cron-display').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
 }
-
-function genCronDetener(){
+function genCronDetener() {
   clearInterval(S.generadorCron.timer);
-  const now=new Date();
-  document.getElementById('gen-hora-fin').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  document.getElementById('gen-cron-display').style.color='var(--amber)';
-  document.getElementById('btn-gen-start').disabled=false;
-  document.getElementById('btn-gen-stop').disabled=true;
+  const now = new Date();
+  document.getElementById('gen-hora-fin').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  document.getElementById('gen-cron-display').style.color = 'var(--amber)';
+  document.getElementById('btn-gen-start').disabled = false;
+  document.getElementById('btn-gen-stop').disabled = true;
   calcGenMins();
 }
-
-function calcGenMins(){
-  const h1=document.getElementById('gen-hora-ini')?.value;
-  const h2=document.getElementById('gen-hora-fin')?.value;
-  const el=document.getElementById('gen-mins-display');
-  if(!el)return;
-  if(h1&&h2){
-    const[a,b]=h1.split(':').map(Number),[c,d]=h2.split(':').map(Number);
-    const mins=(c*60+d)-(a*60+b);
-    el.textContent=mins>=0?`${mins} minutos encendido`:'';
-  }else{el.textContent='';}
+function calcGenMins() {
+  const h1 = document.getElementById('gen-hora-ini')?.value;
+  const h2 = document.getElementById('gen-hora-fin')?.value;
+  const el = document.getElementById('gen-mins-display'); if (!el) return;
+  if (h1 && h2) {
+    const [a,b] = h1.split(':').map(Number), [c,d] = h2.split(':').map(Number);
+    const mins = (c*60+d)-(a*60+b);
+    el.textContent = mins >= 0 ? `${mins} minutos encendido` : '';
+  } else { el.textContent = ''; }
 }
-
-function collectGenerador(){
-  const horaIni=document.getElementById('gen-hora-ini')?.value;
-  const horaFin=document.getElementById('gen-hora-fin')?.value;
-  if(!horaIni&&!horaFin)return null;
-  let mins='';
-  if(horaIni&&horaFin){const[a,b]=horaIni.split(':').map(Number),[c,d]=horaFin.split(':').map(Number);const diff=(c*60+d)-(a*60+b);if(diff>=0)mins=diff;}
-  return{fecha:new Date().toISOString().slice(0,10),horaEncendido:horaIni||'',horaApagado:horaFin||'',tiempoMin:mins,observaciones:document.getElementById('gen-obs')?.value||''};
+function collectGenerador() {
+  const horaIni = document.getElementById('gen-hora-ini')?.value;
+  const horaFin = document.getElementById('gen-hora-fin')?.value;
+  if (!horaIni && !horaFin) return null;
+  let mins = '';
+  if (horaIni && horaFin) {
+    const [a,b] = horaIni.split(':').map(Number), [c,d] = horaFin.split(':').map(Number);
+    const diff = (c*60+d)-(a*60+b); if (diff >= 0) mins = diff;
+  }
+  return { fecha: new Date().toISOString().slice(0,10), horaEncendido:horaIni||'', horaApagado:horaFin||'', tiempoMin:mins, observaciones:document.getElementById('gen-obs')?.value||'' };
 }
 
 /* ══ TAB 3: BITÁCORA ════════════════════════════════════ */
-function cronIniciar(){
-  const now=new Date();
-  document.getElementById('b-entrada').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
-  S.cronSecs=0;
+function cronIniciar() {
+  const now = new Date();
+  document.getElementById('b-entrada').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  S.cronSecs = 0;
   document.getElementById('cron-display').classList.add('running');
-  document.getElementById('btn-cron-start').disabled=true;
-  document.getElementById('btn-cron-stop').disabled=false;
-  S.cronTimer=setInterval(()=>{
+  document.getElementById('btn-cron-start').disabled = true;
+  document.getElementById('btn-cron-stop').disabled = false;
+  S.cronTimer = setInterval(() => {
     S.cronSecs++;
-    const h=Math.floor(S.cronSecs/3600),m=Math.floor((S.cronSecs%3600)/60),s=S.cronSecs%60;
-    document.getElementById('cron-display').textContent=`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  },1000);
+    const h = Math.floor(S.cronSecs/3600), m = Math.floor((S.cronSecs%3600)/60), s = S.cronSecs%60;
+    document.getElementById('cron-display').textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }, 1000);
 }
-function cronDetener(){
+function cronDetener() {
   clearInterval(S.cronTimer);
-  const now=new Date();
-  document.getElementById('b-salida').value=`${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const now = new Date();
+  document.getElementById('b-salida').value = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
   document.getElementById('cron-display').classList.remove('running');
-  document.getElementById('btn-cron-start').disabled=false;
-  document.getElementById('btn-cron-stop').disabled=true;
+  document.getElementById('btn-cron-start').disabled = false;
+  document.getElementById('btn-cron-stop').disabled = true;
 }
-function resetCron(){
-  clearInterval(S.cronTimer);S.cronSecs=0;
-  document.getElementById('cron-display').textContent='00:00:00';
+function resetCron() {
+  clearInterval(S.cronTimer); S.cronSecs = 0;
+  document.getElementById('cron-display').textContent = '00:00:00';
   document.getElementById('cron-display').classList.remove('running');
-  document.getElementById('btn-cron-start').disabled=false;
-  document.getElementById('btn-cron-stop').disabled=true;
+  document.getElementById('btn-cron-start').disabled = false;
+  document.getElementById('btn-cron-stop').disabled = true;
 }
 
-/* Truck photos — camera opens by default, gallery is secondary button */
-document.addEventListener('DOMContentLoaded',()=>{
-  ['camion','nota'].forEach(tipo=>{
-    const slot=document.getElementById(`slot-${tipo}`);
-    if(slot)slot.onclick=e=>{
-      if(e.target.classList.contains('slot-gallery-btn'))return;
+document.addEventListener('DOMContentLoaded', () => {
+  ['camion','nota'].forEach(tipo => {
+    const slot = document.getElementById(`slot-${tipo}`);
+    if (slot) slot.onclick = e => {
+      if (e.target.classList.contains('slot-gallery-btn')) return;
       document.getElementById(`photo-${tipo}-cam`).click();
     };
   });
 });
 
-async function handleTruckPhoto(tipo,input){
-  const file=input.files[0];if(!file)return;
-  const b64=await compressImage(file);if(!b64)return;
-  S.truckPhotos[tipo]={b64,dataUrl:'data:image/jpeg;base64,'+b64};
-  const slot=document.getElementById(`slot-${tipo}`);
-  const thumb=document.getElementById(`thumb-${tipo}`);
-  if(slot&&thumb){thumb.src=S.truckPhotos[tipo].dataUrl;slot.classList.add('has-photo');}
-  input.value='';
+async function handleTruckPhoto(tipo, input) {
+  const file = input.files[0]; if (!file) return;
+  const b64 = await compressImage(file); if (!b64) return;
+  S.truckPhotos[tipo] = { b64, dataUrl: 'data:image/jpeg;base64,' + b64 };
+  const slot = document.getElementById(`slot-${tipo}`);
+  const thumb = document.getElementById(`thumb-${tipo}`);
+  if (slot && thumb) { thumb.src = S.truckPhotos[tipo].dataUrl; slot.classList.add('has-photo'); }
+  input.value = '';
 }
 
-function updateCounter(){
-  const total=parseInt(document.getElementById('b-total')?.value)||0;
-  const count=S.trucks.length;
-  const el=document.getElementById('truck-counter');
-  if(el){el.textContent=`${count} / ${total||'—'}`;el.classList.toggle('ready',total>0&&count>=total);}
-  const btn=document.getElementById('btn-bit');
-  if(btn)btn.disabled=!(total>0&&count===total);
+function updateCounter() {
+  const total = parseInt(document.getElementById('b-total')?.value) || 0;
+  const count = S.trucks.length;
+  const el = document.getElementById('truck-counter');
+  if (el) { el.textContent = `${count} / ${total || '—'}`; el.classList.toggle('ready', total > 0 && count >= total); }
+  const btn = document.getElementById('btn-bit');
+  if (btn) btn.disabled = !(total > 0 && count === total);
 }
-
-function addTruck(){
-  const folio=document.getElementById('b-folio').value.trim();
-  const placa=document.getElementById('b-placa').value.trim();
-  const operador=document.getElementById('b-operador').value.trim();
-  const entrada=document.getElementById('b-entrada').value;
-  const salida=document.getElementById('b-salida').value;
-  const tons=document.getElementById('b-tons').value.trim();
-  const m3=document.getElementById('b-m3').value.trim();
-  const missing=[];
-  if(!folio)missing.push('Folio');if(!placa)missing.push('Placa');
-  if(!operador)missing.push('Operador');if(!entrada)missing.push('Hora entrada');
-  if(!salida)missing.push('Hora salida');if(!tons&&!m3)missing.push('Tons o m³');
-  if(missing.length){toast('Falta: '+missing.join(', '),'error');return;}
-  const truck={folio,placa,operador,horaEntrada:entrada,horaSalida:salida,tons,m3,
-    fotoCamion:S.truckPhotos.camion?.b64||null,fotoNota:S.truckPhotos.nota?.b64||null};
-  if(S.editTruckIdx!==null){
-    S.trucks.splice(S.editTruckIdx,0,truck);S.editTruckIdx=null;
-    document.getElementById('truck-form-label').textContent='Registrar camión';
-    document.getElementById('btn-add-truck').textContent='✅ Registrar camión';
-  }else{S.trucks.push(truck);}
-  ['b-folio','b-placa','b-operador','b-entrada','b-salida','b-tons','b-m3'].forEach(id=>document.getElementById(id).value='');
-  S.truckPhotos={camion:null,nota:null};
-  ['camion','nota'].forEach(t=>{document.getElementById(`slot-${t}`)?.classList.remove('has-photo');const th=document.getElementById(`thumb-${t}`);if(th)th.src='';});
-  resetCron();renderTruckList();toast(`✅ ${placa} registrado`,'success');
+function addTruck() {
+  const folio = document.getElementById('b-folio').value.trim();
+  const placa = document.getElementById('b-placa').value.trim();
+  const operador = document.getElementById('b-operador').value.trim();
+  const entrada = document.getElementById('b-entrada').value;
+  const salida  = document.getElementById('b-salida').value;
+  const tons = document.getElementById('b-tons').value.trim();
+  const m3   = document.getElementById('b-m3').value.trim();
+  const missing = [];
+  if (!folio) missing.push('Folio'); if (!placa) missing.push('Placa');
+  if (!operador) missing.push('Operador'); if (!entrada) missing.push('Hora entrada');
+  if (!salida) missing.push('Hora salida'); if (!tons && !m3) missing.push('Tons o m³');
+  if (missing.length) { toast('Falta: ' + missing.join(', '), 'error'); return; }
+  const truck = { folio, placa, operador, horaEntrada:entrada, horaSalida:salida, tons, m3,
+    fotoCamion: S.truckPhotos.camion?.b64 || null,
+    fotoNota:   S.truckPhotos.nota?.b64   || null };
+  if (S.editTruckIdx !== null) {
+    S.trucks.splice(S.editTruckIdx, 0, truck); S.editTruckIdx = null;
+    document.getElementById('truck-form-label').textContent = 'Registrar camión';
+    document.getElementById('btn-add-truck').textContent = '✅ Registrar camión';
+  } else { S.trucks.push(truck); }
+  ['b-folio','b-placa','b-operador','b-entrada','b-salida','b-tons','b-m3'].forEach(id => document.getElementById(id).value = '');
+  S.truckPhotos = { camion:null, nota:null };
+  ['camion','nota'].forEach(t => { document.getElementById(`slot-${t}`)?.classList.remove('has-photo'); const th = document.getElementById(`thumb-${t}`); if (th) th.src = ''; });
+  resetCron(); renderTruckList(); toast(`✅ ${placa} registrado`, 'success');
 }
-
-function renderTruckList(){
-  const el=document.getElementById('truck-list');
-  if(!S.trucks.length){el.innerHTML='<div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>';updateCounter();return;}
-  el.innerHTML=S.trucks.map((t,i)=>{
-    const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
-    const fotos=[t.fotoCamion?'📷 camión':'',t.fotoNota?'🧾 nota':''].filter(Boolean).join(' ');
-    return`<div class="truck-card">
+function renderTruckList() {
+  const el = document.getElementById('truck-list');
+  if (!S.trucks.length) { el.innerHTML = '<div style="font-size:11px;color:var(--muted)">Ningún camión registrado aún.</div>'; updateCounter(); return; }
+  el.innerHTML = S.trucks.map((t, i) => {
+    const qty   = [t.tons ? t.tons + ' Tn' : '', t.m3 ? t.m3 + ' m³' : ''].filter(Boolean).join(' · ');
+    const fotos = [t.fotoCamion ? '📷 camión' : '', t.fotoNota ? '🧾 nota' : ''].filter(Boolean).join(' ');
+    return `<div class="truck-card">
       <div class="truck-head">
         <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
           <span class="truck-num">${i+1}</span>
@@ -1281,191 +1477,239 @@ function renderTruckList(){
           <button class="btn-truck del" onclick="deleteTruck(${i})">🗑</button>
         </div>
       </div>
-      <div class="truck-body">${t.horaEntrada} → ${t.horaSalida}${qty?' · '+qty:''} · Folio: ${t.folio}${fotos?' · '+fotos:''}</div>
+      <div class="truck-body">${t.horaEntrada} → ${t.horaSalida}${qty ? ' · ' + qty : ''} · Folio: ${t.folio}${fotos ? ' · ' + fotos : ''}</div>
     </div>`;
   }).join('');
   updateCounter();
 }
-
-function editTruck(idx){
-  const t=S.trucks[idx];
-  document.getElementById('b-folio').value=t.folio;document.getElementById('b-placa').value=t.placa;
-  document.getElementById('b-operador').value=t.operador;document.getElementById('b-entrada').value=t.horaEntrada;
-  document.getElementById('b-salida').value=t.horaSalida;document.getElementById('b-tons').value=t.tons;
-  document.getElementById('b-m3').value=t.m3;
-  S.truckPhotos={
-    camion:t.fotoCamion?{b64:t.fotoCamion,dataUrl:'data:image/jpeg;base64,'+t.fotoCamion}:null,
-    nota:t.fotoNota?{b64:t.fotoNota,dataUrl:'data:image/jpeg;base64,'+t.fotoNota}:null,
+function editTruck(idx) {
+  const t = S.trucks[idx];
+  document.getElementById('b-folio').value = t.folio; document.getElementById('b-placa').value = t.placa;
+  document.getElementById('b-operador').value = t.operador; document.getElementById('b-entrada').value = t.horaEntrada;
+  document.getElementById('b-salida').value = t.horaSalida; document.getElementById('b-tons').value = t.tons;
+  document.getElementById('b-m3').value = t.m3;
+  S.truckPhotos = {
+    camion: t.fotoCamion ? { b64:t.fotoCamion, dataUrl:'data:image/jpeg;base64,'+t.fotoCamion } : null,
+    nota:   t.fotoNota   ? { b64:t.fotoNota,   dataUrl:'data:image/jpeg;base64,'+t.fotoNota   } : null,
   };
-  ['camion','nota'].forEach(tipo=>{
-    const slot=document.getElementById(`slot-${tipo}`),thumb=document.getElementById(`thumb-${tipo}`);
-    if(S.truckPhotos[tipo]){slot?.classList.add('has-photo');if(thumb)thumb.src=S.truckPhotos[tipo].dataUrl;}
-    else{slot?.classList.remove('has-photo');if(thumb)thumb.src='';}
+  ['camion','nota'].forEach(tipo => {
+    const slot = document.getElementById(`slot-${tipo}`), thumb = document.getElementById(`thumb-${tipo}`);
+    if (S.truckPhotos[tipo]) { slot?.classList.add('has-photo'); if (thumb) thumb.src = S.truckPhotos[tipo].dataUrl; }
+    else { slot?.classList.remove('has-photo'); if (thumb) thumb.src = ''; }
   });
-  S.editTruckIdx=idx;S.trucks.splice(idx,1);renderTruckList();
-  document.getElementById('truck-form-label').textContent=`Editando: ${t.placa}`;
-  document.getElementById('btn-add-truck').textContent='💾 Guardar cambios';
-  document.getElementById('truck-form-card').scrollIntoView({behavior:'smooth'});
+  S.editTruckIdx = idx; S.trucks.splice(idx, 1); renderTruckList();
+  document.getElementById('truck-form-label').textContent = `Editando: ${t.placa}`;
+  document.getElementById('btn-add-truck').textContent = '💾 Guardar cambios';
+  document.getElementById('truck-form-card').scrollIntoView({ behavior:'smooth' });
 }
-function deleteTruck(idx){const p=S.trucks[idx]?.placa||'';S.trucks.splice(idx,1);renderTruckList();toast(`🗑 ${p} eliminado`,'info');}
+function deleteTruck(idx) { const p = S.trucks[idx]?.placa || ''; S.trucks.splice(idx, 1); renderTruckList(); toast(`🗑 ${p} eliminado`, 'info'); }
 
-function preSubmitBitacora(){
-  if(!S.activeProdId){toast('Registra una producción primero','error');return;}
-  const total=parseInt(document.getElementById('b-total').value)||0;
-  if(!total||S.trucks.length!==total){toast(`Registra los ${total} camiones primero`,'error');return;}
-  const info=`<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
+function preSubmitBitacora() {
+  if (!S.activeProdId) { toast('Registra una producción primero', 'error'); return; }
+  const total = parseInt(document.getElementById('b-total').value) || 0;
+  if (!total || S.trucks.length !== total) { toast(`Registra los ${total} camiones primero`, 'error'); return; }
+  const info = `<div style="background:var(--surface);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:12px">
     Producción: <strong style="color:var(--amber);font-family:monospace">${S.activeProdId}</strong> · <strong>${S.trucks.length} camiones</strong></div>`;
-  const html=S.trucks.map((t,i)=>{
-    const qty=[t.tons?t.tons+' Tn':'',t.m3?t.m3+' m³':''].filter(Boolean).join(' · ');
-    return`<div class="sum-item"><div class="sum-item-head"><span class="truck-num">${i+1}</span><strong class="truck-placa">${t.placa}</strong><span class="truck-op">${t.operador}</span></div>
+  const html = S.trucks.map((t, i) => {
+    const qty = [t.tons ? t.tons + ' Tn' : '', t.m3 ? t.m3 + ' m³' : ''].filter(Boolean).join(' · ');
+    return `<div class="sum-item"><div class="sum-item-head"><span class="truck-num">${i+1}</span><strong class="truck-placa">${t.placa}</strong><span class="truck-op">${t.operador}</span></div>
     <div class="sum-item-body">${t.horaEntrada} → ${t.horaSalida} · ${qty} · Folio: ${t.folio}</div></div>`;
   }).join('');
-  showModal('Bitácora completa',info+html,doSubmitBitacora);
+  showModal('Bitácora completa', info + html, doSubmitBitacora);
 }
-async function doSubmitBitacora(){
-  await send({action:'bitacora',idProd:S.activeProdId,folderId:S.activeProdFolderId,camiones:S.trucks},'btn-bit',
-    async r=>{toast(`✅ ${r.camiones} camiones registrados`,'success');S.trucks=[];document.getElementById('b-total').value='';renderTruckList();updateCounter();});
-}
-
-/* ══ TAB 4: ENTRADAS ════════════════════════════════════ */
-function initEntrada(){document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);}
-
-function onEntradaInsumoChange(){
-  const info=getInsumoInfo(document.getElementById('e-insumo').value);
-  if(info.Unidad)document.getElementById('e-unidad').value=info.Unidad;
+async function doSubmitBitacora() {
+  await send({ action:'bitacora', idProd:S.activeProdId, folderId:S.activeProdFolderId, camiones:S.trucks }, 'btn-bit',
+    async r => { toast(`✅ ${r.camiones} camiones registrados`, 'success'); S.trucks = []; document.getElementById('b-total').value = ''; renderTruckList(); updateCounter(); });
 }
 
-function calcEntradaTotals(){
-  const precio=parseFloat(document.getElementById('e-precio').value)||0;
-  const addIva=document.getElementById('e-iva-check').checked;
-  const ivaFields=document.getElementById('iva-fields');
-  ivaFields.style.display=addIva?'grid':'none';
-  if(addIva){
-    const iva=Math.round(precio*0.16*100)/100;
-    const total=Math.round((precio+iva)*100)/100;
-    document.getElementById('e-iva-monto').value=iva>0?iva:'';
-    document.getElementById('e-precio-total').value=total>0?total:'';
+/* ══ TAB 4: SUMINISTROS ═════════════════════════════════
+   ✅ FIX: flete es tarifa fija por entrega.
+   Fórmula correcta: cant × precio(+iva) + flete          */
+function initEntrada() { document.getElementById('e-fecha').value = new Date().toISOString().slice(0,10); }
+
+function onEntradaInsumoChange() {
+  const info = getInsumoInfo(document.getElementById('e-insumo').value);
+  if (info.Unidad) document.getElementById('e-unidad').value = info.Unidad;
+  calcEntradaTotals();
+}
+
+function calcEntradaTotals() {
+  const precio = parseFloat(document.getElementById('e-precio').value) || 0;
+  const cant   = parseFloat(document.getElementById('e-cantidad').value) || 0;
+  const flete  = parseFloat(document.getElementById('e-flete').value) || 0;
+  const addIva = document.getElementById('e-iva-check').checked;
+
+  const ivaFields = document.getElementById('iva-fields');
+  ivaFields.style.display = addIva ? 'grid' : 'none';
+
+  let precioConIva = precio;
+  if (addIva) {
+    const iva = Math.round(precio * 0.16 * 100) / 100;
+    precioConIva = precio + iva;
+    document.getElementById('e-iva-monto').value   = iva > 0 ? iva : '';
+    document.getElementById('e-precio-total').value = precioConIva > 0 ? precioConIva : '';
+  } else {
+    document.getElementById('e-iva-monto').value   = '';
+    document.getElementById('e-precio-total').value = '';
   }
+
+  // ✅ Flete fijo — no multiplica por cantidad
+  const costoTotal = cant * precioConIva + flete;
+  const elCosto = document.getElementById('e-costo-total');
+  if (elCosto) elCosto.textContent = costoTotal > 0 ? `$${costoTotal.toFixed(2)}` : '—';
 }
 
-async function handleEntradaPhotos(input){
-  for(const file of Array.from(input.files)){
-    const b64=await compressImage(file);
-    if(b64)S.entradaPhotos.push({b64,dataUrl:'data:image/jpeg;base64,'+b64});
+async function handleEntradaPhotos(input) {
+  for (const file of Array.from(input.files)) {
+    const b64 = await compressImage(file);
+    if (b64) S.entradaPhotos.push({ b64, dataUrl: 'data:image/jpeg;base64,' + b64 });
   }
-  renderEntradaThumbs();input.value='';
+  renderEntradaThumbs(); input.value = '';
 }
-function renderEntradaThumbs(){
-  const el=document.getElementById('entrada-thumbs');if(!el)return;
-  el.innerHTML=S.entradaPhotos.map((p,i)=>`
+function renderEntradaThumbs() {
+  const el = document.getElementById('entrada-thumbs'); if (!el) return;
+  el.innerHTML = S.entradaPhotos.map((p, i) => `
     <div class="thumb-wrap"><img src="${p.dataUrl}" class="thumb" alt="">
       <button class="thumb-del" onclick="S.entradaPhotos.splice(${i},1);renderEntradaThumbs()" type="button">×</button>
     </div>`).join('');
 }
 
-async function submitEntrada(){
-  const insumo=document.getElementById('e-insumo').value;
-  const cant=parseFloat(document.getElementById('e-cantidad').value);
-  if(!insumo||!cant){toast('Insumo y cantidad son obligatorios','error');return;}
-  const precio=parseFloat(document.getElementById('e-precio').value)||0;
-  const addIva=document.getElementById('e-iva-check').checked;
-  const iva=addIva?Math.round(precio*0.16*100)/100:0;
-  const payload={action:'entrada',entrada:{
-    fecha:document.getElementById('e-fecha').value,
-    insumo,cantidad:String(cant),
-    unidad:document.getElementById('e-unidad').value,
-    precio:String(precio),iva:String(iva),
-    flete:document.getElementById('e-flete').value||'0',
-    fotos:S.entradaPhotos.map(p=>p.b64),
+async function submitEntrada() {
+  const insumo = document.getElementById('e-insumo').value;
+  const cant   = parseFloat(document.getElementById('e-cantidad').value);
+  if (!insumo || !cant) { toast('Insumo y cantidad son obligatorios', 'error'); return; }
+  const precio = parseFloat(document.getElementById('e-precio').value) || 0;
+  const addIva = document.getElementById('e-iva-check').checked;
+  const iva    = addIva ? Math.round(precio * 0.16 * 100) / 100 : 0;
+  const payload = { action:'entrada', entrada:{
+    fecha:   document.getElementById('e-fecha').value,
+    insumo, cantidad: String(cant),
+    unidad:  document.getElementById('e-unidad').value,
+    precio:  String(precio), iva: String(iva),
+    flete:   document.getElementById('e-flete').value || '0',
+    fotos:   S.entradaPhotos.map(p => p.b64),
   }};
-  await send(payload,'btn-ent',async()=>{toast('✅ Entrada registrada','success');resetEntrada();});
+  await send(payload, 'btn-ent', async () => { toast('✅ Suministro registrado', 'success'); resetEntrada(); });
 }
 
-function resetEntrada(){
-  ['e-cantidad','e-precio','e-flete'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('e-fecha').value=new Date().toISOString().slice(0,10);
-  document.getElementById('e-insumo').selectedIndex=0;
-  document.getElementById('e-unidad').value='Tn';
-  document.getElementById('e-iva-check').checked=false;
-  document.getElementById('iva-fields').style.display='none';
-  document.getElementById('e-iva-monto').value='';
-  document.getElementById('e-precio-total').value='';
-  S.entradaPhotos=[];renderEntradaThumbs();
+function resetEntrada() {
+  ['e-cantidad','e-precio','e-flete'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('e-fecha').value = new Date().toISOString().slice(0,10);
+  document.getElementById('e-insumo').selectedIndex = 0;
+  document.getElementById('e-unidad').value = 'Tn';
+  document.getElementById('e-iva-check').checked = false;
+  document.getElementById('iva-fields').style.display = 'none';
+  document.getElementById('e-iva-monto').value = '';
+  document.getElementById('e-precio-total').value = '';
+  const elCosto = document.getElementById('e-costo-total');
+  if (elCosto) elCosto.textContent = '—';
+  S.entradaPhotos = []; renderEntradaThumbs();
 }
 
 /* ══ SEND + QUEUE ════════════════════════════════════════ */
-async function send(payload,btnId,onSuccess){
-  const icon=document.getElementById(`${btnId}-icon`);
-  const txt=document.getElementById(`${btnId}-txt`);
-  const btn=document.getElementById(btnId);
-  btn.disabled=true;if(icon)icon.textContent='⏳';if(txt)txt.textContent='Enviando…';
-  if(!S.online){enqueue(payload);toast('📶 Sin conexión — guardado en cola','info');resetBtn(btnId);return;}
-  try{
-    const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)});
-    const result=await res.json().catch(()=>({status:'error',message:'Respuesta inválida'}));
-    if(result.status==='ok'){await onSuccess(result);}
-    else{toast('❌ '+(result.message||'Error en Apps Script'),'error');console.error(result);}
-  }catch(err){console.error(err);enqueue(payload);toast('❌ Error de red — guardado en cola','error');}
-  finally{resetBtn(btnId);}
+async function send(payload, btnId, onSuccess) {
+  const icon = document.getElementById(`${btnId}-icon`);
+  const txt  = document.getElementById(`${btnId}-txt`);
+  const btn  = document.getElementById(btnId);
+  btn.disabled = true; if (icon) icon.textContent = '⏳'; if (txt) txt.textContent = 'Enviando…';
+  if (!S.online) { enqueue(payload); toast('📶 Sin conexión — guardado en cola', 'info'); resetBtn(btnId); return; }
+  try {
+    const res    = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload) });
+    const result = await res.json().catch(() => ({ status:'error', message:'Respuesta inválida' }));
+    if (result.status === 'ok') { await onSuccess(result); }
+    else { toast('❌ ' + (result.message || 'Error en Apps Script'), 'error'); console.error(result); }
+  } catch(err) { console.error(err); enqueue(payload); toast('❌ Error de red — guardado en cola', 'error'); }
+  finally { resetBtn(btnId); }
 }
-const BTN_DEF={'btn-prod':{icon:'✅',txt:'Registrar producción'},'btn-ins':{icon:'📋',txt:'Revisar y enviar insumos'},'btn-bit':{icon:'✅',txt:'Enviar bitácora completa'},'btn-ent':{icon:'✅',txt:'Registrar entrada'}};
-function resetBtn(btnId){
-  const d=BTN_DEF[btnId]||{icon:'✅',txt:'Enviar'};
-  document.getElementById(btnId).disabled=btnId==='btn-bit';
-  const icon=document.getElementById(`${btnId}-icon`),txt=document.getElementById(`${btnId}-txt`);
-  if(icon)icon.textContent=d.icon;if(txt)txt.textContent=d.txt;
-  if(btnId==='btn-bit')updateCounter();
+
+const BTN_DEF = {
+  'btn-prod': { icon:'✅', txt:'Registrar producción' },
+  'btn-ins':  { icon:'📋', txt:'Revisar y enviar insumos' },
+  'btn-bit':  { icon:'✅', txt:'Enviar bitácora completa' },
+  'btn-ent':  { icon:'✅', txt:'Registrar suministro' },
+};
+function resetBtn(btnId) {
+  const d = BTN_DEF[btnId] || { icon:'✅', txt:'Enviar' };
+  document.getElementById(btnId).disabled = btnId === 'btn-bit';
+  const icon = document.getElementById(`${btnId}-icon`), txt = document.getElementById(`${btnId}-txt`);
+  if (icon) icon.textContent = d.icon; if (txt) txt.textContent = d.txt;
+  if (btnId === 'btn-bit') updateCounter();
 }
-function enqueue(payload){S.pendingQueue.push({payload,ts:Date.now()});localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();}
-async function processQueue(){
-  if(!S.online||!S.pendingQueue.length)return;
-  const queue=[...S.pendingQueue];S.pendingQueue=[];
-  for(const item of queue){
-    try{const res=await fetch(APPS_SCRIPT_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(item.payload)});
-      const result=await res.json().catch(()=>({status:'error'}));
-      if(result.status!=='ok')S.pendingQueue.push(item);
-    }catch{S.pendingQueue.push(item);break;}
+function enqueue(payload) {
+  S.pendingQueue.push({ payload, ts: Date.now() });
+  try { localStorage.setItem('pendingQueue', JSON.stringify(S.pendingQueue)); } catch(e) {
+    console.warn('Cola llena (localStorage quota):', e);
+    toast('⚠️ Sin espacio local para cola', 'warn');
   }
-  localStorage.setItem('pendingQueue',JSON.stringify(S.pendingQueue));updatePendingBadge();
-  const sent=queue.length-S.pendingQueue.length;
-  if(sent>0)toast(`✅ ${sent} registro(s) enviado(s)`,'success');
+  updatePendingBadge();
 }
-function updatePendingBadge(){const n=S.pendingQueue.length;const el=document.getElementById('pendingBadge');el.textContent=`${n} pend.`;el.classList.toggle('show',n>0);}
+async function processQueue() {
+  if (!S.online || !S.pendingQueue.length) return;
+  const queue = [...S.pendingQueue]; S.pendingQueue = [];
+  for (const item of queue) {
+    try {
+      const res    = await fetch(APPS_SCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(item.payload) });
+      const result = await res.json().catch(() => ({ status:'error' }));
+      if (result.status !== 'ok') S.pendingQueue.push(item);
+    } catch { S.pendingQueue.push(item); break; }
+  }
+  localStorage.setItem('pendingQueue', JSON.stringify(S.pendingQueue));
+  updatePendingBadge();
+  const sent = queue.length - S.pendingQueue.length;
+  if (sent > 0) toast(`✅ ${sent} registro(s) enviado(s)`, 'success');
+}
+function updatePendingBadge() {
+  const n = S.pendingQueue.length;
+  const el = document.getElementById('pendingBadge');
+  el.textContent = `${n} pend.`; el.classList.toggle('show', n > 0);
+}
 
 /* ══ ONLINE ══════════════════════════════════════════════ */
-function setupOnline(){
-  const update=online=>{S.online=online;const el=document.getElementById('connDot');el.textContent=online?'En línea':'Sin conexión';el.classList.toggle('offline',!online);if(online)processQueue();};
-  window.addEventListener('online',()=>update(true));window.addEventListener('offline',()=>update(false));update(navigator.onLine);
+function setupOnline() {
+  const update = online => {
+    S.online = online;
+    const el = document.getElementById('connDot');
+    el.textContent = online ? 'En línea' : 'Sin conexión';
+    el.classList.toggle('offline', !online);
+    if (online) processQueue();
+  };
+  window.addEventListener('online', () => update(true));
+  window.addEventListener('offline', () => update(false));
+  update(navigator.onLine);
 }
 
 /* ══ PHOTOS ══════════════════════════════════════════════ */
-async function compressImage(file,maxW=1024,quality=0.78){
-  return new Promise(resolve=>{
-    const img=new Image();const url=URL.createObjectURL(file);
-    img.onload=()=>{
-      URL.revokeObjectURL(url);let{width:w,height:h}=img;
-      if(w>maxW){h=Math.round(h*maxW/w);w=maxW;}
-      const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
-      canvas.getContext('2d').drawImage(img,0,0,w,h);
-      canvas.toBlob(blob=>{const r=new FileReader();r.onloadend=()=>resolve(r.result.split(',')[1]);r.readAsDataURL(blob);},'image/jpeg',quality);
+async function compressImage(file, maxW = 1024, quality = 0.78) {
+  return new Promise(resolve => {
+    const img = new Image(); const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url); let { width:w, height:h } = img;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(blob => { const r = new FileReader(); r.onloadend = () => resolve(r.result.split(',')[1]); r.readAsDataURL(blob); }, 'image/jpeg', quality);
     };
-    img.onerror=()=>resolve(null);img.src=url;
+    img.onerror = () => resolve(null); img.src = url;
   });
 }
 
 /* ══ MODAL ═══════════════════════════════════════════════ */
-function showModal(title,bodyHtml,onConfirm,confirmLabel='Confirmar y enviar'){
-  document.getElementById('modal-title').textContent=title;
-  document.getElementById('modal-body').innerHTML=bodyHtml;
-  document.getElementById('modal-confirm').textContent=confirmLabel;
-  document.getElementById('modal-confirm').onclick=()=>{closeModal();onConfirm();};
+function showModal(title, bodyHtml, onConfirm, confirmLabel = 'Confirmar y enviar') {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = bodyHtml;
+  document.getElementById('modal-confirm').textContent = confirmLabel;
+  document.getElementById('modal-confirm').onclick = () => { closeModal(); onConfirm(); };
   document.getElementById('modal').classList.add('show');
 }
-function closeModal(){document.getElementById('modal').classList.remove('show');}
+function closeModal() { document.getElementById('modal').classList.remove('show'); }
 
 /* ══ TOAST ═══════════════════════════════════════════════ */
 let toastTimer;
-function toast(msg,tipo='success'){const el=document.getElementById('toast');clearTimeout(toastTimer);el.textContent=msg;el.className=`${tipo} show`;toastTimer=setTimeout(()=>{el.className='';},3500);}
+function toast(msg, tipo = 'success') {
+  const el = document.getElementById('toast'); clearTimeout(toastTimer);
+  el.textContent = msg; el.className = `${tipo} show`;
+  toastTimer = setTimeout(() => { el.className = ''; }, 3500);
+}
 
 /* ══ START ═══════════════════════════════════════════════ */
 init();
