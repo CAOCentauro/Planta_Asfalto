@@ -310,6 +310,14 @@ async function loadData() {
 }
 
 async function reload() { await loadData(); }
+  function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('on');
+}
+function closeMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('on');
+}
 function bar(on) {
   const el = document.getElementById('pbar');
   el.style.width = on ? '65%' : '100%';
@@ -322,6 +330,7 @@ document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e =>
   document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
   a.classList.add('active');
   renderSec(a.dataset.s);
+  closeMenu();
 }));
 
 function renderSec(id) {
