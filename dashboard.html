@@ -529,7 +529,7 @@ function financiero() {
   const u   = uniq(D.producciones||[]);
   const um  = mesAct(u);
   const ing = um.reduce((s,p)=>s+N(p.ingreso_total),0);
-  const gas = um.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.otros_gastos),0);
+  const gas = um.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos),0);
   const util= um.reduce((s,p)=>s+N(p.utilidad),0);
   const mg  = ing > 0 ? util/ing : 0;
 
@@ -545,7 +545,7 @@ function financiero() {
     labels: s.map(p=>p.id_prod),
     datasets: [
       { label:'Ingreso',  data:s.map(p=>N(p.ingreso_total)), backgroundColor:'rgba(245,158,11,.5)' },
-      { label:'Gastos',   data:s.map(p=>N(p.gastos_insumos)+N(p.otros_gastos)), backgroundColor:'rgba(220,38,38,.4)' },
+      { label:'Gastos',   data:s.map(p=>N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos)), backgroundColor:'rgba(220,38,38,.4)' },
       { label:'Utilidad', data:s.map(p=>N(p.utilidad)), backgroundColor:'rgba(22,163,74,.5)' },
     ]
   });
