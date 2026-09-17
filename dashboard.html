@@ -671,7 +671,8 @@ function renderCont() {
     return;
   }
 
-  const vals=ins.map(r=>N(r.termino_L));
+  const vals    = ins.map(r=>N(r.termino_L));
+const valsIni = ins.map(r=>N(r.inicio_L));  // ← agregar esto
   const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
   const sigma=std(vals);
   const labs=ins.map(r=>r.fecha);
@@ -679,13 +680,18 @@ function renderCont() {
   document.getElementById('c-stats').textContent=
     `  Promedio: ${f2(avg)} L  ·  σ: ${f2(sigma)} L  ·  ${ins.length} registros`;
 
-  mkChart('cCont','line',{
+   mkChart('cCont','line',{
     labels:labs,
     datasets:[
-      {label:'Nivel al cierre (L)',data:vals,
+      {label:'Inicio (L)',data:valsIni,
+       borderColor:'#818cf8',backgroundColor:'transparent',
+       pointBackgroundColor:'#818cf8',pointRadius:5,
+       tension:.2,fill:false,borderDash:[3,3]},
+      {label:'Cierre (L)',data:vals,
        borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
-       pointBackgroundColor:'#f59e0b',tension:.2,fill:true},
-      {label:'Promedio',data:labs.map(()=>avg),
+       pointBackgroundColor:'#f59e0b',pointRadius:5,
+       tension:.2,fill:true},
+      {label:'Promedio cierre',data:labs.map(()=>avg),
        borderColor:'#6b7280',borderDash:[5,4],pointRadius:0,fill:false},
     ]
   });
