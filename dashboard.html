@@ -671,7 +671,7 @@ function renderCont() {
     return;
   }
 
-  const vals=ins.map(r=>N(r.consumo_L));
+  const vals=ins.map(r=>N(r.termino_L));
   const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
   const sigma=std(vals);
   const labs=ins.map(r=>r.fecha);
@@ -679,13 +679,13 @@ function renderCont() {
   document.getElementById('c-stats').textContent=
     `  Promedio: ${f2(avg)} L  ·  σ: ${f2(sigma)} L  ·  ${ins.length} registros`;
 
-  mkChart('cCont','bar',{
+  mkChart('cCont','line',{
     labels:labs,
     datasets:[
-      {label:`Consumo (L)`,data:vals,
-       backgroundColor:vals.map(v=>v<0?'rgba(220,38,38,.7)':'rgba(245,158,11,.6)'),
-       borderColor:vals.map(v=>v<0?'#dc2626':'#f59e0b'),borderWidth:1},
-      {label:'Promedio',data:labs.map(()=>avg),type:'line',
+      {label:'Nivel al cierre (L)',data:vals,
+       borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
+       pointBackgroundColor:'#f59e0b',tension:.2,fill:true},
+      {label:'Promedio',data:labs.map(()=>avg),
        borderColor:'#6b7280',borderDash:[5,4],pointRadius:0,fill:false},
     ]
   });
@@ -727,16 +727,23 @@ function anomalias() {
     id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
     tipo:'Sin costo',det:'costo_unit vacío',lv:'warn'}));
 
-  const gr={};
+    const gr={};
   ins.filter(r=>r.tipo_uso==='PRODUCCION')
      .sort((a,b)=>a.fecha.localeCompare(b.fecha))
      .forEach(r=>{const k=`${r.insumo}|${r.uso}`;(gr[k]=gr[k]||[]).push(r);});
   Object.values(gr).forEach(rows=>{
     for(let i=1;i<rows.length;i++){
       const p=rows[i-1],c=rows[i];
-      const d=Math.abs(N(c.inicio_L)-N(p.termino_L));
+      // Suministros que llegaron entre las dos producciones (días sin producción)
+      const sumiEntre=(D.suministros||[])
+        .filter(s=>s.insumo===c.insumo&&s.uso===c.uso&&s.fecha>p.fecha&&s.fecha<c.fecha)
+        .reduce((sum,s)=>sum+N(s.cantidad_L),0);
+      const esperado=N(p.termino_L)+sumiEntre;
+      const d=Math.abs(N(c.inicio_L)-esperado);
       if(d>2) al.push({id:c.id_prod,f:c.fecha,ins:c.insumo,uso:c.uso,
-        tipo:'Continuidad',det:`Término ant: ${f2(p.termino_L)}L → Inicio: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,lv:'warn'});
+        tipo:'Continuidad',
+        det:`Término ant: ${f2(p.termino_L)}L${sumiEntre>0?' + sumi. '+f2(sumiEntre)+'L':''} → esperado: ${f2(esperado)}L → Inicio real: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,
+        lv:'warn'});
     }
   });
 
