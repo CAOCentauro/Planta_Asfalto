@@ -7,22 +7,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-:root {
-  --bg:     #0b0b0b;
-  --s1:     #141414;
-  --s2:     #1c1c1c;
-  --bd:     #2a2a2a;
-  --amb:    #f59e0b;
-  --green:  #16a34a;
-  --red:    #dc2626;
-  --text:   #e4e4e4;
-  --muted:  #6b6b6b;
-  --sw:     210px;
-}
+:root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
 
-/* ── LOGIN ── */
+/* LOGIN */
 #login{display:flex;align-items:center;justify-content:center;height:100vh}
 .lbox{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--amb);padding:40px;width:320px}
 .lbox h1{font-size:16px;font-weight:600;margin-bottom:4px}
@@ -33,7 +22,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 .btn-p:hover{background:#d97706}
 .err{color:var(--red);font-size:12px;margin-top:8px;display:none}
 
-/* ── LAYOUT ── */
+/* LAYOUT */
 #app{display:none;height:100vh}
 #sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
 .sb-logo{padding:18px 16px;border-bottom:1px solid var(--bd)}
@@ -49,33 +38,31 @@ nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(245,1
 .btn-r:hover{border-color:var(--amb);color:var(--amb)}
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column}
 
-/* ── PROGRESS BAR ── */
+/* PROGRESS BAR */
 #pbar{height:2px;background:var(--amb);width:0;transition:width .3s;position:fixed;top:0;left:0;right:0;z-index:999}
 
-/* ── SECTIONS ── */
+/* SECTIONS */
 .sec{display:none;flex-direction:column;height:100%;overflow-y:auto}
 .sec.on{display:flex}
 .ph{padding:15px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:10;flex-shrink:0}
 .ph h2{font-size:15px;font-weight:600;flex:1}
 .sb{padding:24px;display:flex;flex-direction:column;gap:20px}
 
-/* ── METRIC CARDS ── */
+/* METRIC CARDS */
 .mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
 .mc{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--amb);padding:16px}
-.mc.r{border-left-color:var(--red)}
-.mc.g{border-left-color:var(--green)}
-.mc.m{border-left-color:var(--muted)}
+.mc.r{border-left-color:var(--red)}.mc.g{border-left-color:var(--green)}.mc.m{border-left-color:var(--muted)}
 .ml{font-size:11px;color:var(--muted);margin-bottom:6px}
 .mv{font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
 .ms{font-size:11px;color:var(--muted);margin-top:5px}
 
-/* ── PANELS ── */
+/* PANELS */
 .pn{background:var(--s1);border:1px solid var(--bd)}
-.pnh{padding:11px 16px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between}
+.pnh{padding:11px 16px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pnb{padding:16px}
 .cw{position:relative;height:250px}
 
-/* ── TABLES ── */
+/* TABLES */
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:8px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--bd);white-space:nowrap}
@@ -87,54 +74,31 @@ tr:hover td{background:rgba(245,158,11,.03)}
 .tm{background:rgba(245,158,11,.15);color:#fbbf24}
 .tb{background:rgba(22,163,74,.15);color:#4ade80}
 
-/* ── FILTERS ── */
+/* FILTERS */
 .flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 select,input[type=text],input[type=date]{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;outline:none}
 select:focus,input:focus{border-color:var(--amb)}
 
-/* ── UTILS ── */
+/* FINANCIERO TOGGLE */
+.ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
+.ftb:hover{border-color:var(--amb);color:var(--amb)}
+.ftb.active{background:rgba(245,158,11,.12);border-color:var(--amb);color:var(--amb)}
+
+/* UTILS */
 .pos{color:#4ade80}.neg{color:#f87171}.amb{color:var(--amb)}.rt{text-align:right}
 .empty{padding:36px;text-align:center;color:var(--muted)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:860px){.two{grid-template-columns:1fr}}
-  #menu-btn {
-  display: none;
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 20px;
-  cursor: pointer;
-  padding: 0 8px;
-}
-@media (max-width: 640px) {
-  #menu-btn {
-    display: block;
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 101;
-    background: var(--s1);
-    border: 1px solid var(--bd);
-    padding: 4px 10px;
-  }
-  #sidebar {
-    position: fixed;
-    left: -100%;
-    top: 0; bottom: 0;
-    z-index: 100;
-    transition: left .2s;
-    width: 220px;
-  }
-  #sidebar.open { left: 0; }
-  #overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,.6);
-    z-index: 99;
-  }
-  #overlay.on { display: block; }
-  #main { padding-top: 44px; }
+
+/* MOBILE */
+#menu-btn{display:none;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:0 8px}
+@media(max-width:640px){
+  #menu-btn{display:block;position:fixed;top:12px;left:12px;z-index:101;background:var(--s1);border:1px solid var(--bd);padding:4px 10px}
+  #sidebar{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:left .2s;width:220px}
+  #sidebar.open{left:0}
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+  #overlay.on{display:block}
+  #main{padding-top:44px}
 }
 </style>
 </head>
@@ -154,144 +118,172 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <!-- APP -->
 <div id="app">
-  <!-- después de <div id="app"> -->
 <button id="menu-btn" onclick="toggleMenu()">☰</button>
 <div id="overlay" onclick="closeMenu()"></div>
-  <div id="sidebar">
-    <div class="sb-logo">
-      <span>Panel de control</span>
-      <strong>Planta de Asfalto</strong>
-    </div>
-    <nav>
-      <a href="#" class="active" data-s="resumen">Resumen</a>
-      <a href="#" data-s="rendimientos">Rendimientos</a>
-      <a href="#" data-s="financiero">Financiero</a>
-      <a href="#" data-s="insumos">Insumos</a>
-      <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
-      <a href="#" data-s="historial">Historial</a>
-    </nav>
-    <div class="sb-foot">
-      Última actualización
-      <span id="lu">—</span>
-      <button class="btn-r" onclick="reload()">↺ Actualizar</button>
-    </div>
+<div id="sidebar">
+  <div class="sb-logo">
+    <span>Panel de control</span>
+    <strong>Planta de Asfalto</strong>
   </div>
-
-  <div id="main">
-
-    <!-- RESUMEN -->
-    <section class="sec on" id="sec-resumen">
-      <div class="ph"><h2>Resumen</h2></div>
-      <div class="sb">
-        <div class="mg" id="r-met"></div>
-        <div class="two">
-          <div class="pn">
-            <div class="pnh">Últimas producciones</div>
-            <div class="tw" id="r-tbl"></div>
-          </div>
-          <div class="pn">
-            <div class="pnh">Nivel de tanques al cierre</div>
-            <div class="tw" id="r-stk"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- RENDIMIENTOS -->
-    <section class="sec" id="sec-rendimientos">
-      <div class="ph">
-        <h2>Rendimientos</h2>
-        <div class="flt">
-          <select id="ri" onchange="renderRend()"></select>
-        </div>
-      </div>
-      <div class="sb">
-        <div class="pn">
-          <div class="pnh">L / tonelada producida <span id="r-avg" style="color:var(--amb)"></span></div>
-          <div class="pnb"><div class="cw"><canvas id="cRend"></canvas></div></div>
-        </div>
-        <div class="pn">
-          <div class="pnh">Detalle por producción</div>
-          <div class="tw" id="r-det"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- FINANCIERO -->
-    <section class="sec" id="sec-financiero">
-      <div class="ph"><h2>Financiero</h2></div>
-      <div class="sb">
-        <div class="mg" id="f-met"></div>
-        <div class="pn">
-          <div class="pnh">Ingreso · Gastos · Utilidad por producción</div>
-          <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
-        </div>
-        <div class="pn">
-          <div class="pnh">Desglose por producción</div>
-          <div class="tw" id="f-tbl"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- INSUMOS -->
-    <section class="sec" id="sec-insumos">
-      <div class="ph"><h2>Insumos</h2></div>
-      <div class="sb">
-        <div class="two">
-          <div class="pn">
-            <div class="pnh">Consumo total acumulado (L)</div>
-            <div class="pnb"><div class="cw"><canvas id="cIns"></canvas></div></div>
-          </div>
-          <div class="pn">
-            <div class="pnh">Entradas de material recientes</div>
-            <div class="tw" id="i-ent"></div>
-          </div>
-        </div>
-        <div class="pn">
-          <div class="pnh">Rendimiento promedio por insumo y uso</div>
-          <div class="tw" id="i-rnd"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ANOMALÍAS -->
-    <section class="sec" id="sec-anomalias">
-      <div class="ph"><h2>Anomalías</h2></div>
-      <div class="sb">
-        <div class="pn">
-          <div class="pnh" id="an-hdr">Revisión de datos</div>
-          <div class="tw" id="an-tbl"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- HISTORIAL -->
-    <section class="sec" id="sec-historial">
-      <div class="ph">
-        <h2>Historial</h2>
-        <div class="flt">
-          <input type="text" id="hc" placeholder="Cliente" oninput="renderHist()">
-          <input type="date" id="hd" oninput="renderHist()">
-          <input type="date" id="hh" oninput="renderHist()">
-          <select id="hm" onchange="renderHist()"><option value="">Todas las mezclas</option></select>
-        </div>
-      </div>
-      <div class="sb">
-        <div class="pn"><div class="tw" id="h-tbl"></div></div>
-      </div>
-    </section>
-
+  <nav>
+    <a href="#" class="active" data-s="resumen">Resumen</a>
+    <a href="#" data-s="rendimientos">Rendimientos</a>
+    <a href="#" data-s="financiero">Financiero</a>
+    <a href="#" data-s="insumos">Insumos</a>
+    <a href="#" data-s="continuidad">Continuidad</a>
+    <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
+    <a href="#" data-s="historial">Historial</a>
+  </nav>
+  <div class="sb-foot">
+    Última actualización
+    <span id="lu">—</span>
+    <button class="btn-r" onclick="reload()">↺ Actualizar</button>
   </div>
 </div>
 
+<div id="main">
+
+  <!-- RESUMEN -->
+  <section class="sec on" id="sec-resumen">
+    <div class="ph"><h2>Resumen</h2></div>
+    <div class="sb">
+      <div class="mg" id="r-met"></div>
+      <div class="two">
+        <div class="pn">
+          <div class="pnh">Últimas producciones</div>
+          <div class="tw" id="r-tbl"></div>
+        </div>
+        <div class="pn">
+          <div class="pnh">Nivel de tanques al cierre</div>
+          <div class="tw" id="r-stk"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RENDIMIENTOS -->
+  <section class="sec" id="sec-rendimientos">
+    <div class="ph">
+      <h2>Rendimientos</h2>
+      <div class="flt">
+        <select id="ri" onchange="onInsumoChange()"></select>
+        <select id="ru" onchange="renderRend()"><option value="">Todos los usos</option></select>
+        <input type="date" id="rd" oninput="renderRend()" title="Desde">
+        <input type="date" id="rh" oninput="renderRend()" title="Hasta">
+      </div>
+    </div>
+    <div class="sb">
+      <div class="pn">
+        <div class="pnh">L / tonelada producida <span id="r-avg" style="color:var(--amb)"></span></div>
+        <div class="pnb"><div class="cw"><canvas id="cRend"></canvas></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh">Detalle por producción</div>
+        <div class="tw" id="r-det"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINANCIERO -->
+  <section class="sec" id="sec-financiero">
+    <div class="ph"><h2>Financiero</h2></div>
+    <div class="sb">
+      <div class="mg" id="f-met"></div>
+      <div class="pn">
+        <div class="pnh">
+          <span>Ingreso · Gastos · Utilidad por producción</span>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button class="ftb active" data-mode="all"  onclick="setFinMode('all')">Todos</button>
+            <button class="ftb"        data-mode="ing"  onclick="setFinMode('ing')">Ingresos</button>
+            <button class="ftb"        data-mode="gas"  onclick="setFinMode('gas')">Gastos</button>
+            <button class="ftb"        data-mode="util" onclick="setFinMode('util')">Utilidad</button>
+          </div>
+        </div>
+        <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh">Desglose por producción</div>
+        <div class="tw" id="f-tbl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSUMOS -->
+  <section class="sec" id="sec-insumos">
+    <div class="ph"><h2>Insumos</h2></div>
+    <div class="sb">
+      <div class="two">
+        <div class="pn">
+          <div class="pnh">Consumo total acumulado (L)</div>
+          <div class="pnb"><div class="cw"><canvas id="cIns"></canvas></div></div>
+        </div>
+        <div class="pn">
+          <div class="pnh">Entradas de material recientes</div>
+          <div class="tw" id="i-ent"></div>
+        </div>
+      </div>
+      <div class="pn">
+        <div class="pnh">Estadísticas de rendimiento por insumo · uso</div>
+        <div class="tw" id="i-rnd"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTINUIDAD -->
+  <section class="sec" id="sec-continuidad">
+    <div class="ph">
+      <h2>Continuidad</h2>
+      <div class="flt">
+        <select id="ci" onchange="renderCont()"></select>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="pn">
+        <div class="pnh">Consumo diario (L) <span id="c-stats" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+        <div class="pnb"><div class="cw"><canvas id="cCont"></canvas></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh">Detalle de registros</div>
+        <div class="tw" id="c-tbl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANOMALÍAS -->
+  <section class="sec" id="sec-anomalias">
+    <div class="ph"><h2>Anomalías</h2></div>
+    <div class="sb">
+      <div class="pn">
+        <div class="pnh" id="an-hdr">Revisión de datos</div>
+        <div class="tw" id="an-tbl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="sec" id="sec-historial">
+    <div class="ph">
+      <h2>Historial</h2>
+      <div class="flt">
+        <input type="text" id="hc" placeholder="Cliente" oninput="renderHist()">
+        <input type="date" id="hd" oninput="renderHist()">
+        <input type="date" id="hh" oninput="renderHist()">
+        <select id="hm" onchange="renderHist()"><option value="">Todas las mezclas</option></select>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="pn"><div class="tw" id="h-tbl"></div></div>
+    </div>
+  </section>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
 <script>
-// ══════════════════════════════════════════
-//  CONFIG — edita estas dos líneas
-// ══════════════════════════════════════════
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhfIDfclX_CXOMH_FBDZVaQKQ8Qe6oBWQKCvHoPIQgWsUcSBz7Q0BSmGba2LKBtSfq/exec';
 const PASSWORD   = 'Hola1';
 
-let D = null, CH = {};
+let D = null, CH = {}, FIN_MODE = 'all';
 
 // ── AUTH ──────────────────────────────────
 function login() {
@@ -320,7 +312,8 @@ async function loadData() {
 }
 
 async function reload() { await loadData(); }
-  function toggleMenu() {
+
+function toggleMenu() {
   document.getElementById('sidebar').classList.toggle('open');
   document.getElementById('overlay').classList.toggle('on');
 }
@@ -331,186 +324,189 @@ function closeMenu() {
 function bar(on) {
   const el = document.getElementById('pbar');
   el.style.width = on ? '65%' : '100%';
-  if (!on) setTimeout(() => el.style.width = '0', 400);
+  if (!on) setTimeout(()=>el.style.width='0',400);
 }
 
 // ── NAV ───────────────────────────────────
 document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {
   e.preventDefault();
-  document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
   a.classList.add('active');
   renderSec(a.dataset.s);
   closeMenu();
 }));
 
 function renderSec(id) {
-  document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
-  const el = document.getElementById('sec-' + id);
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  const el = document.getElementById('sec-'+id);
   if (el) el.classList.add('on');
   if (!D) return;
-  ({ resumen, rendimientos, financiero, insumos, anomalias, historial })[id]?.();
+  ({resumen,rendimientos,financiero,insumos,continuidad,anomalias,historial})[id]?.();
 }
 
 // ── HELPERS ───────────────────────────────
-const N  = v => v == null ? 0 : parseFloat(v) || 0;
-const f2 = v => v == null ? '—' : new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
-const fp = v => v == null ? '—' : (v*100).toFixed(1) + '%';
-const $  = v => v == null ? '—' : '$' + f2(v);
+const N  = v => v==null ? 0 : parseFloat(v)||0;
+const f2 = v => v==null ? '—' : new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const fp = v => v==null ? '—' : (v*100).toFixed(1)+'%';
+const $  = v => v==null ? '—' : '$'+f2(v);
+
+function std(arr) {
+  if (!arr.length) return 0;
+  const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
+  return Math.sqrt(arr.reduce((s,v)=>s+(v-avg)**2,0)/arr.length);
+}
 
 function uniq(prods) {
-  const m = {};
-  prods.forEach(p => {
-    if (!m[p.id_prod]) m[p.id_prod] = {...p, ingreso_total:0, gastos_insumos:0, otros_gastos:0, utilidad:0, clientes:[]};
+  const m={};
+  prods.forEach(p=>{
+    if(!m[p.id_prod]) m[p.id_prod]={...p,ingreso_total:0,gastos_insumos:0,gasto_material:0,otros_gastos:0,utilidad:0,clientes:[]};
     m[p.id_prod].ingreso_total  += N(p.ingreso_total);
     m[p.id_prod].gastos_insumos += N(p.gastos_insumos);
+    m[p.id_prod].gasto_material += N(p.gasto_material);
     m[p.id_prod].otros_gastos   += N(p.otros_gastos);
     m[p.id_prod].utilidad       += N(p.utilidad);
-    if (!m[p.id_prod].clientes.includes(p.cliente)) m[p.id_prod].clientes.push(p.cliente);
+    if(!m[p.id_prod].clientes.includes(p.cliente)) m[p.id_prod].clientes.push(p.cliente);
   });
-  return Object.values(m).sort((a,b) => a.fecha.localeCompare(b.fecha));
+  return Object.values(m).sort((a,b)=>a.fecha.localeCompare(b.fecha));
 }
 
-function mesAct(arr, f='fecha') {
-  const n = new Date();
-  return arr.filter(r => { const d = new Date(r[f]); return d.getMonth()===n.getMonth() && d.getFullYear()===n.getFullYear(); });
+function mesAct(arr,f='fecha') {
+  const n=new Date();
+  return arr.filter(r=>{const d=new Date(r[f]);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();});
 }
 
-function mkChart(id, type, data, extra={}) {
-  if (CH[id]) CH[id].destroy();
-  const c = document.getElementById(id);
-  if (!c) return;
-  CH[id] = new Chart(c, {
-    type, data,
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#9ca3af', boxWidth:10, font:{size:11} } } },
-      scales: type !== 'pie' ? {
-        x:{ grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
-        y:{ grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} }
-      } : undefined,
+function mkChart(id,type,data,extra={}) {
+  if(CH[id]) CH[id].destroy();
+  const c=document.getElementById(id);
+  if(!c) return;
+  CH[id]=new Chart(c,{
+    type,data,
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}}},
+      scales:type!=='pie'?{
+        x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}},
+        y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}}
+      }:undefined,
       ...extra
     }
   });
 }
 
 function tagR(r) {
-  if (!r) return '';
-  const c = {ALTO:'ta',MEDIO:'tm',BAJO:'tb'}[r]||'';
-  return `<span class="tag ${c}">${r}</span>`;
+  if(!r) return '';
+  return `<span class="tag ${{ALTO:'ta',MEDIO:'tm',BAJO:'tb'}[r]||''}">${r}</span>`;
 }
-
-function mcColor(v, hi=0.35, lo=0.2) {
-  return v >= hi ? 'g' : v >= lo ? '' : 'r';
-}
+function mcColor(v,hi=0.35,lo=0.2){return v>=hi?'g':v>=lo?'':'r'}
 
 // ══════════════════════════════════════════
 //  RESUMEN
 // ══════════════════════════════════════════
 function resumen() {
-  const u  = uniq(D.producciones || []);
-  const um = mesAct(u);
-  const tonsMes = um.reduce((s,p)=>s+N(p.tons_real),0);
-  const utilMes = um.reduce((s,p)=>s+N(p.utilidad),0);
-  const mgArr   = um.filter(p=>N(p.ingreso_total)>0).map(p=>N(p.margen));
-  const mgProm  = mgArr.length ? mgArr.reduce((s,v)=>s+v,0)/mgArr.length : 0;
-  const last    = u[u.length-1];
+  const u=uniq(D.producciones||[]);
+  const um=mesAct(u);
+  const tonsMes=um.reduce((s,p)=>s+N(p.tons_real),0);
+  const utilMes=um.reduce((s,p)=>s+N(p.utilidad),0);
+  const mgArr=um.filter(p=>N(p.ingreso_total)>0).map(p=>N(p.margen));
+  const mgProm=mgArr.length?mgArr.reduce((s,v)=>s+v,0)/mgArr.length:0;
+  const last=u[u.length-1];
 
-  document.getElementById('r-met').innerHTML = `
-    <div class="mc">
-      <div class="ml">Última producción</div>
+  document.getElementById('r-met').innerHTML=`
+    <div class="mc"><div class="ml">Última producción</div>
       <div class="mv" style="font-size:17px">${last?.clientes?.join(', ')||'—'}</div>
-      <div class="ms">${last?.fecha||'—'} · ${f2(last?.tons_real)} ton</div>
-    </div>
-    <div class="mc">
-      <div class="ml">Toneladas este mes</div>
+      <div class="ms">${last?.fecha||'—'} · ${f2(last?.tons_real)} ton</div></div>
+    <div class="mc"><div class="ml">Toneladas este mes</div>
       <div class="mv">${f2(tonsMes)}</div>
-      <div class="ms">${um.length} producción${um.length!==1?'es':''}</div>
-    </div>
-    <div class="mc ${mcColor(mgProm)}">
-      <div class="ml">Margen promedio del mes</div>
-      <div class="mv">${fp(mgProm)}</div>
-      <div class="ms">Sobre ventas</div>
-    </div>
-    <div class="mc ${utilMes>=0?'g':'r'}">
-      <div class="ml">Utilidad acumulada del mes</div>
-      <div class="mv" style="font-size:17px">${$(utilMes)}</div>
-      <div class="ms">Neta estimada</div>
-    </div>
-  `;
+      <div class="ms">${um.length} producción${um.length!==1?'es':''}</div></div>
+    <div class="mc ${mcColor(mgProm)}"><div class="ml">Margen promedio del mes</div>
+      <div class="mv">${fp(mgProm)}</div><div class="ms">Sobre ventas</div></div>
+    <div class="mc ${utilMes>=0?'g':'r'}"><div class="ml">Utilidad acumulada del mes</div>
+      <div class="mv" style="font-size:17px">${$(utilMes)}</div><div class="ms">Neta estimada</div></div>`;
 
-  const l5 = [...u].reverse().slice(0,5);
-  document.getElementById('r-tbl').innerHTML = `
-    <table><thead><tr>
-      <th>ID</th><th>Fecha</th><th>Cliente(s)</th>
-      <th class="rt">Tons</th><th class="rt">Ingreso</th><th class="rt">Margen</th>
-    </tr></thead><tbody>
+  const l5=[...u].reverse().slice(0,5);
+  document.getElementById('r-tbl').innerHTML=`
+    <table><thead><tr><th>ID</th><th>Fecha</th><th>Cliente(s)</th>
+      <th class="rt">Tons</th><th class="rt">Ingreso</th><th class="rt">Margen</th></tr></thead><tbody>
     ${l5.map(p=>`<tr>
-      <td class="amb">${p.id_prod}</td><td>${p.fecha}</td>
-      <td>${p.clientes.join(', ')}</td>
-      <td class="rt">${f2(p.tons_real)}</td>
-      <td class="rt">${$(p.ingreso_total)}</td>
+      <td class="amb">${p.id_prod}</td><td>${p.fecha}</td><td>${p.clientes.join(', ')}</td>
+      <td class="rt">${f2(p.tons_real)}</td><td class="rt">${$(p.ingreso_total)}</td>
       <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 
-  // Nivel de tanques (último término_L por insumo+uso)
-  const ins = D.insumos || [];
-  const lev = {};
+  const ins=D.insumos||[];
+  const lev={};
   ins.filter(r=>r.tipo_uso==='PRODUCCION')
      .sort((a,b)=>a.fecha.localeCompare(b.fecha))
-     .forEach(r=>{ lev[`${r.insumo}|${r.uso}`]={insumo:r.insumo,uso:r.uso,L:N(r.termino_L),fecha:r.fecha}; });
-
-  const rows = Object.values(lev);
-  document.getElementById('r-stk').innerHTML = rows.length
-    ? `<table><thead><tr><th>Insumo</th><th>Uso</th><th class="rt">Nivel (L)</th><th>Fecha</th></tr></thead><tbody>
-       ${rows.map(r=>`<tr>
-         <td>${r.insumo}</td><td class="muted">${r.uso}</td>
-         <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td>
-       </tr>`).join('')}</tbody></table>`
-    : '<div class="empty">Sin datos de stock</div>';
+     .forEach(r=>{lev[`${r.insumo}|${r.uso}`]={insumo:r.insumo,uso:r.uso,L:N(r.termino_L),fecha:r.fecha};});
+  const rows=Object.values(lev);
+  document.getElementById('r-stk').innerHTML=rows.length
+    ?`<table><thead><tr><th>Insumo</th><th>Uso</th><th class="rt">Nivel (L)</th><th>Fecha</th></tr></thead><tbody>
+      ${rows.map(r=>`<tr><td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
+        <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td></tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Sin datos de stock</div>';
 }
 
 // ══════════════════════════════════════════
 //  RENDIMIENTOS
 // ══════════════════════════════════════════
 function rendimientos() {
-  const ins = (D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
-  const combos = [...new Set(ins.map(r=>r.insumo))];
-  const sel = document.getElementById('ri');
-  if (!sel.options.length) sel.innerHTML = combos.map(c=>`<option value="${c}">${c}</option>`).join('');
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
+  const insumos_u=[...new Set(ins.map(r=>r.insumo))];
+  const sel_i=document.getElementById('ri');
+  if(!sel_i.options.length)
+    sel_i.innerHTML=insumos_u.map(c=>`<option value="${c}">${c}</option>`).join('');
+  onInsumoChange();
+}
+
+function onInsumoChange() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
+  const insumo=document.getElementById('ri').value;
+  const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>r.uso))];
+  const sel_u=document.getElementById('ru');
+  sel_u.innerHTML='<option value="">Todos los usos</option>'+usos.map(u=>`<option value="${u}">${u}</option>`).join('');
   renderRend();
 }
 
 function renderRend() {
-  const ins    = (D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
-  const insumo = document.getElementById('ri').value;
-  const filt   = ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0)
-                    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  if (!filt.length) return;
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const insumo=document.getElementById('ri').value;
+  const uso=document.getElementById('ru').value;
+  const desde=document.getElementById('rd').value;
+  const hasta=document.getElementById('rh').value;
 
-  const vals = filt.map(r=>N(r.rendimiento_L_ton));
-  const avg  = vals.reduce((s,v)=>s+v,0)/vals.length;
-  const bajo = N(filt[0].rango_bajo);
-  const alto = N(filt[0].rango_alto);
-  const labs = filt.map(r=>r.id_prod);
+  let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
+  if(uso)   filt=filt.filter(r=>r.uso===uso);
+  if(desde) filt=filt.filter(r=>r.fecha>=desde);
+  if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
+  filt=filt.sort((a,b)=>a.fecha.localeCompare(b.fecha));
 
-  document.getElementById('r-avg').textContent = `Promedio: ${f2(avg)} L/ton`;
+  if(!filt.length){
+    document.getElementById('r-avg').textContent='';
+    document.getElementById('r-det').innerHTML='<div class="empty">Sin datos con esos filtros</div>';
+    if(CH['cRend']){CH['cRend'].destroy();delete CH['cRend'];}
+    return;
+  }
+
+  const vals=filt.map(r=>N(r.rendimiento_L_ton));
+  const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+  const bajo=N(filt[0].rango_bajo);
+  const alto=N(filt[0].rango_alto);
+  const labs=filt.map(r=>uso?r.id_prod:`${r.id_prod} · ${r.uso}`);
+
+  document.getElementById('r-avg').textContent=`Promedio: ${f2(avg)} L/ton`;
 
   mkChart('cRend','line',{
-    labels: labs,
-    datasets: [
-      { label:'L/ton', data:vals, borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)',
-        pointBackgroundColor:'#f59e0b', tension:.3, fill:true },
-      { label:'Promedio', data:labs.map(()=>avg), borderColor:'#6b7280',
-        borderDash:[5,4], pointRadius:0 },
-      bajo ? { label:'Rango bajo', data:labs.map(()=>bajo), borderColor:'rgba(22,163,74,.5)',
-        borderDash:[2,4], pointRadius:0 } : null,
-      alto ? { label:'Rango alto', data:labs.map(()=>alto), borderColor:'rgba(220,38,38,.5)',
-        borderDash:[2,4], pointRadius:0 } : null,
+    labels:labs,
+    datasets:[
+      {label:'L/ton',data:vals,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
+       pointBackgroundColor:'#f59e0b',tension:.3,fill:true},
+      {label:'Promedio',data:labs.map(()=>avg),borderColor:'#6b7280',borderDash:[5,4],pointRadius:0},
+      bajo?{label:'Rango bajo',data:labs.map(()=>bajo),borderColor:'rgba(22,163,74,.5)',borderDash:[2,4],pointRadius:0}:null,
+      alto?{label:'Rango alto',data:labs.map(()=>alto),borderColor:'rgba(220,38,38,.5)',borderDash:[2,4],pointRadius:0}:null,
     ].filter(Boolean)
   });
 
-  document.getElementById('r-det').innerHTML = `
+  document.getElementById('r-det').innerHTML=`
     <table><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Uso</th>
       <th class="rt">L/ton</th><th>Rango</th>
@@ -518,43 +514,41 @@ function renderRend() {
     ${filt.map(r=>`<tr>
       <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${r.uso}</td>
       <td class="rt">${f2(r.rendimiento_L_ton)}</td><td>${tagR(r.rango)}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════
 //  FINANCIERO
 // ══════════════════════════════════════════
-function financiero() {
-  const u   = uniq(D.producciones||[]);
-  const um  = mesAct(u);
-  const ing = um.reduce((s,p)=>s+N(p.ingreso_total),0);
-  const gas = um.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos),0);
-  const util= um.reduce((s,p)=>s+N(p.utilidad),0);
-  const mg  = ing > 0 ? util/ing : 0;
+function setFinMode(mode) {
+  FIN_MODE=mode;
+  document.querySelectorAll('.ftb').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
+  if(D) renderFinChart();
+}
 
-  document.getElementById('f-met').innerHTML = `
+function financiero() {
+  document.querySelectorAll('.ftb').forEach(b=>b.classList.toggle('active',b.dataset.mode===FIN_MODE));
+  const u=uniq(D.producciones||[]);
+  const um=mesAct(u);
+  const ing=um.reduce((s,p)=>s+N(p.ingreso_total),0);
+  const gas=um.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos),0);
+  const util=um.reduce((s,p)=>s+N(p.utilidad),0);
+  const mg=ing>0?util/ing:0;
+
+  document.getElementById('f-met').innerHTML=`
     <div class="mc m"><div class="ml">Ingresos del mes</div><div class="mv" style="font-size:17px">${$(ing)}</div></div>
     <div class="mc r"><div class="ml">Gastos del mes</div><div class="mv" style="font-size:17px">${$(gas)}</div></div>
     <div class="mc ${util>=0?'g':'r'}"><div class="ml">Utilidad del mes</div><div class="mv" style="font-size:17px">${$(util)}</div></div>
-    <div class="mc ${mcColor(mg)}"><div class="ml">Margen del mes</div><div class="mv">${fp(mg)}</div></div>
-  `;
+    <div class="mc ${mcColor(mg)}"><div class="ml">Margen del mes</div><div class="mv">${fp(mg)}</div></div>`;
 
-  const s = u.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  mkChart('cFin','bar',{
-    labels: s.map(p=>p.id_prod),
-    datasets: [
-      { label:'Ingreso',  data:s.map(p=>N(p.ingreso_total)), backgroundColor:'rgba(245,158,11,.5)' },
-      { label:'Gastos',   data:s.map(p=>N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos)), backgroundColor:'rgba(220,38,38,.4)' },
-      { label:'Utilidad', data:s.map(p=>N(p.utilidad)), backgroundColor:'rgba(22,163,74,.5)' },
-    ]
-  });
+  renderFinChart();
 
-  document.getElementById('f-tbl').innerHTML = `
+  const s=u.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  document.getElementById('f-tbl').innerHTML=`
     <table><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Cliente(s)</th>
-      <th class="rt">Ingreso</th><th class="rt">Gastos insumos</th>
-      <th class="rt">Otros gastos</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
+      <th class="rt">Ingreso</th><th class="rt">Gs. insumos</th>
+      <th class="rt">Otros gs.</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
     </tr></thead><tbody>
     ${s.map(p=>`<tr>
       <td class="amb">${p.id_prod}</td><td>${p.fecha}</td><td>${p.clientes.join(', ')}</td>
@@ -563,168 +557,248 @@ function financiero() {
       <td class="rt neg">${$(p.otros_gastos)}</td>
       <td class="rt ${N(p.utilidad)>=0?'pos':'neg'}">${$(p.utilidad)}</td>
       <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
+}
+
+function renderFinChart() {
+  const u=uniq(D.producciones||[]);
+  const s=u.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const all=[
+    {key:'ing', label:'Ingreso',  data:s.map(p=>N(p.ingreso_total)),  backgroundColor:'rgba(245,158,11,.5)'},
+    {key:'gas', label:'Gastos',   data:s.map(p=>N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos)), backgroundColor:'rgba(220,38,38,.4)'},
+    {key:'util',label:'Utilidad', data:s.map(p=>N(p.utilidad)),        backgroundColor:'rgba(22,163,74,.5)'},
+  ];
+  const ds=FIN_MODE==='all'?all:all.filter(d=>d.key===FIN_MODE);
+  mkChart('cFin','bar',{labels:s.map(p=>p.id_prod),datasets:ds});
 }
 
 // ══════════════════════════════════════════
 //  INSUMOS
 // ══════════════════════════════════════════
 function insumos() {
-  const ins = (D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
 
-  // Consumo total por insumo
-  const cm = {};
-  ins.forEach(r=>{ cm[r.insumo]=(cm[r.insumo]||0)+N(r.consumo_L); });
-  const names = Object.keys(cm);
+  // Consumo total por insumo+uso
+  const cm={};
+  ins.forEach(r=>{
+    const k=`${r.insumo} · ${r.uso}`;
+    cm[k]=(cm[k]||0)+N(r.consumo_L);
+  });
+  const names=Object.keys(cm);
   mkChart('cIns','bar',{
-    labels: names,
-    datasets:[{ label:'Litros consumidos',
-      data:names.map(k=>cm[k]),
-      backgroundColor:'rgba(245,158,11,.6)',
-      borderColor:'#f59e0b', borderWidth:1 }]
-  },{ indexAxis:'y' });
+    labels:names,
+    datasets:[{label:'Litros consumidos',data:names.map(k=>cm[k]),
+      backgroundColor:'rgba(245,158,11,.6)',borderColor:'#f59e0b',borderWidth:1}]
+  },{indexAxis:'y'});
 
   // Entradas recientes
-  const ent = (D.entradas||[]).slice(-8).reverse();
-  document.getElementById('i-ent').innerHTML = ent.length
-    ? `<table><thead><tr>
+  const ent=(D.entradas||[]).slice(-8).reverse();
+  document.getElementById('i-ent').innerHTML=ent.length
+    ?`<table><thead><tr>
         <th>Fecha</th><th>Insumo</th><th class="rt">Cantidad</th>
         <th class="rt">Costo unit.</th><th>Proveedor</th>
-       </tr></thead><tbody>
-       ${ent.map(e=>`<tr>
-         <td>${e.fecha}</td><td>${e.insumo}</td>
-         <td class="rt">${f2(e.cantidad)} ${e.unidad||'L'}</td>
-         <td class="rt">${$(e.costo_unit_real)}</td>
-         <td>${e.proveedor||'—'}</td>
-       </tr>`).join('')}</tbody></table>`
-    : '<div class="empty">Sin entradas registradas</div>';
+      </tr></thead><tbody>
+      ${ent.map(e=>`<tr>
+        <td>${e.fecha}</td><td>${e.insumo}</td>
+        <td class="rt">${f2(e.cantidad)} ${e.unidad||'L'}</td>
+        <td class="rt">${$(e.costo_unit_real)}</td>
+        <td>${e.proveedor||'—'}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Sin entradas registradas</div>';
 
-  // Rendimiento promedio por insumo+uso
-  const rm = {};
+  // Tabla estadísticas de rendimiento
+  const rm={};
   ins.filter(r=>N(r.rendimiento_L_ton)>0).forEach(r=>{
     const k=`${r.insumo}|${r.uso}`;
-    if (!rm[k]) rm[k]={insumo:r.insumo,uso:r.uso,v:[],rb:r.rango_bajo,ra:r.rango_alto};
+    if(!rm[k]) rm[k]={insumo:r.insumo,uso:r.uso,v:[],rangos:{BAJO:0,MEDIO:0,ALTO:0}};
     rm[k].v.push(N(r.rendimiento_L_ton));
+    if(r.rango && rm[k].rangos[r.rango]!==undefined) rm[k].rangos[r.rango]++;
   });
-  const rrows = Object.values(rm).map(x=>({...x,avg:x.v.reduce((s,v)=>s+v,0)/x.v.length,n:x.v.length}));
 
-  document.getElementById('i-rnd').innerHTML = `
+  const rrows=Object.values(rm).map(x=>{
+    const n=x.v.length;
+    const avg=x.v.reduce((s,v)=>s+v,0)/n;
+    const sigma=std(x.v);
+    const totalR=x.rangos.BAJO+x.rangos.MEDIO+x.rangos.ALTO;
+    const pctMedio=totalR>0?x.rangos.MEDIO/totalR:0;
+    return {...x,n,avg,sigma,pctMedio};
+  });
+
+  document.getElementById('i-rnd').innerHTML=`
     <table><thead><tr>
-      <th>Insumo</th><th>Uso</th><th class="rt">Prom. L/ton</th>
-      <th class="rt">Rango bajo</th><th class="rt">Rango alto</th><th class="rt">Registros</th>
+      <th>Insumo</th><th>Uso</th>
+      <th class="rt">Promedio</th><th class="rt">σ</th><th class="rt">% en rango</th>
+      <th class="rt">BAJO</th><th class="rt">MEDIO</th><th class="rt">ALTO</th><th class="rt">Total</th>
     </tr></thead><tbody>
     ${rrows.map(r=>`<tr>
       <td>${r.insumo}</td><td>${r.uso}</td>
       <td class="rt amb">${f2(r.avg)}</td>
-      <td class="rt">${f2(r.rb)}</td><td class="rt">${f2(r.ra)}</td>
+      <td class="rt">${f2(r.sigma)}</td>
+      <td class="rt ${r.pctMedio>=.7?'pos':r.pctMedio>=.4?'amb':'neg'}">${fp(r.pctMedio)}</td>
+      <td class="rt ${r.rangos.BAJO>0?'neg':''}">${r.rangos.BAJO}</td>
+      <td class="rt ${r.rangos.MEDIO>0?'pos':''}">${r.rangos.MEDIO}</td>
+      <td class="rt ${r.rangos.ALTO>0?'neg':''}">${r.rangos.ALTO}</td>
       <td class="rt">${r.n}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  CONTINUIDAD
+// ══════════════════════════════════════════
+function continuidad() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const combos=[...new Set(ins.map(r=>`${r.insumo}||${r.uso}`))].sort();
+  const sel=document.getElementById('ci');
+  if(!sel.options.length)
+    sel.innerHTML=combos.map(c=>{
+      const [ins2,uso]=c.split('||');
+      return `<option value="${c}">${ins2} · ${uso}</option>`;
+    }).join('');
+  renderCont();
+}
+
+function renderCont() {
+  const val=document.getElementById('ci').value;
+  if(!val) return;
+  const [insumo,uso]=val.split('||');
+  const ins=(D.insumos||[])
+    .filter(r=>r.tipo_uso==='PRODUCCION'&&r.insumo===insumo&&r.uso===uso)
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+  if(!ins.length){
+    document.getElementById('c-stats').textContent='Sin datos';
+    document.getElementById('c-tbl').innerHTML='<div class="empty">Sin registros</div>';
+    return;
+  }
+
+  const vals=ins.map(r=>N(r.consumo_L));
+  const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+  const sigma=std(vals);
+  const labs=ins.map(r=>r.fecha);
+
+  document.getElementById('c-stats').textContent=
+    `  Promedio: ${f2(avg)} L  ·  σ: ${f2(sigma)} L  ·  ${ins.length} registros`;
+
+  mkChart('cCont','bar',{
+    labels:labs,
+    datasets:[
+      {label:`Consumo (L)`,data:vals,
+       backgroundColor:vals.map(v=>v<0?'rgba(220,38,38,.7)':'rgba(245,158,11,.6)'),
+       borderColor:vals.map(v=>v<0?'#dc2626':'#f59e0b'),borderWidth:1},
+      {label:'Promedio',data:labs.map(()=>avg),type:'line',
+       borderColor:'#6b7280',borderDash:[5,4],pointRadius:0,fill:false},
+    ]
+  });
+
+  document.getElementById('c-tbl').innerHTML=`
+    <table><thead><tr>
+      <th>Producción</th><th>Fecha</th>
+      <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
+      <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th>
+    </tr></thead><tbody>
+    ${ins.map(r=>`<tr>
+      <td class="amb">${r.id_prod}</td><td>${r.fecha}</td>
+      <td class="rt">${f2(r.inicio_L)}</td>
+      <td class="rt">${f2(r.suministro_L)}</td>
+      <td class="rt">${f2(r.termino_L)}</td>
+      <td class="rt ${N(r.consumo_L)<0?'neg':'amb'}">${f2(r.consumo_L)}</td>
+    </tr>`).join('')}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════
 //  ANOMALÍAS
 // ══════════════════════════════════════════
 function anomalias() {
-  const ins = D.insumos || [];
-  const al  = [];
+  const ins=D.insumos||[];
+  const al=[];
 
-  // 1. Consumo negativo
   ins.filter(r=>N(r.consumo_L)<0).forEach(r=>al.push({
-    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-    tipo:'Consumo negativo', det:`consumo_L = ${r.consumo_L}`, lv:'error'
-  }));
+    id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
+    tipo:'Consumo negativo',det:`consumo_L = ${r.consumo_L}`,lv:'error'}));
 
-  // 2. Rendimiento fuera de rango
   ins.filter(r=>r.tipo_uso==='PRODUCCION'&&r.rango&&N(r.rendimiento_L_ton)>0).forEach(r=>{
-    if (r.rango==='ALTO') al.push({ id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-      tipo:'Rendimiento alto', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_alto}`, lv:'warn' });
-    if (r.rango==='BAJO') al.push({ id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-      tipo:'Rendimiento bajo', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_bajo}`, lv:'info' });
+    if(r.rango==='ALTO') al.push({id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
+      tipo:'Rendimiento alto',det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_alto}`,lv:'warn'});
+    if(r.rango==='BAJO') al.push({id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
+      tipo:'Rendimiento bajo',det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_bajo}`,lv:'info'});
   });
 
-  // 3. Sin costo registrado
   ins.filter(r=>r.tipo_uso==='PRODUCCION'&&!r.costo_unit&&N(r.consumo_L)>0).forEach(r=>al.push({
-    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-    tipo:'Sin costo', det:'costo_unit vacío', lv:'warn'
-  }));
+    id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
+    tipo:'Sin costo',det:'costo_unit vacío',lv:'warn'}));
 
-  // 4. Continuidad
-  const gr = {};
+  const gr={};
   ins.filter(r=>r.tipo_uso==='PRODUCCION')
      .sort((a,b)=>a.fecha.localeCompare(b.fecha))
-     .forEach(r=>{ const k=`${r.insumo}|${r.uso}`; (gr[k]=gr[k]||[]).push(r); });
+     .forEach(r=>{const k=`${r.insumo}|${r.uso}`;(gr[k]=gr[k]||[]).push(r);});
   Object.values(gr).forEach(rows=>{
-    for (let i=1;i<rows.length;i++){
-      const p=rows[i-1], c=rows[i];
+    for(let i=1;i<rows.length;i++){
+      const p=rows[i-1],c=rows[i];
       const d=Math.abs(N(c.inicio_L)-N(p.termino_L));
-      if (d>2) al.push({ id:c.id_prod, f:c.fecha, ins:c.insumo, uso:c.uso,
-        tipo:'Continuidad', det:`Término ant: ${f2(p.termino_L)}L → Inicio: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`, lv:'warn' });
+      if(d>2) al.push({id:c.id_prod,f:c.fecha,ins:c.insumo,uso:c.uso,
+        tipo:'Continuidad',det:`Término ant: ${f2(p.termino_L)}L → Inicio: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,lv:'warn'});
     }
   });
 
-  // Badge en sidebar
-  const errores = al.filter(a=>a.lv==='error'||a.lv==='warn').length;
-  document.getElementById('anom-badge').textContent = errores ? ` (${errores})` : '';
+  const errores=al.filter(a=>a.lv==='error'||a.lv==='warn').length;
+  document.getElementById('anom-badge').textContent=errores?` (${errores})`:'';
+  document.getElementById('an-hdr').textContent=
+    al.length===0?'Sin anomalías detectadas':`${al.length} anomalía${al.length!==1?'s':''} detectada${al.length!==1?'s':''}`;
 
-  document.getElementById('an-hdr').textContent =
-    al.length===0 ? 'Sin anomalías detectadas' : `${al.length} anomalía${al.length!==1?'s':''} detectada${al.length!==1?'s':''}`;
-
-  document.getElementById('an-tbl').innerHTML = al.length
-    ? `<table><thead><tr>
+  document.getElementById('an-tbl').innerHTML=al.length
+    ?`<table><thead><tr>
         <th>Producción</th><th>Fecha</th><th>Insumo</th><th>Uso</th>
         <th>Tipo</th><th>Detalle</th>
-       </tr></thead><tbody>
-       ${al.map(a=>`<tr>
-         <td class="amb">${a.id}</td><td>${a.f}</td>
-         <td>${a.ins}</td><td>${a.uso}</td>
-         <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
-         <td>${a.det}</td>
-       </tr>`).join('')}</tbody></table>`
-    : '<div class="empty">✓ Todo en orden</div>';
+      </tr></thead><tbody>
+      ${al.map(a=>`<tr>
+        <td class="amb">${a.id}</td><td>${a.f}</td>
+        <td>${a.ins}</td><td>${a.uso}</td>
+        <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
+        <td>${a.det}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">✓ Todo en orden</div>';
 }
 
 // ══════════════════════════════════════════
 //  HISTORIAL
 // ══════════════════════════════════════════
 function historial() {
-  const mz = [...new Set((D.producciones||[]).map(p=>p.mezcla).filter(Boolean))];
-  const sel = document.getElementById('hm');
-  if (sel.options.length<=1) sel.innerHTML =
-    '<option value="">Todas las mezclas</option>' + mz.map(m=>`<option value="${m}">${m}</option>`).join('');
+  const mz=[...new Set((D.producciones||[]).map(p=>p.mezcla).filter(Boolean))];
+  const sel=document.getElementById('hm');
+  if(sel.options.length<=1)
+    sel.innerHTML='<option value="">Todas las mezclas</option>'+mz.map(m=>`<option value="${m}">${m}</option>`).join('');
   renderHist();
 }
 
 function renderHist() {
-  let p = D.producciones || [];
-  const c  = document.getElementById('hc').value.toLowerCase().trim();
-  const d  = document.getElementById('hd').value;
-  const h  = document.getElementById('hh').value;
-  const mz = document.getElementById('hm').value;
-  if (c)  p = p.filter(x=>x.cliente.toLowerCase().includes(c));
-  if (d)  p = p.filter(x=>x.fecha>=d);
-  if (h)  p = p.filter(x=>x.fecha<=h);
-  if (mz) p = p.filter(x=>x.mezcla===mz);
-  p = p.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+  let p=D.producciones||[];
+  const c=document.getElementById('hc').value.toLowerCase().trim();
+  const d=document.getElementById('hd').value;
+  const h=document.getElementById('hh').value;
+  const mz=document.getElementById('hm').value;
+  if(c)  p=p.filter(x=>x.cliente.toLowerCase().includes(c));
+  if(d)  p=p.filter(x=>x.fecha>=d);
+  if(h)  p=p.filter(x=>x.fecha<=h);
+  if(mz) p=p.filter(x=>x.mezcla===mz);
+  p=p.sort((a,b)=>b.fecha.localeCompare(a.fecha));
 
-  document.getElementById('h-tbl').innerHTML = p.length
-    ? `<table><thead><tr>
+  document.getElementById('h-tbl').innerHTML=p.length
+    ?`<table><thead><tr>
         <th>Producción</th><th>Fecha</th><th>Cliente</th><th>Mezcla</th>
         <th class="rt">Tons ped.</th><th class="rt">Tons real</th>
         <th class="rt">Precio/ton</th><th class="rt">Ingreso</th>
         <th class="rt">Gastos</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
-       </tr></thead><tbody>
-       ${p.map(x=>`<tr>
-         <td class="amb">${x.id_prod}</td><td>${x.fecha}</td>
-         <td>${x.cliente}</td><td>${x.mezcla||'—'}</td>
-         <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
-         <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
-         <td class="rt neg">${$(N(x.gastos_insumos)+N(x.otros_gastos))}</td>
-         <td class="rt ${N(x.utilidad)>=0?'pos':'neg'}">${$(x.utilidad)}</td>
-         <td class="rt ${N(x.margen)>=.35?'pos':N(x.margen)>=.2?'':'neg'}">${fp(x.margen)}</td>
-       </tr>`).join('')}</tbody></table>`
-    : '<div class="empty">Sin registros con esos filtros</div>';
+      </tr></thead><tbody>
+      ${p.map(x=>`<tr>
+        <td class="amb">${x.id_prod}</td><td>${x.fecha}</td>
+        <td>${x.cliente}</td><td>${x.mezcla||'—'}</td>
+        <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
+        <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
+        <td class="rt neg">${$(N(x.gastos_insumos)+N(x.otros_gastos))}</td>
+        <td class="rt ${N(x.utilidad)>=0?'pos':'neg'}">${$(x.utilidad)}</td>
+        <td class="rt ${N(x.margen)>=.35?'pos':N(x.margen)>=.2?'':'neg'}">${fp(x.margen)}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Sin registros con esos filtros</div>';
 }
 </script>
 </body>
