@@ -675,7 +675,7 @@ function renderCont() {
 const valsIni = ins.map(r=>N(r.inicio_L));  // ← agregar esto
   const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
   const sigma=std(vals);
-  const labs=ins.map(r=>r.fecha);
+  const labs=ins.map(r=>(r.fecha||'').slice(0,10));
 
   document.getElementById('c-stats').textContent=
     `  Promedio: ${f2(avg)} L  ·  σ: ${f2(sigma)} L  ·  ${ins.length} registros`;
