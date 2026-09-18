@@ -249,11 +249,13 @@ select:focus,input:focus{border-color:var(--amb)}
   <!-- CONTINUIDAD -->
   <section class="sec" id="sec-continuidad">
     <div class="ph">
-      <h2>Continuidad</h2>
-      <div class="flt">
-        <select id="ci" onchange="renderCont()"></select>
-      </div>
-    </div>
+  <h2>Continuidad</h2>
+  <div class="flt">
+    <select id="ci" onchange="renderCont()"></select>
+    <input type="date" id="cd" oninput="renderCont()" title="Desde">
+    <input type="date" id="ch" oninput="renderCont()" title="Hasta">
+  </div>
+</div>
     <div class="sb">
       <div class="pn">
         <div class="pnh" style="flex-wrap:wrap;gap:8px">
@@ -279,7 +281,19 @@ select:focus,input:focus{border-color:var(--amb)}
 
   <!-- ANOMALÍAS -->
   <section class="sec" id="sec-anomalias">
-    <div class="ph"><h2>Anomalías</h2></div>
+    <div class="ph">
+  <h2>Anomalías</h2>
+  <div class="flt">
+    <select id="at" onchange="renderAnom()">
+      <option value="">Todos los tipos</option>
+      <option value="Consumo negativo">Consumo negativo</option>
+      <option value="Rendimiento alto">Rendimiento alto</option>
+      <option value="Rendimiento bajo">Rendimiento bajo</option>
+      <option value="Sin costo">Sin costo</option>
+      <option value="Continuidad">Continuidad</option>
+    </select>
+  </div>
+</div>
     <div class="sb">
       <div class="pn">
         <div class="pnh" id="an-hdr">Revisión de datos</div>
@@ -314,7 +328,74 @@ const PASSWORD   = 'Hola1';
 let D = null, CH = {}, FIN_MODE = 'all';
 let REND_TAB = 'serie';
 let CONT_VIS = {nivel:true, inicio:true, promedio:true, sumi:true, consumo:true};
+let ANOM_ALL = [];
 
+function anomalias() {
+  const ins = D.insumos || [];
+  const al  = [];
+
+  ins.filter(r=>N(r.consumo_L)<0).forEach(r=>al.push({
+    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
+    tipo:'Consumo negativo', det:`consumo_L = ${r.consumo_L}`, lv:'error'}));
+
+  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&r.rango&&N(r.rendimiento_L_ton)>0).forEach(r=>{
+    if(r.rango==='ALTO') al.push({id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
+      tipo:'Rendimiento alto', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_alto}`, lv:'warn'});
+    if(r.rango==='BAJO') al.push({id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
+      tipo:'Rendimiento bajo', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_bajo}`, lv:'info'});
+  });
+
+  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&!r.costo_unit&&N(r.consumo_L)>0).forEach(r=>al.push({
+    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
+    tipo:'Sin costo', det:'costo_unit vacío', lv:'warn'}));
+
+  const gr = {};
+  ins.filter(r=>r.tipo_uso==='PRODUCCION')
+     .sort((a,b)=>a.fecha.localeCompare(b.fecha))
+     .forEach(r=>{ const k=`${r.insumo}|${r.uso}`; (gr[k]=gr[k]||[]).push(r); });
+  Object.values(gr).forEach(rows=>{
+    for(let i=1;i<rows.length;i++){
+      const p=rows[i-1], c=rows[i];
+      const sumiEntre=(D.suministros||[])
+        .filter(s=>s.insumo===c.insumo&&s.uso===c.uso&&s.fecha>p.fecha&&s.fecha<c.fecha)
+        .reduce((sum,s)=>sum+N(s.cantidad_L),0);
+      const esperado=N(p.termino_L)+sumiEntre;
+      const d=Math.abs(N(c.inicio_L)-esperado);
+      if(d>2) al.push({id:c.id_prod, f:c.fecha, ins:c.insumo, uso:c.uso,
+        tipo:'Continuidad',
+        det:`Término ant: ${f2(p.termino_L)}L${sumiEntre>0?' + sumi. '+f2(sumiEntre)+'L':''} → esperado: ${f2(esperado)}L → Inicio real: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,
+        lv:'warn'});
+    }
+  });
+
+  ANOM_ALL = al;
+  const errores = al.filter(a=>a.lv==='error'||a.lv==='warn').length;
+  document.getElementById('anom-badge').textContent = errores ? ` (${errores})` : '';
+  renderAnom();
+}
+
+function renderAnom() {
+  const tipo = document.getElementById('at').value;
+  const al   = tipo ? ANOM_ALL.filter(a=>a.tipo===tipo) : ANOM_ALL;
+
+  document.getElementById('an-hdr').textContent =
+    al.length===0
+      ? (tipo ? `Sin anomalías de tipo "${tipo}"` : 'Sin anomalías detectadas')
+      : `${al.length} anomalía${al.length!==1?'s':''} — ${tipo||'todos los tipos'}`;
+
+  document.getElementById('an-tbl').innerHTML = al.length
+    ? `<table><thead><tr>
+        <th>Producción</th><th>Fecha</th><th>Insumo</th><th>Uso</th>
+        <th>Tipo</th><th>Detalle</th>
+      </tr></thead><tbody>
+      ${al.map(a=>`<tr>
+        <td class="amb">${a.id}</td><td>${a.f}</td>
+        <td>${a.ins}</td><td>${a.uso}</td>
+        <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
+        <td>${a.det}</td>
+      </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">✓ Todo en orden</div>';
+}
 function toggleContVis(key) {
   CONT_VIS[key] = !CONT_VIS[key];
   document.querySelectorAll('[data-cv]').forEach(b =>
@@ -793,8 +874,12 @@ function renderCont() {
   if (!val) return;
   const [insumo, uso] = val.split('||');
 
+    const desde = document.getElementById('cd').value;
+  const hasta = document.getElementById('ch').value;
+
   const prodRows = (D.insumos||[])
     .filter(r => r.tipo_uso==='PRODUCCION' && r.insumo===insumo && r.uso===uso)
+    .filter(r => (!desde || r.fecha.slice(0,10) >= desde) && (!hasta || r.fecha.slice(0,10) <= hasta))
     .sort((a,b) => a.fecha.localeCompare(b.fecha));
 
   if (!prodRows.length) {
@@ -931,67 +1016,6 @@ function renderCont() {
         <td class="rt ${mantDia[f]>0?'neg':''}">${mantDia[f]>0 ? f2(mantDia[f]) : '—'}</td>
       </tr>`;
     }).join('')}</tbody></table>`;
-}
-
-// ══════════════════════════════════════════
-//  ANOMALÍAS
-// ══════════════════════════════════════════
-function anomalias() {
-  const ins=D.insumos||[];
-  const al=[];
-
-  ins.filter(r=>N(r.consumo_L)<0).forEach(r=>al.push({
-    id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
-    tipo:'Consumo negativo',det:`consumo_L = ${r.consumo_L}`,lv:'error'}));
-
-  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&r.rango&&N(r.rendimiento_L_ton)>0).forEach(r=>{
-    if(r.rango==='ALTO') al.push({id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
-      tipo:'Rendimiento alto',det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_alto}`,lv:'warn'});
-    if(r.rango==='BAJO') al.push({id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
-      tipo:'Rendimiento bajo',det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_bajo}`,lv:'info'});
-  });
-
-  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&!r.costo_unit&&N(r.consumo_L)>0).forEach(r=>al.push({
-    id:r.id_prod,f:r.fecha,ins:r.insumo,uso:r.uso,
-    tipo:'Sin costo',det:'costo_unit vacío',lv:'warn'}));
-
-    const gr={};
-  ins.filter(r=>r.tipo_uso==='PRODUCCION')
-     .sort((a,b)=>a.fecha.localeCompare(b.fecha))
-     .forEach(r=>{const k=`${r.insumo}|${r.uso}`;(gr[k]=gr[k]||[]).push(r);});
-  Object.values(gr).forEach(rows=>{
-    for(let i=1;i<rows.length;i++){
-      const p=rows[i-1],c=rows[i];
-      // Suministros que llegaron entre las dos producciones (días sin producción)
-      const sumiEntre=(D.suministros||[])
-        .filter(s=>s.insumo===c.insumo&&s.uso===c.uso&&s.fecha>p.fecha&&s.fecha<c.fecha)
-        .reduce((sum,s)=>sum+N(s.cantidad_L),0);
-      const esperado=N(p.termino_L)+sumiEntre;
-      const d=Math.abs(N(c.inicio_L)-esperado);
-      if(d>2) al.push({id:c.id_prod,f:c.fecha,ins:c.insumo,uso:c.uso,
-        tipo:'Continuidad',
-        det:`Término ant: ${f2(p.termino_L)}L${sumiEntre>0?' + sumi. '+f2(sumiEntre)+'L':''} → esperado: ${f2(esperado)}L → Inicio real: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,
-        lv:'warn'});
-    }
-  });
-
-  const errores=al.filter(a=>a.lv==='error'||a.lv==='warn').length;
-  document.getElementById('anom-badge').textContent=errores?` (${errores})`:'';
-  document.getElementById('an-hdr').textContent=
-    al.length===0?'Sin anomalías detectadas':`${al.length} anomalía${al.length!==1?'s':''} detectada${al.length!==1?'s':''}`;
-
-  document.getElementById('an-tbl').innerHTML=al.length
-    ?`<table><thead><tr>
-        <th>Producción</th><th>Fecha</th><th>Insumo</th><th>Uso</th>
-        <th>Tipo</th><th>Detalle</th>
-      </tr></thead><tbody>
-      ${al.map(a=>`<tr>
-        <td class="amb">${a.id}</td><td>${a.f}</td>
-        <td>${a.ins}</td><td>${a.uso}</td>
-        <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
-        <td>${a.det}</td>
-      </tr>`).join('')}</tbody></table>`
-    :'<div class="empty">✓ Todo en orden</div>';
 }
 
 // ══════════════════════════════════════════
