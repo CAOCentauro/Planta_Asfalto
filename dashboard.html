@@ -256,7 +256,18 @@ select:focus,input:focus{border-color:var(--amb)}
     </div>
     <div class="sb">
       <div class="pn">
-        <div class="pnh">Nivel al cierre · Inicio (L) <span id="c-stats" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+        <div class="pnh" style="flex-wrap:wrap;gap:8px">
+  <span>Nivel al cierre · Inicio (L)
+    <span id="c-stats" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span>
+  </span>
+  <div style="display:flex;gap:4px;flex-wrap:wrap">
+    <button class="ftb active" data-cv="nivel"    onclick="toggleContVis('nivel')">Nivel</button>
+    <button class="ftb active" data-cv="inicio"   onclick="toggleContVis('inicio')">Inicio</button>
+    <button class="ftb active" data-cv="promedio" onclick="toggleContVis('promedio')">Promedio</button>
+    <button class="ftb active" data-cv="sumi"     onclick="toggleContVis('sumi')">Suministros</button>
+    <button class="ftb active" data-cv="consumo"  onclick="toggleContVis('consumo')">Consumos</button>
+  </div>
+</div>
         <div class="pnb"><div class="cw"><canvas id="cCont"></canvas></div></div>
       </div>
       <div class="pn">
@@ -302,7 +313,14 @@ const PASSWORD   = 'Hola1';
 
 let D = null, CH = {}, FIN_MODE = 'all';
 let REND_TAB = 'serie';
+let CONT_VIS = {nivel:true, inicio:true, promedio:true, sumi:true, consumo:true};
 
+function toggleContVis(key) {
+  CONT_VIS[key] = !CONT_VIS[key];
+  document.querySelectorAll('[data-cv]').forEach(b =>
+    b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+  if (D) renderCont();
+}
 function setRendTab(tab) {
   REND_TAB = tab;
   document.querySelectorAll('.rtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -785,11 +803,9 @@ function renderCont() {
     return;
   }
 
-  // Mapa producción por fecha
   const prodMap = {};
   prodRows.forEach(r => { prodMap[r.fecha.slice(0,10)] = r; });
 
-  // Suministros por fecha
   const sumiDia = {};
   (D.suministros||[])
     .filter(s => s.insumo === insumo)
@@ -798,7 +814,6 @@ function renderCont() {
       sumiDia[f] = (sumiDia[f]||0) + N(s.cantidad_L);
     });
 
-  // Consumos de mantenimiento por fecha
   const mantDia = {};
   (D.insumos||[])
     .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===insumo && r.uso===uso)
@@ -807,7 +822,6 @@ function renderCont() {
       mantDia[f] = (mantDia[f]||0) + N(r.consumo_L);
     });
 
-  // Rango continuo de fechas
   const dias = [];
   let cur = new Date(prodRows[0].fecha.slice(0,10) + 'T12:00:00Z');
   const fin = new Date(prodRows[prodRows.length-1].fecha.slice(0,10) + 'T12:00:00Z');
@@ -816,20 +830,16 @@ function renderCont() {
     cur.setDate(cur.getDate() + 1);
   }
 
-  // Construir series día a día
-  const dataNivel  = [];
-  const dataInicio = [];
-    const dataSumi = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
+  const dataNivel = [], dataInicio = [];
   let nivel = N(prodRows[0].inicio_L);
 
   dias.forEach(dia => {
     const prod = prodMap[dia];
     const sumi = sumiDia[dia] || 0;
     const mant = mantDia[dia] || 0;
-
     if (prod) {
       dataInicio.push(N(prod.inicio_L));
-      nivel = N(prod.termino_L) - mant;  // termino ya refleja consumo de producción; mant es extra
+      nivel = N(prod.termino_L) - mant;
     } else {
       dataInicio.push(null);
       nivel = nivel + sumi - mant;
@@ -837,66 +847,68 @@ function renderCont() {
     dataNivel.push(nivel);
   });
 
-  // Stats sobre días de producción
+  const dataSumi    = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
+  const dataConsumo = dias.map(dia => {
+    const prod = prodMap[dia];
+    const mant = mantDia[dia] || 0;
+    const total = (prod ? N(prod.consumo_L) : 0) + mant;
+    return total > 0 ? total : null;
+  });
+
   const cierres = prodRows.map(r => N(r.termino_L));
   const avg = cierres.reduce((s,v)=>s+v,0) / cierres.length;
   document.getElementById('c-stats').textContent =
-    `Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días`;
+    `  Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días`;
 
-    mkChart('cCont', 'line', {
+  // Restaurar estado de botones
+  document.querySelectorAll('[data-cv]').forEach(b =>
+    b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+
+  const allDatasets = [
+    {
+      key:'nivel', label:'Nivel al cierre (L)', data:dataNivel,
+      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)',
+      pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
+      pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
+      tension:0, fill:true, yAxisID:'y'
+    },
+    {
+      key:'inicio', label:'Inicio producción (L)', data:dataInicio,
+      showLine:false, spanGaps:false,
+      pointBackgroundColor:'#818cf8', pointBorderColor:'#818cf8',
+      pointRadius:6, fill:false, yAxisID:'y'
+    },
+    {
+      key:'promedio', label:'Promedio cierre', data:dias.map(()=>avg),
+      borderColor:'#6b7280', borderDash:[5,4], pointRadius:0, fill:false, yAxisID:'y'
+    },
+    {
+      key:'sumi', label:'Suministro (L)', type:'bar', data:dataSumi,
+      backgroundColor:'rgba(34,211,238,.5)', borderColor:'#22d3ee',
+      borderWidth:1, yAxisID:'yExtra', order:10
+    },
+    {
+      key:'consumo', label:'Consumo (L)', type:'bar', data:dataConsumo,
+      backgroundColor:'rgba(220,38,38,.4)', borderColor:'#dc2626',
+      borderWidth:1, yAxisID:'yExtra', order:10
+    }
+  ];
+
+  const showExtra = CONT_VIS.sumi || CONT_VIS.consumo;
+
+  mkChart('cCont', 'line', {
     labels: dias,
-    datasets: [
-      {
-        label: 'Nivel al cierre (L)',
-        data: dataNivel,
-        borderColor: '#f59e0b',
-        backgroundColor: 'rgba(245,158,11,.08)',
-        pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
-        pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
-        tension: 0,
-        fill: true,
-        yAxisID: 'y'
-      },
-      {
-        label: 'Inicio producción (L)',
-        data: dataInicio,
-        showLine: false,
-        spanGaps: false,
-        pointBackgroundColor: '#818cf8',
-        pointBorderColor: '#818cf8',
-        pointRadius: 6,
-        fill: false,
-        yAxisID: 'y'
-      },
-      {
-        label: 'Promedio cierre',
-        data: dias.map(() => avg),
-        borderColor: '#6b7280',
-        borderDash: [5,4],
-        pointRadius: 0,
-        fill: false,
-        yAxisID: 'y'
-      },
-      {
-        label: 'Suministro (L)',
-        type: 'bar',
-        data: dataSumi,
-        backgroundColor: 'rgba(34,211,238,.5)',
-        borderColor: '#22d3ee',
-        borderWidth: 1,
-        yAxisID: 'ySumi',
-        order: 10
-      }
-    ]
+    datasets: allDatasets.filter(d => CONT_VIS[d.key])
   }, {
     scales: {
       x: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
       y: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
-      ySumi: {
+      yExtra: {
+        display: showExtra,
         position: 'right',
-        grid: { drawOnChartArea: false },
-        ticks: { color:'#22d3ee', font:{size:9} },
-        title: { display:true, text:'Suministro (L)', color:'#22d3ee', font:{size:9} }
+        grid: { drawOnChartArea:false },
+        ticks: { color:'#9ca3af', font:{size:9} },
+        title: { display:true, text:'Sumi. / Consumo (L)', color:'#9ca3af', font:{size:9} }
       }
     }
   });
