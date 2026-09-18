@@ -819,6 +819,7 @@ function renderCont() {
   // Construir series día a día
   const dataNivel  = [];
   const dataInicio = [];
+    const dataSumi = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
   let nivel = N(prodRows[0].inicio_L);
 
   dias.forEach(dia => {
@@ -842,7 +843,7 @@ function renderCont() {
   document.getElementById('c-stats').textContent =
     `Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días`;
 
-  mkChart('cCont', 'line', {
+    mkChart('cCont', 'line', {
     labels: dias,
     datasets: [
       {
@@ -853,7 +854,8 @@ function renderCont() {
         pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
         pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
         tension: 0,
-        fill: true
+        fill: true,
+        yAxisID: 'y'
       },
       {
         label: 'Inicio producción (L)',
@@ -863,7 +865,8 @@ function renderCont() {
         pointBackgroundColor: '#818cf8',
         pointBorderColor: '#818cf8',
         pointRadius: 6,
-        fill: false
+        fill: false,
+        yAxisID: 'y'
       },
       {
         label: 'Promedio cierre',
@@ -871,9 +874,31 @@ function renderCont() {
         borderColor: '#6b7280',
         borderDash: [5,4],
         pointRadius: 0,
-        fill: false
+        fill: false,
+        yAxisID: 'y'
+      },
+      {
+        label: 'Suministro (L)',
+        type: 'bar',
+        data: dataSumi,
+        backgroundColor: 'rgba(34,211,238,.5)',
+        borderColor: '#22d3ee',
+        borderWidth: 1,
+        yAxisID: 'ySumi',
+        order: 10
       }
     ]
+  }, {
+    scales: {
+      x: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
+      y: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
+      ySumi: {
+        position: 'right',
+        grid: { drawOnChartArea: false },
+        ticks: { color:'#22d3ee', font:{size:9} },
+        title: { display:true, text:'Suministro (L)', color:'#22d3ee', font:{size:9} }
+      }
+    }
   });
 
   document.getElementById('c-tbl').innerHTML = `
