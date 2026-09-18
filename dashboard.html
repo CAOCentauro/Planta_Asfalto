@@ -172,9 +172,9 @@ select:focus,input:focus{border-color:var(--amb)}
     <h2>Rendimientos</h2>
     <div class="flt">
       <select id="ri" onchange="onInsumoChange()"></select>
-      <select id="ru" onchange="renderRend()"><option value="">Todos los usos</option></select>
-      <input type="date" id="rd" oninput="renderRend()" title="Desde">
-      <input type="date" id="rh" oninput="renderRend()" title="Hasta">
+      <select id="ru" onchange="onRendFiltChange()"><option value="">Todos los usos</option></select>
+<input type="date" id="rd" oninput="onRendFiltChange()" title="Desde">
+<input type="date" id="rh" oninput="onRendFiltChange()" title="Hasta">
     </div>
   </div>
   <div class="rtab-bar">
@@ -385,12 +385,13 @@ function std(arr) {
 function uniq(prods) {
   const m={};
   prods.forEach(p=>{
-    if(!m[p.id_prod]) m[p.id_prod]={...p,ingreso_total:0,gastos_insumos:0,gasto_material:0,otros_gastos:0,utilidad:0,clientes:[]};
+        if(!m[p.id_prod]) m[p.id_prod]={...p,ingreso_total:0,gastos_insumos:0,gasto_material:0,otros_gastos:0,utilidad:0,tons_real:0,clientes:[]};
     m[p.id_prod].ingreso_total  += N(p.ingreso_total);
     m[p.id_prod].gastos_insumos += N(p.gastos_insumos);
     m[p.id_prod].gasto_material += N(p.gasto_material);
     m[p.id_prod].otros_gastos   += N(p.otros_gastos);
     m[p.id_prod].utilidad       += N(p.utilidad);
+    m[p.id_prod].tons_real      += N(p.tons_real);
     if(!m[p.id_prod].clientes.includes(p.cliente)) m[p.id_prod].clientes.push(p.cliente);
   });
   return Object.values(m).sort((a,b)=>a.fecha.localeCompare(b.fecha));
@@ -494,6 +495,10 @@ function onInsumoChange() {
   const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>r.uso))];
   const sel_u=document.getElementById('ru');
   sel_u.innerHTML='<option value="">Todos los usos</option>'+usos.map(u=>`<option value="${u}">${u}</option>`).join('');
+  REND_TAB==='serie' ? renderRend() : renderRendScatter();
+}
+
+function onRendFiltChange() {
   REND_TAB==='serie' ? renderRend() : renderRendScatter();
 }
 
