@@ -771,57 +771,129 @@ function continuidad() {
 }
 
 function renderCont() {
-  const val=document.getElementById('ci').value;
-  if(!val) return;
-  const [insumo,uso]=val.split('||');
-  const ins=(D.insumos||[])
-    .filter(r=>r.tipo_uso==='PRODUCCION'&&r.insumo===insumo&&r.uso===uso)
-    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const val = document.getElementById('ci').value;
+  if (!val) return;
+  const [insumo, uso] = val.split('||');
 
-  if(!ins.length){
-    document.getElementById('c-stats').textContent='Sin datos';
-    document.getElementById('c-tbl').innerHTML='<div class="empty">Sin registros</div>';
+  const prodRows = (D.insumos||[])
+    .filter(r => r.tipo_uso==='PRODUCCION' && r.insumo===insumo && r.uso===uso)
+    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+
+  if (!prodRows.length) {
+    document.getElementById('c-stats').textContent = 'Sin datos';
+    document.getElementById('c-tbl').innerHTML = '<div class="empty">Sin registros</div>';
     return;
   }
 
-  const vals    = ins.map(r=>N(r.termino_L));
-const valsIni = ins.map(r=>N(r.inicio_L));  // ← agregar esto
-  const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
-  const sigma=std(vals);
-  const labs=ins.map(r=>(r.fecha||'').slice(0,10));
+  // Mapa producción por fecha
+  const prodMap = {};
+  prodRows.forEach(r => { prodMap[r.fecha.slice(0,10)] = r; });
 
-  document.getElementById('c-stats').textContent=
-    `  Promedio: ${f2(avg)} L  ·  σ: ${f2(sigma)} L  ·  ${ins.length} registros`;
+  // Suministros por fecha
+  const sumiDia = {};
+  (D.suministros||[])
+    .filter(s => s.insumo === insumo)
+    .forEach(s => {
+      const f = (s.fecha||'').slice(0,10);
+      sumiDia[f] = (sumiDia[f]||0) + N(s.cantidad_L);
+    });
 
-   mkChart('cCont','line',{
-    labels:labs,
-    datasets:[
-      {label:'Inicio (L)',data:valsIni,
-       borderColor:'#818cf8',backgroundColor:'transparent',
-       pointBackgroundColor:'#818cf8',pointRadius:5,
-       tension:.2,fill:false,borderDash:[3,3]},
-      {label:'Cierre (L)',data:vals,
-       borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
-       pointBackgroundColor:'#f59e0b',pointRadius:5,
-       tension:.2,fill:true},
-      {label:'Promedio cierre',data:labs.map(()=>avg),
-       borderColor:'#6b7280',borderDash:[5,4],pointRadius:0,fill:false},
+  // Consumos de mantenimiento por fecha
+  const mantDia = {};
+  (D.insumos||[])
+    .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===insumo && r.uso===uso)
+    .forEach(r => {
+      const f = (r.fecha||'').slice(0,10);
+      mantDia[f] = (mantDia[f]||0) + N(r.consumo_L);
+    });
+
+  // Rango continuo de fechas
+  const dias = [];
+  let cur = new Date(prodRows[0].fecha.slice(0,10) + 'T12:00:00Z');
+  const fin = new Date(prodRows[prodRows.length-1].fecha.slice(0,10) + 'T12:00:00Z');
+  while (cur <= fin) {
+    dias.push(cur.toISOString().slice(0,10));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // Construir series día a día
+  const dataNivel  = [];
+  const dataInicio = [];
+  let nivel = N(prodRows[0].inicio_L);
+
+  dias.forEach(dia => {
+    const prod = prodMap[dia];
+    const sumi = sumiDia[dia] || 0;
+    const mant = mantDia[dia] || 0;
+
+    if (prod) {
+      dataInicio.push(N(prod.inicio_L));
+      nivel = N(prod.termino_L) - mant;  // termino ya refleja consumo de producción; mant es extra
+    } else {
+      dataInicio.push(null);
+      nivel = nivel + sumi - mant;
+    }
+    dataNivel.push(nivel);
+  });
+
+  // Stats sobre días de producción
+  const cierres = prodRows.map(r => N(r.termino_L));
+  const avg = cierres.reduce((s,v)=>s+v,0) / cierres.length;
+  document.getElementById('c-stats').textContent =
+    `Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días`;
+
+  mkChart('cCont', 'line', {
+    labels: dias,
+    datasets: [
+      {
+        label: 'Nivel al cierre (L)',
+        data: dataNivel,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245,158,11,.08)',
+        pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
+        pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
+        tension: 0,
+        fill: true
+      },
+      {
+        label: 'Inicio producción (L)',
+        data: dataInicio,
+        showLine: false,
+        spanGaps: false,
+        pointBackgroundColor: '#818cf8',
+        pointBorderColor: '#818cf8',
+        pointRadius: 6,
+        fill: false
+      },
+      {
+        label: 'Promedio cierre',
+        data: dias.map(() => avg),
+        borderColor: '#6b7280',
+        borderDash: [5,4],
+        pointRadius: 0,
+        fill: false
+      }
     ]
   });
 
-  document.getElementById('c-tbl').innerHTML=`
+  document.getElementById('c-tbl').innerHTML = `
     <table><thead><tr>
       <th>Producción</th><th>Fecha</th>
       <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
       <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th>
+      <th class="rt">Mant. (L)</th>
     </tr></thead><tbody>
-    ${ins.map(r=>`<tr>
-      <td class="amb">${r.id_prod}</td><td>${r.fecha}</td>
-      <td class="rt">${f2(r.inicio_L)}</td>
-      <td class="rt">${f2(r.suministro_L)}</td>
-      <td class="rt">${f2(r.termino_L)}</td>
-      <td class="rt ${N(r.consumo_L)<0?'neg':'amb'}">${f2(r.consumo_L)}</td>
-    </tr>`).join('')}</tbody></table>`;
+    ${prodRows.map(r => {
+      const f = (r.fecha||'').slice(0,10);
+      return `<tr>
+        <td class="amb">${r.id_prod}</td><td>${f}</td>
+        <td class="rt">${f2(r.inicio_L)}</td>
+        <td class="rt">${f2(r.suministro_L)}</td>
+        <td class="rt">${f2(r.termino_L)}</td>
+        <td class="rt ${N(r.consumo_L)<0?'neg':'amb'}">${f2(r.consumo_L)}</td>
+        <td class="rt ${mantDia[f]>0?'neg':''}">${mantDia[f]>0 ? f2(mantDia[f]) : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
 }
 
 // ══════════════════════════════════════════
