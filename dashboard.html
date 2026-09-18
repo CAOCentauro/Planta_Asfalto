@@ -159,11 +159,22 @@ select:focus,input:focus{border-color:var(--amb)}
           <div class="tw" id="r-tbl"></div>
         </div>
         <div class="pn">
-          <div class="pnh">Nivel de tanques al cierre</div>
+          <div class="pnh">Nivel de tanques — cierre y estimado actual</div>
           <div class="tw" id="r-stk"></div>
         </div>
-      </div>
+      
     </div>
+    <div class="pn">
+  <div class="pnh">
+    <span>Detalle de producción</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="rp-sel" onchange="renderResumenProd()" style="max-width:260px"></select>
+      <button class="ftb active" onclick="resumenProdUltima()">↑ Última</button>
+    </div>
+  </div>
+  <div id="rp-body"></div>
+</div>
+      </div>
   </section>
 
   <!-- RENDIMIENTOS -->
@@ -559,17 +570,100 @@ function resumen() {
       <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
     </tr>`).join('')}</tbody></table>`;
 
-  const ins=D.insumos||[];
-  const lev={};
-  ins.filter(r=>r.tipo_uso==='PRODUCCION')
-     .sort((a,b)=>a.fecha.localeCompare(b.fecha))
-     .forEach(r=>{lev[`${r.insumo}|${r.uso}`]={insumo:r.insumo,uso:r.uso,L:N(r.termino_L),fecha:r.fecha};});
-  const rows=Object.values(lev);
-  document.getElementById('r-stk').innerHTML=rows.length
-    ?`<table><thead><tr><th>Insumo</th><th>Uso</th><th class="rt">Nivel (L)</th><th>Fecha</th></tr></thead><tbody>
-      ${rows.map(r=>`<tr><td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
-        <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td></tr>`).join('')}</tbody></table>`
-    :'<div class="empty">Sin datos de stock</div>';
+  // Nivel de tanques
+  const ins = D.insumos || [];
+  const lev = {};
+
+  ins.filter(r => r.tipo_uso==='PRODUCCION')
+     .sort((a,b) => a.fecha.localeCompare(b.fecha))
+     .forEach(r => {
+       const k = `${r.insumo}|${r.uso}`;
+       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10) };
+     });
+
+  Object.values(lev).forEach(item => {
+    const sumiPost = (D.suministros||[])
+      .filter(s => s.insumo===item.insumo && (s.fecha||'').slice(0,10) > item.fecha)
+      .reduce((s,r) => s + N(r.cantidad_L), 0);
+    const mantPost = ins
+      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===item.insumo && r.uso===item.uso
+               && (r.fecha||'').slice(0,10) > item.fecha)
+      .reduce((s,r) => s + N(r.consumo_L), 0);
+    item.estimado = item.L + sumiPost - mantPost;
+    item.diff     = item.estimado - item.L;
+  });
+
+  const rows = Object.values(lev);
+  document.getElementById('r-stk').innerHTML = rows.length
+    ? `<table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Último cierre (L)</th><th>Fecha</th>
+        <th class="rt">Estimado hoy (L)</th><th class="rt">Δ</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
+        <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td>
+        <td class="rt ${r.estimado < r.L * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
+        <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+    : '<div class="empty">Sin datos de stock</div>';
+    // Poblar selector
+  const rpSel = document.getElementById('rp-sel');
+  const allU = uniq(D.producciones||[]).reverse();
+  rpSel.innerHTML = allU.map(p =>
+    `<option value="${p.id_prod}">${p.id_prod} · ${p.fecha.slice(0,10)} · ${p.clientes.join(', ')}</option>`
+  ).join('');
+  renderResumenProd();
+}
+  function resumenProdUltima() {
+  const u = uniq(D.producciones||[]);
+  if (!u.length) return;
+  document.getElementById('rp-sel').value = u[u.length-1].id_prod;
+  renderResumenProd();
+}
+
+function renderResumenProd() {
+  const id = document.getElementById('rp-sel').value;
+  if (!id || !D) return;
+
+  const prods   = (D.producciones||[]).filter(p => p.id_prod === id);
+  const fecha   = (prods[0]?.fecha||'').slice(0,10);
+  const clientes = [...new Set(prods.map(p => p.cliente))];
+  const tonsTotal = prods.reduce((s,p) => s + N(p.tons_real), 0);
+
+  const ins = (D.insumos||[])
+    .filter(r => r.id_prod === id && r.tipo_uso === 'PRODUCCION')
+    .sort((a,b) => a.insumo.localeCompare(b.insumo));
+
+  document.getElementById('rp-body').innerHTML = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--bd);font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
+      <span style="color:var(--muted)">${fecha}</span>
+      <span>${clientes.join(' · ')}</span>
+      <span class="amb" style="font-weight:600">${f2(tonsTotal)} ton producidas</span>
+    </div>
+    <div class="tw">
+      <table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Inicio (L)</th>
+        <th class="rt">Suministro (L)</th>
+        <th class="rt">Término (L)</th>
+        <th class="rt">Consumo (L)</th>
+        <th class="rt">L / ton</th>
+        <th>Rango</th>
+      </tr></thead><tbody>
+      ${ins.length ? ins.map(r => `<tr>
+        <td>${r.insumo}</td>
+        <td style="color:var(--muted)">${r.uso}</td>
+        <td class="rt">${f2(r.inicio_L)}</td>
+        <td class="rt ${N(r.suministro_L)>0?'pos':''}">${N(r.suministro_L)>0 ? f2(r.suministro_L) : '—'}</td>
+        <td class="rt">${f2(r.termino_L)}</td>
+        <td class="rt amb">${f2(r.consumo_L)}</td>
+        <td class="rt ${r.rango==='ALTO'?'neg':r.rango==='BAJO'?'pos':'amb'}">${N(r.rendimiento_L_ton)>0 ? f2(r.rendimiento_L_ton) : '—'}</td>
+        <td>${tagR(r.rango)}</td>
+      </tr>`).join('') : '<tr><td colspan="8" class="empty">Sin datos de insumos</td></tr>'}
+      </tbody></table>
+    </div>`;
 }
 
 // ══════════════════════════════════════════
