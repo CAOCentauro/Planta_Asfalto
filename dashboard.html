@@ -100,6 +100,11 @@ select:focus,input:focus{border-color:var(--amb)}
   #overlay.on{display:block}
   #main{padding-top:44px}
 }
+/* RENDIMIENTO TABS */
+.rtab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:10px 16px;font-size:12px;font-family:inherit;cursor:pointer;margin-bottom:-1px}
+.rtab:hover{color:var(--text)}
+.rtab.active{color:var(--amb);border-bottom-color:var(--amb)}
+.rtab-bar{border-bottom:1px solid var(--bd);padding:0 24px;display:flex;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -162,17 +167,22 @@ select:focus,input:focus{border-color:var(--amb)}
   </section>
 
   <!-- RENDIMIENTOS -->
-  <section class="sec" id="sec-rendimientos">
-    <div class="ph">
-      <h2>Rendimientos</h2>
-      <div class="flt">
-        <select id="ri" onchange="onInsumoChange()"></select>
-        <select id="ru" onchange="renderRend()"><option value="">Todos los usos</option></select>
-        <input type="date" id="rd" oninput="renderRend()" title="Desde">
-        <input type="date" id="rh" oninput="renderRend()" title="Hasta">
-      </div>
+<section class="sec" id="sec-rendimientos">
+  <div class="ph">
+    <h2>Rendimientos</h2>
+    <div class="flt">
+      <select id="ri" onchange="onInsumoChange()"></select>
+      <select id="ru" onchange="renderRend()"><option value="">Todos los usos</option></select>
+      <input type="date" id="rd" oninput="renderRend()" title="Desde">
+      <input type="date" id="rh" oninput="renderRend()" title="Hasta">
     </div>
-    <div class="sb">
+  </div>
+  <div class="rtab-bar">
+    <button class="rtab active" data-tab="serie"   onclick="setRendTab('serie')">Serie temporal</button>
+    <button class="rtab"        data-tab="scatter" onclick="setRendTab('scatter')">Rend. vs Producción</button>
+  </div>
+  <div class="sb">
+    <div id="rt-serie">
       <div class="pn">
         <div class="pnh">L / tonelada producida <span id="r-avg" style="color:var(--amb)"></span></div>
         <div class="pnb"><div class="cw"><canvas id="cRend"></canvas></div></div>
@@ -182,7 +192,14 @@ select:focus,input:focus{border-color:var(--amb)}
         <div class="tw" id="r-det"></div>
       </div>
     </div>
-  </section>
+    <div id="rt-scatter" style="display:none">
+      <div class="pn">
+        <div class="pnh">Rendimiento (L/ton) vs Toneladas producidas</div>
+        <div class="pnb"><div class="cw" style="height:300px"><canvas id="cRendScat"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+</section>
 
   <!-- FINANCIERO -->
   <section class="sec" id="sec-financiero">
@@ -284,7 +301,16 @@ const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhfIDfclX_CXOMH_FBD
 const PASSWORD   = 'Hola1';
 
 let D = null, CH = {}, FIN_MODE = 'all';
+let REND_TAB = 'serie';
 
+function setRendTab(tab) {
+  REND_TAB = tab;
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.getElementById('rt-serie').style.display   = tab==='serie'   ? '' : 'none';
+  document.getElementById('rt-scatter').style.display = tab==='scatter' ? '' : 'none';
+  if(!D) return;
+  tab==='serie' ? renderRend() : renderRendScatter();
+}
 // ── AUTH ──────────────────────────────────
 function login() {
   if (document.getElementById('pw').value === PASSWORD) {
@@ -455,6 +481,10 @@ function rendimientos() {
   const sel_i=document.getElementById('ri');
   if(!sel_i.options.length)
     sel_i.innerHTML=insumos_u.map(c=>`<option value="${c}">${c}</option>`).join('');
+  // Restaurar tab activo
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===REND_TAB));
+  document.getElementById('rt-serie').style.display   = REND_TAB==='serie'   ? '' : 'none';
+  document.getElementById('rt-scatter').style.display = REND_TAB==='scatter' ? '' : 'none';
   onInsumoChange();
 }
 
@@ -464,7 +494,7 @@ function onInsumoChange() {
   const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>r.uso))];
   const sel_u=document.getElementById('ru');
   sel_u.innerHTML='<option value="">Todos los usos</option>'+usos.map(u=>`<option value="${u}">${u}</option>`).join('');
-  renderRend();
+  REND_TAB==='serie' ? renderRend() : renderRendScatter();
 }
 
 function renderRend() {
@@ -487,11 +517,21 @@ function renderRend() {
     return;
   }
 
+  // Mapa tons por id_prod
+  const tonsMap={};
+  uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
+
   const vals=filt.map(r=>N(r.rendimiento_L_ton));
   const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
   const bajo=N(filt[0].rango_bajo);
   const alto=N(filt[0].rango_alto);
-  const labs=filt.map(r=>uso?r.id_prod:`${r.id_prod} · ${r.uso}`);
+
+  // Labels con 2 líneas: ID y producción+consumo
+  const labs=filt.map(r=>{
+    const tons=tonsMap[r.id_prod]||0;
+    const suffix=uso?'':`· ${r.uso}`;
+    return [`${r.id_prod} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
+  });
 
   document.getElementById('r-avg').textContent=`Promedio: ${f2(avg)} L/ton`;
 
@@ -509,12 +549,80 @@ function renderRend() {
   document.getElementById('r-det').innerHTML=`
     <table><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Uso</th>
-      <th class="rt">L/ton</th><th>Rango</th>
+      <th class="rt">Tons real</th><th class="rt">Consumo (L)</th><th class="rt">L/ton</th><th>Rango</th>
     </tr></thead><tbody>
     ${filt.map(r=>`<tr>
       <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${r.uso}</td>
-      <td class="rt">${f2(r.rendimiento_L_ton)}</td><td>${tagR(r.rango)}</td>
+      <td class="rt">${f2(tonsMap[r.id_prod]||0)}</td>
+      <td class="rt">${f2(N(r.consumo_L))}</td>
+      <td class="rt">${f2(r.rendimiento_L_ton)}</td>
+      <td>${tagR(r.rango)}</td>
     </tr>`).join('')}</tbody></table>`;
+}
+
+function renderRendScatter() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const insumo=document.getElementById('ri').value;
+  const uso=document.getElementById('ru').value;
+  const desde=document.getElementById('rd').value;
+  const hasta=document.getElementById('rh').value;
+
+  let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
+  if(uso)   filt=filt.filter(r=>r.uso===uso);
+  if(desde) filt=filt.filter(r=>r.fecha>=desde);
+  if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
+
+  const tonsMap={};
+  uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
+
+  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton), id:r.id_prod, uso:r.uso}));
+
+  if(!points.length){
+    if(CH['cRendScat']){CH['cRendScat'].destroy();delete CH['cRendScat'];}
+    return;
+  }
+
+  // Línea de tendencia (regresión lineal)
+  const n=points.length;
+  const sx=points.reduce((s,p)=>s+p.x,0), sy=points.reduce((s,p)=>s+p.y,0);
+  const sxy=points.reduce((s,p)=>s+p.x*p.y,0), sxx=points.reduce((s,p)=>s+p.x*p.x,0);
+  const denom=n*sxx-sx*sx;
+  const slope=denom?((n*sxy-sx*sy)/denom):0;
+  const intercept=(sy-slope*sx)/n;
+  const xMin=Math.min(...points.map(p=>p.x)), xMax=Math.max(...points.map(p=>p.x));
+  const trendLine=n>2?[{x:xMin,y:slope*xMin+intercept},{x:xMax,y:slope*xMax+intercept}]:[];
+
+  if(CH['cRendScat']) CH['cRendScat'].destroy();
+  const c=document.getElementById('cRendScat');
+  if(!c) return;
+  CH['cRendScat']=new Chart(c,{
+    type:'scatter',
+    data:{datasets:[
+      {label:'L/ton',data:points,
+       backgroundColor:'rgba(245,158,11,.75)',pointRadius:7,pointHoverRadius:9},
+      ...(trendLine.length?[{label:'Tendencia',data:trendLine,type:'line',
+        borderColor:'#6b7280',borderDash:[4,4],pointRadius:0,fill:false}]:[])
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{
+          label:ctx=>{
+            const p=ctx.raw;
+            return p.id?`${p.id}${p.uso?' · '+p.uso:''}: ${f2(p.x)}t → ${f2(p.y)} L/ton`
+              :`Tendencia: ${f2(p.y)} L/ton`;
+          }
+        }}
+      },
+      scales:{
+        x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}},
+           title:{display:true,text:'Toneladas producidas',color:'#6b6b6b',font:{size:11}}},
+        y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}},
+           title:{display:true,text:'L / tonelada',color:'#6b6b6b',font:{size:11}}}
+      }
+    }
+  });
 }
 
 // ══════════════════════════════════════════
