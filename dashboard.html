@@ -871,12 +871,13 @@ function calcNomina(prodList) {
   (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA')
     .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
 
-  const tonsSem = {};
-  prodList.forEach(p => { const w=isoWeek(p.fecha); tonsSem[w]=(tonsSem[w]||0)+N(p.tons_real); });
+  // Número de producciones por semana (división simple, no ponderada por toneladas)
+  const countSem = {};
+  prodList.forEach(p => { const w=isoWeek(p.fecha); countSem[w]=(countSem[w]||0)+1; });
 
   return prodList.map(p => {
     const w = isoWeek(p.fecha);
-    const nom = (tonsSem[w]>0 && nomSem[w]) ? (N(p.tons_real)/tonsSem[w])*nomSem[w] : 0;
+    const nom = (countSem[w]>0 && nomSem[w]) ? nomSem[w]/countSem[w] : 0;
     return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
   });
 }
