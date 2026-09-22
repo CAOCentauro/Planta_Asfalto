@@ -578,7 +578,7 @@ function resumen() {
      .sort((a,b) => a.fecha.localeCompare(b.fecha))
      .forEach(r => {
        const k = `${r.insumo}|${r.uso}`;
-       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10) };
+       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10), cap:N(r.cap_total_L) };
      });
 
   Object.values(lev).forEach(item => {
@@ -595,19 +595,26 @@ function resumen() {
 
   const rows = Object.values(lev);
   document.getElementById('r-stk').innerHTML = rows.length
-    ? `<table><thead><tr>
-        <th>Insumo</th><th>Uso</th>
-        <th class="rt">Último cierre (L)</th><th>Fecha</th>
-        <th class="rt">Estimado hoy (L)</th><th class="rt">Δ</th>
-      </tr></thead><tbody>
-      ${rows.map(r => `<tr>
+  ? `<table><thead><tr>
+      <th>Insumo</th><th>Uso</th>
+      <th class="rt">Capacidad (L)</th>
+      <th class="rt">Último cierre (L)</th><th>Fecha</th>
+      <th class="rt">Estimado hoy (L)</th><th class="rt">% lleno</th><th class="rt">Δ</th>
+    </tr></thead><tbody>
+    ${rows.map(r => {
+      const pct = r.cap > 0 ? r.estimado / r.cap : null;
+      const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
+      return `<tr>
         <td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
+        <td class="rt">${r.cap > 0 ? f2(r.cap) : '—'}</td>
         <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td>
         <td class="rt ${r.estimado < r.L * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
+        <td class="rt ${pctColor}">${pct !== null ? (pct*100).toFixed(1)+'%' : '—'}</td>
         <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
-      </tr>`).join('')}
-      </tbody></table>`
-    : '<div class="empty">Sin datos de stock</div>';
+      </tr>`;
+    }).join('')}
+    </tbody></table>`
+  : '<div class="empty">Sin datos de stock</div>';
     // Poblar selector
   const rpSel = document.getElementById('rp-sel');
   const allU = uniq(D.producciones||[]).reverse();
