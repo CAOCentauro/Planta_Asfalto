@@ -213,28 +213,39 @@ select:focus,input:focus{border-color:var(--amb)}
 </section>
 
   <!-- FINANCIERO -->
-  <section class="sec" id="sec-financiero">
-    <div class="ph"><h2>Financiero</h2></div>
-    <div class="sb">
-      <div class="mg" id="f-met"></div>
-      <div class="pn">
-        <div class="pnh">
-          <span>Ingreso · Gastos · Utilidad por producción</span>
-          <div style="display:flex;gap:4px;flex-shrink:0">
-            <button class="ftb active" data-mode="all"  onclick="setFinMode('all')">Todos</button>
-            <button class="ftb"        data-mode="ing"  onclick="setFinMode('ing')">Ingresos</button>
-            <button class="ftb"        data-mode="gas"  onclick="setFinMode('gas')">Gastos</button>
-            <button class="ftb"        data-mode="util" onclick="setFinMode('util')">Utilidad</button>
-          </div>
-        </div>
-        <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
-      </div>
-      <div class="pn">
-        <div class="pnh">Desglose por producción</div>
-        <div class="tw" id="f-tbl"></div>
-      </div>
+<section class="sec" id="sec-financiero">
+  <div class="ph">
+    <h2>Financiero</h2>
+    <div class="flt">
+      <input type="date" id="fd" oninput="renderFin()" title="Desde">
+      <input type="date" id="fh" oninput="renderFin()" title="Hasta">
+      <select id="fp" multiple onchange="renderFin()"
+        style="height:60px;min-width:180px" title="Ctrl+clic para selección múltiple">
+      </select>
+      <button class="ftb" onclick="limpiarFinFiltros()" title="Limpiar filtros">✕</button>
     </div>
-  </section>
+  </div>
+  <div class="sb">
+    <div class="mg" id="f-met"></div>
+    <div class="pn">
+      <div class="pnh">
+        <span>Financiero por producción</span>
+        <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">
+          <button class="ftb active" data-fmode="all"       onclick="setFinMode('all')">Todos</button>
+          <button class="ftb"        data-fmode="ing"       onclick="setFinMode('ing')">Ingresos</button>
+          <button class="ftb"        data-fmode="gas"       onclick="setFinMode('gas')">Gastos</button>
+          <button class="ftb"        data-fmode="util_op"   onclick="setFinMode('util_op')">Ut. operativa</button>
+          <button class="ftb"        data-fmode="util_real" onclick="setFinMode('util_real')">Ut. real</button>
+        </div>
+      </div>
+      <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
+    </div>
+    <div class="pn">
+      <div class="pnh">Desglose por producción</div>
+      <div class="tw" id="f-tbl"></div>
+    </div>
+  </div>
+</section>
 
   <!-- INSUMOS -->
   <section class="sec" id="sec-insumos">
@@ -570,51 +581,62 @@ function resumen() {
       <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
     </tr>`).join('')}</tbody></table>`;
 
-  // Nivel de tanques
+    // Nivel de tanques
   const ins = D.insumos || [];
-  const lev = {};
+  const cats = D.recipientes || [];
 
+  // Mapa de capacidades desde el catálogo
+  const capMap = {};
+  cats.forEach(c => { capMap[`${c.insumo}|${c.uso}`] = N(c.cap_total_L); });
+
+  // Último cierre por insumo+uso (solo producciones)
+  const lev = {};
   ins.filter(r => r.tipo_uso==='PRODUCCION')
      .sort((a,b) => a.fecha.localeCompare(b.fecha))
      .forEach(r => {
        const k = `${r.insumo}|${r.uso}`;
-       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10), cap:N(r.cap_total_L) };
+       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10) };
      });
 
-  Object.values(lev).forEach(item => {
+  // Construir filas desde el catálogo (todos los tanques, hayan producido o no)
+  const rows = cats.map(c => {
+    const k = `${c.insumo}|${c.uso}`;
+    const cap = N(c.cap_total_L);
+    const base = lev[k] || { L:0, fecha:'—' };
+
     const sumiPost = (D.suministros||[])
-      .filter(s => s.insumo===item.insumo && (s.fecha||'').slice(0,10) > item.fecha)
+      .filter(s => s.insumo===c.insumo && (s.fecha||'').slice(0,10) > base.fecha)
       .reduce((s,r) => s + N(r.cantidad_L), 0);
     const mantPost = ins
-      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===item.insumo && r.uso===item.uso
-               && (r.fecha||'').slice(0,10) > item.fecha)
+      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===c.insumo && r.uso===c.uso
+               && (r.fecha||'').slice(0,10) > base.fecha)
       .reduce((s,r) => s + N(r.consumo_L), 0);
-    item.estimado = item.L + sumiPost - mantPost;
-    item.diff     = item.estimado - item.L;
+
+    const estimado = base.L + sumiPost - mantPost;
+    const diff     = estimado - base.L;
+    const pct      = cap > 0 ? estimado / cap : null;
+    const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
+
+    return { insumo:c.insumo, uso:c.uso, cap, L:base.L, fecha:base.fecha, estimado, diff, pct, pctColor };
   });
 
-  const rows = Object.values(lev);
   document.getElementById('r-stk').innerHTML = rows.length
-  ? `<table><thead><tr>
-      <th>Insumo</th><th>Uso</th>
-      <th class="rt">Capacidad (L)</th>
-      <th class="rt">Último cierre (L)</th><th>Fecha</th>
-      <th class="rt">Estimado hoy (L)</th><th class="rt">% lleno</th><th class="rt">Δ</th>
-    </tr></thead><tbody>
-    ${rows.map(r => {
-      const pct = r.cap > 0 ? r.estimado / r.cap : null;
-      const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
-      return `<tr>
+    ? `<table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Capacidad (L)</th>
+        <th class="rt">Último cierre (L)</th><th>Fecha</th>
+        <th class="rt">Estimado hoy (L)</th><th class="rt">% lleno</th><th class="rt">Δ</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `<tr>
         <td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
         <td class="rt">${r.cap > 0 ? f2(r.cap) : '—'}</td>
-        <td class="rt amb">${f2(r.L)}</td><td>${r.fecha}</td>
-        <td class="rt ${r.estimado < r.L * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
-        <td class="rt ${pctColor}">${pct !== null ? (pct*100).toFixed(1)+'%' : '—'}</td>
+        <td class="rt amb">${r.L > 0 ? f2(r.L) : '—'}</td><td>${r.fecha}</td>
+        <td class="rt ${r.estimado < r.cap * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
+        <td class="rt ${r.pctColor}">${r.pct !== null ? (r.pct*100).toFixed(1)+'%' : '—'}</td>
         <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
-      </tr>`;
-    }).join('')}
-    </tbody></table>`
-  : '<div class="empty">Sin datos de stock</div>';
+      </tr>`).join('')}
+      </tbody></table>`
+    : '<div class="empty">Sin datos de catálogo</div>';
     // Poblar selector
   const rpSel = document.getElementById('rp-sel');
   const allU = uniq(D.producciones||[]).reverse();
@@ -833,56 +855,132 @@ function renderRendScatter() {
 // ══════════════════════════════════════════
 //  FINANCIERO
 // ══════════════════════════════════════════
-function setFinMode(mode) {
-  FIN_MODE=mode;
-  document.querySelectorAll('.ftb').forEach(b=>b.classList.toggle('active',b.dataset.mode===mode));
-  if(D) renderFinChart();
+// ── ISO week ──────────────────────────────
+function isoWeek(dateStr) {
+  if (!dateStr) return '0000-W00';
+  const d = new Date(dateStr.slice(0,10) + 'T12:00:00Z');
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return `${d.getUTCFullYear()}-W${String(Math.ceil(((d-ys)/86400000+1)/7)).padStart(2,'0')}`;
 }
 
+// ── Nómina prorrateada ────────────────────
+function calcNomina(prodList) {
+  const nomSem = {};
+  (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA')
+    .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
+
+  const tonsSem = {};
+  prodList.forEach(p => { const w=isoWeek(p.fecha); tonsSem[w]=(tonsSem[w]||0)+N(p.tons_real); });
+
+  return prodList.map(p => {
+    const w = isoWeek(p.fecha);
+    const nom = (tonsSem[w]>0 && nomSem[w]) ? (N(p.tons_real)/tonsSem[w])*nomSem[w] : 0;
+    return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
+  });
+}
+
+// ── Producciones filtradas ────────────────
+function getFinProds() {
+  let prods = uniq(D.producciones||[]).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+  const desde = document.getElementById('fd')?.value;
+  const hasta  = document.getElementById('fh')?.value;
+  const sel    = [...(document.getElementById('fp')?.selectedOptions||[])].map(o=>o.value);
+  if (desde) prods = prods.filter(p=>p.fecha>=desde);
+  if (hasta)  prods = prods.filter(p=>p.fecha<=hasta);
+  if (sel.length) prods = prods.filter(p=>sel.includes(p.id_prod));
+  return calcNomina(prods);
+}
+
+function limpiarFinFiltros() {
+  document.getElementById('fd').value = '';
+  document.getElementById('fh').value = '';
+  [...(document.getElementById('fp')?.options||[])].forEach(o=>o.selected=false);
+  renderFin();
+}
+
+// ── Toggle gráfica ────────────────────────
+function setFinMode(mode) {
+  FIN_MODE = mode;
+  document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===mode));
+  if (D) renderFinChart(getFinProds());
+}
+
+// ── Financiero principal ──────────────────
 function financiero() {
-  document.querySelectorAll('.ftb').forEach(b=>b.classList.toggle('active',b.dataset.mode===FIN_MODE));
-  const u=uniq(D.producciones||[]);
-  const um=mesAct(u);
-  const ing=um.reduce((s,p)=>s+N(p.ingreso_total),0);
-  const gas=um.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos),0);
-  const util=um.reduce((s,p)=>s+N(p.utilidad),0);
-  const mg=ing>0?util/ing:0;
+  const allU = uniq(D.producciones||[]).reverse();
+  const fp = document.getElementById('fp');
+  if (!fp.options.length)
+    fp.innerHTML = allU.map(p=>
+      `<option value="${p.id_prod}">${p.id_prod} · ${p.fecha.slice(0,10)} · ${p.clientes.join(', ')}</option>`
+    ).join('');
+  document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===FIN_MODE));
+  renderFin();
+}
+
+function renderFin() {
+  const prods = getFinProds();
+  const ing      = prods.reduce((s,p)=>s+N(p.ingreso_total),0);
+  const gsIns    = prods.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material),0);
+  const nom      = prods.reduce((s,p)=>s+N(p.nomina_prorrateada),0);
+  const otros    = prods.reduce((s,p)=>s+N(p.otros_gastos),0);
+  const utilOp   = prods.reduce((s,p)=>s+N(p.utilidad),0);
+  const utilReal = prods.reduce((s,p)=>s+N(p.utilidad_real),0);
+  const mgOp     = ing>0?utilOp/ing:0;
+  const mgReal   = ing>0?utilReal/ing:0;
 
   document.getElementById('f-met').innerHTML=`
-    <div class="mc m"><div class="ml">Ingresos del mes</div><div class="mv" style="font-size:17px">${$(ing)}</div></div>
-    <div class="mc r"><div class="ml">Gastos del mes</div><div class="mv" style="font-size:17px">${$(gas)}</div></div>
-    <div class="mc ${util>=0?'g':'r'}"><div class="ml">Utilidad del mes</div><div class="mv" style="font-size:17px">${$(util)}</div></div>
-    <div class="mc ${mcColor(mg)}"><div class="ml">Margen del mes</div><div class="mv">${fp(mg)}</div></div>`;
+    <div class="mc m"><div class="ml">Ingresos</div><div class="mv" style="font-size:17px">${$(ing)}</div><div class="ms">${prods.length} producciones</div></div>
+    <div class="mc r"><div class="ml">Gs. insumos</div><div class="mv" style="font-size:17px">${$(gsIns)}</div></div>
+    <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div></div>
+    <div class="mc r"><div class="ml">Otros gastos</div><div class="mv" style="font-size:17px">${$(otros)}</div></div>
+    <div class="mc ${utilOp>=0?'g':'r'}"><div class="ml">Ut. operativa</div><div class="mv" style="font-size:15px">${$(utilOp)}</div><div class="ms">Margen ${fp(mgOp)}</div></div>
+    <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Ut. real (c/nómina)</div><div class="mv" style="font-size:15px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)}</div></div>`;
 
-  renderFinChart();
+  renderFinChart(prods);
 
-  const s=u.sort((a,b)=>a.fecha.localeCompare(b.fecha));
   document.getElementById('f-tbl').innerHTML=`
     <table><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Cliente(s)</th>
       <th class="rt">Ingreso</th><th class="rt">Gs. insumos</th>
-      <th class="rt">Otros gs.</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
+      <th class="rt">Nómina</th><th class="rt">Otros gs.</th>
+      <th class="rt">Ut. operativa</th><th class="rt">Ut. real</th><th class="rt">Margen real</th>
     </tr></thead><tbody>
-    ${s.map(p=>`<tr>
-      <td class="amb">${p.id_prod}</td><td>${p.fecha}</td><td>${p.clientes.join(', ')}</td>
-      <td class="rt">${$(p.ingreso_total)}</td>
-      <td class="rt neg">${$(p.gastos_insumos)}</td>
-      <td class="rt neg">${$(p.otros_gastos)}</td>
-      <td class="rt ${N(p.utilidad)>=0?'pos':'neg'}">${$(p.utilidad)}</td>
-      <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
-    </tr>`).join('')}</tbody></table>`;
+    ${prods.map(p=>{
+      const mgR = N(p.ingreso_total)>0 ? N(p.utilidad_real)/N(p.ingreso_total) : 0;
+      return `<tr>
+        <td class="amb">${p.id_prod}</td><td>${p.fecha.slice(0,10)}</td><td>${p.clientes.join(', ')}</td>
+        <td class="rt">${$(p.ingreso_total)}</td>
+        <td class="rt neg">${$(N(p.gastos_insumos)+N(p.gasto_material))}</td>
+        <td class="rt neg">${N(p.nomina_prorrateada)>0?$(p.nomina_prorrateada):'—'}</td>
+        <td class="rt neg">${$(p.otros_gastos)}</td>
+        <td class="rt ${N(p.utilidad)>=0?'pos':'neg'}">${$(p.utilidad)}</td>
+        <td class="rt ${N(p.utilidad_real)>=0?'pos':'neg'}">${$(p.utilidad_real)}</td>
+        <td class="rt ${mgR>=.35?'pos':mgR>=.2?'':'neg'}">${N(p.ingreso_total)>0?fp(mgR):'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
 }
 
-function renderFinChart() {
-  const u=uniq(D.producciones||[]);
-  const s=u.sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  const all=[
-    {key:'ing', label:'Ingreso',  data:s.map(p=>N(p.ingreso_total)),  backgroundColor:'rgba(245,158,11,.5)'},
-    {key:'gas', label:'Gastos',   data:s.map(p=>N(p.gastos_insumos)+N(p.gasto_material)+N(p.otros_gastos)), backgroundColor:'rgba(220,38,38,.4)'},
-    {key:'util',label:'Utilidad', data:s.map(p=>N(p.utilidad)),        backgroundColor:'rgba(22,163,74,.5)'},
-  ];
-  const ds=FIN_MODE==='all'?all:all.filter(d=>d.key===FIN_MODE);
-  mkChart('cFin','bar',{labels:s.map(p=>p.id_prod),datasets:ds});
+function renderFinChart(prods) {
+  const labs = prods.map(p=>p.id_prod);
+  const ds = {
+    ing:      { label:'Ingreso',       data:prods.map(p=>N(p.ingreso_total)),                        backgroundColor:'rgba(245,158,11,.5)' },
+    gs_ins:   { label:'Gs. insumos',   data:prods.map(p=>N(p.gastos_insumos)+N(p.gasto_material)),   backgroundColor:'rgba(220,38,38,.6)' },
+    gs_nom:   { label:'Nómina',        data:prods.map(p=>N(p.nomina_prorrateada)),                    backgroundColor:'rgba(251,146,60,.6)' },
+    gs_otros: { label:'Otros gastos',  data:prods.map(p=>N(p.otros_gastos)),                         backgroundColor:'rgba(220,38,38,.3)' },
+    util_op:  { label:'Ut. operativa', data:prods.map(p=>N(p.utilidad)),                              backgroundColor:'rgba(22,163,74,.4)' },
+    util_real:{ label:'Ut. real',      data:prods.map(p=>N(p.utilidad_real)),                         backgroundColor:'rgba(22,163,74,.7)' },
+  };
+  const modeDs = {
+    all:       [ds.ing, ds.gs_ins, ds.gs_nom, ds.gs_otros, ds.util_op, ds.util_real],
+    ing:       [ds.ing],
+    gas:       [ds.gs_ins, ds.gs_nom, ds.gs_otros],
+    util_op:   [ds.util_op],
+    util_real: [ds.util_real],
+  };
+  mkChart('cFin','bar',{labels:labs, datasets: modeDs[FIN_MODE]||modeDs.all});
 }
 
 // ══════════════════════════════════════════
