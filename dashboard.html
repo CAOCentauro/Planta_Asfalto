@@ -457,7 +457,9 @@ async function loadData() {
     const r = await fetch(SCRIPT_URL + '?action=all');
     const j = await r.json();
     if (j.status !== 'ok') throw new Error(j.message);
-        D = j.data;
+            D = j.data;
+    // Enmascarar usos ocultos (solo display; Sheets no cambia)
+    ['insumos','suministros','recipientes'].forEach(k => { D[k] = (D[k]||[]).filter(visible); });
     anomalias();
     document.getElementById('lu').textContent =
       new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
@@ -504,7 +506,12 @@ const N  = v => v==null ? 0 : parseFloat(v)||0;
 const f2 = v => v==null ? '—' : new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const fp = v => v==null ? '—' : (v*100).toFixed(1)+'%';
 const $  = v => v==null ? '—' : '$'+f2(v);
-const INSUMO_MAP = {'RETROEXCAVADORA':'MAQUINA ACARREADORA','PAYLOADER':'PAYLOADER'};
+// ── Configuración de display (reversible) ─────────────
+// Para volver a agrupar ambas máquinas, descomenta esta línea y comenta la siguiente:
+// const INSUMO_MAP = {'RETROEXCAVADORA':'MAQUINA ACARREADORA','PAYLOADER':'MAQUINA ACARREADORA'};
+const INSUMO_MAP = {};                        // sin renombres → PAYLOADER se ve como PAYLOADER
+const USOS_OCULTOS = ['RETROEXCAVADORA'];     // para volver a mostrarla: []
+const visible = r => !USOS_OCULTOS.includes(r?.uso);
 const lbl = u => INSUMO_MAP[u] || u;                                  // solo display
 const MOM = s => String(s?.momento || '').trim().toUpperCase();        // ANTES | DURANTE | ''
 const F10 = s => String(s || '').slice(0,10);
