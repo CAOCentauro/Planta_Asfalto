@@ -457,7 +457,8 @@ async function loadData() {
     const r = await fetch(SCRIPT_URL + '?action=all');
     const j = await r.json();
     if (j.status !== 'ok') throw new Error(j.message);
-    D = j.data;
+        D = j.data;
+    anomalias();
     document.getElementById('lu').textContent =
       new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     renderSec('resumen');
@@ -526,7 +527,9 @@ function uniq(prods) {
     m[p.id_prod].tons_real      += N(p.tons_real);
     if(!m[p.id_prod].clientes.includes(p.cliente)) m[p.id_prod].clientes.push(p.cliente);
   });
-  return Object.values(m).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+    return Object.values(m)
+    .map(x => ({ ...x, margen: x.ingreso_total > 0 ? x.utilidad / x.ingreso_total : null }))
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
 }
 
 function mesAct(arr,f='fecha') {
@@ -566,9 +569,10 @@ function resumen() {
   const u=uniq(D.producciones||[]);
   const um=mesAct(u);
   const tonsMes=um.reduce((s,p)=>s+N(p.tons_real),0);
+  const ingMes=um.reduce((s,p)=>s+N(p.ingreso_total),0);
   const utilMes=um.reduce((s,p)=>s+N(p.utilidad),0);
-  const mgArr=um.filter(p=>N(p.ingreso_total)>0).map(p=>N(p.margen));
-  const mgProm=mgArr.length?mgArr.reduce((s,v)=>s+v,0)/mgArr.length:0;
+  const utilRealMes=calcNomina(um).reduce((s,p)=>s+N(p.utilidad_real),0);
+  const mgProm=ingMes>0?utilMes/ingMes:0;
   const last=u[u.length-1];
 
   document.getElementById('r-met').innerHTML=`
@@ -579,9 +583,9 @@ function resumen() {
       <div class="mv">${f2(tonsMes)}</div>
       <div class="ms">${um.length} producción${um.length!==1?'es':''}</div></div>
     <div class="mc ${mcColor(mgProm)}"><div class="ml">Margen promedio del mes</div>
-      <div class="mv">${fp(mgProm)}</div><div class="ms">Sobre ventas</div></div>
-    <div class="mc ${utilMes>=0?'g':'r'}"><div class="ml">Utilidad acumulada del mes</div>
-      <div class="mv" style="font-size:17px">${$(utilMes)}</div><div class="ms">Neta estimada</div></div>`;
+           <div class="mv">${fp(mgProm)}</div><div class="ms">Ponderado · antes de nómina</div></div>
+    <div class="mc ${utilRealMes>=0?'g':'r'}"><div class="ml">Utilidad real del mes</div>
+      <div class="mv" style="font-size:17px">${$(utilRealMes)}</div><div class="ms">Operativa ${$(utilMes)} − nómina</div></div>`;
 
   const l5=[...u].reverse().slice(0,5);
   document.getElementById('r-tbl').innerHTML=`
@@ -650,11 +654,13 @@ function resumen() {
       </tbody></table>`
     : '<div class="empty">Sin datos de catálogo</div>';
     // Poblar selector
-  const rpSel = document.getElementById('rp-sel');
+    const rpSel = document.getElementById('rp-sel');
+  const prevSel = rpSel.value;
   const allU = uniq(D.producciones||[]).reverse();
   rpSel.innerHTML = allU.map(p =>
     `<option value="${p.id_prod}">${p.id_prod} · ${p.fecha.slice(0,10)} · ${p.clientes.join(', ')}</option>`
   ).join('');
+    if (prevSel && allU.some(p => p.id_prod === prevSel)) rpSel.value = prevSel;
   renderResumenProd();
 }
   function resumenProdUltima() {
@@ -769,8 +775,9 @@ function renderRend() {
 
   const vals=filt.map(r=>N(r.rendimiento_L_ton));
   const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
-  const bajo=N(filt[0].rango_bajo);
-  const alto=N(filt[0].rango_alto);
+    const mismoRango=new Set(filt.map(r=>`${r.rango_bajo}|${r.rango_alto}`)).size===1;
+  const bajo=mismoRango?N(filt[0].rango_bajo):0;
+  const alto=mismoRango?N(filt[0].rango_alto):0;
 
   // Labels con 2 líneas: ID y producción+consumo
   const labs=filt.map(r=>{
@@ -1251,7 +1258,7 @@ function renderHist() {
         <td>${x.cliente}</td><td>${x.mezcla||'—'}</td>
         <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
         <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
-        <td class="rt neg">${$(N(x.gastos_insumos)+N(x.otros_gastos))}</td>
+        <td class="rt neg">${$(N(x.gastos_insumos)+N(x.gasto_material)+N(x.otros_gastos))}</td>
         <td class="rt ${N(x.utilidad)>=0?'pos':'neg'}">${$(x.utilidad)}</td>
         <td class="rt ${N(x.margen)>=.35?'pos':N(x.margen)>=.2?'':'neg'}">${fp(x.margen)}</td>
       </tr>`).join('')}</tbody></table>`
