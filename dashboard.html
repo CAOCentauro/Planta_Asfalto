@@ -354,38 +354,45 @@ let ANOM_ALL = [];
 
 function anomalias() {
   const ins = D.insumos || [];
+  const sum = D.suministros || [];
   const al  = [];
 
   ins.filter(r=>N(r.consumo_L)<0).forEach(r=>al.push({
-    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-    tipo:'Consumo negativo', det:`consumo_L = ${r.consumo_L}`, lv:'error'}));
+    id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+    tipo:'Consumo negativo', det:`consumo_L = ${f2(r.consumo_L)}`, lv:'error'}));
 
   ins.filter(r=>r.tipo_uso==='PRODUCCION'&&r.rango&&N(r.rendimiento_L_ton)>0).forEach(r=>{
-    if(r.rango==='ALTO') al.push({id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-      tipo:'Rendimiento alto', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_alto}`, lv:'warn'});
-    if(r.rango==='BAJO') al.push({id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
-      tipo:'Rendimiento bajo', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${r.rango_bajo}`, lv:'info'});
+    if(r.rango==='ALTO') al.push({id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+      tipo:'Rendimiento alto', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${f2(r.rango_alto)}`, lv:'warn'});
+    if(r.rango==='BAJO') al.push({id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+      tipo:'Rendimiento bajo', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${f2(r.rango_bajo)}`, lv:'info'});
   });
 
   ins.filter(r=>r.tipo_uso==='PRODUCCION'&&!r.costo_unit&&N(r.consumo_L)>0).forEach(r=>al.push({
-    id:r.id_prod, f:r.fecha, ins:r.insumo, uso:r.uso,
+    id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
     tipo:'Sin costo', det:'costo_unit vacío', lv:'warn'}));
 
+  // Continuidad / merma entre registros
+  // Cadena por tanque FÍSICO (uso original, no mapeado) e incluye MANT.
   const gr = {};
-  ins.filter(r=>r.tipo_uso==='PRODUCCION')
-     .sort((a,b)=>a.fecha.localeCompare(b.fecha))
+  ins.filter(r=>r.inicio_L!=null && r.termino_L!=null)
+     .sort((a,b)=>F10(a.fecha).localeCompare(F10(b.fecha)) || String(a.id_prod).localeCompare(String(b.id_prod)))
      .forEach(r=>{ const k=`${r.insumo}|${r.uso}`; (gr[k]=gr[k]||[]).push(r); });
+
   Object.values(gr).forEach(rows=>{
     for(let i=1;i<rows.length;i++){
       const p=rows[i-1], c=rows[i];
-      const sumiEntre=(D.suministros||[])
-        .filter(s=>s.insumo===c.insumo&&s.uso===c.uso&&s.fecha>p.fecha&&s.fecha<c.fecha)
-        .reduce((sum,s)=>sum+N(s.cantidad_L),0);
-      const esperado=N(p.termino_L)+sumiEntre;
-      const d=Math.abs(N(c.inicio_L)-esperado);
-      if(d>2) al.push({id:c.id_prod, f:c.fecha, ins:c.insumo, uso:c.uso,
+      const fp=F10(p.fecha), fc=F10(c.fecha);
+      const antes = sum.filter(s=>{
+        if(s.insumo!==c.insumo || s.uso!==c.uso) return false;
+        const fs=F10(s.fecha), m=MOM(s);
+        return (fs>fp && fs<fc && m!=='DURANTE') || (fs===fc && m==='ANTES');
+      }).reduce((t,s)=>t+N(s.cantidad_L),0);
+      const esperado = N(p.termino_L) + antes;
+      const merma    = esperado - N(c.inicio_L);          // + faltante · − sobrante
+      if(Math.abs(merma)>2) al.push({id:c.id_prod, f:fc, ins:c.insumo, uso:lbl(c.uso),
         tipo:'Continuidad',
-        det:`Término ant: ${f2(p.termino_L)}L${sumiEntre>0?' + sumi. '+f2(sumiEntre)+'L':''} → esperado: ${f2(esperado)}L → Inicio real: ${f2(c.inicio_L)}L (Δ ${f2(d)}L)`,
+        det:`Término ${p.id_prod}: ${f2(p.termino_L)}L${antes?' + sumi. antes '+f2(antes)+'L':''} → esperado ${f2(esperado)}L · inicio real ${f2(c.inicio_L)}L · ${merma>0?'faltante':'sobrante'} ${f2(Math.abs(merma))}L${lbl(c.uso)!==c.uso?' ('+c.uso+')':''}`,
         lv:'warn'});
     }
   });
@@ -496,7 +503,11 @@ const N  = v => v==null ? 0 : parseFloat(v)||0;
 const f2 = v => v==null ? '—' : new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
 const fp = v => v==null ? '—' : (v*100).toFixed(1)+'%';
 const $  = v => v==null ? '—' : '$'+f2(v);
-
+const INSUMO_MAP = {'RETROEXCAVADORA':'MAQUINA ACARREADORA','PAYLOADER':'MAQUINA ACARREADORA'};
+const lbl = u => INSUMO_MAP[u] || u;                                  // solo display
+const MOM = s => String(s?.momento || '').trim().toUpperCase();        // ANTES | DURANTE | ''
+const F10 = s => String(s || '').slice(0,10);
+  
 function std(arr) {
   if (!arr.length) return 0;
   const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
@@ -520,7 +531,8 @@ function uniq(prods) {
 
 function mesAct(arr,f='fecha') {
   const n=new Date();
-  return arr.filter(r=>{const d=new Date(r[f]);return d.getMonth()===n.getMonth()&&d.getFullYear()===n.getFullYear();});
+  const ym=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+  return arr.filter(r=>F10(r[f]).slice(0,7)===ym);
 }
 
 function mkChart(id,type,data,extra={}) {
@@ -605,7 +617,7 @@ function resumen() {
     const base = lev[k] || { L:0, fecha:'—' };
 
     const sumiPost = (D.suministros||[])
-      .filter(s => s.insumo===c.insumo && (s.fecha||'').slice(0,10) > base.fecha)
+      .filter(s => s.insumo===c.insumo && s.uso===c.uso && F10(s.fecha) > base.fecha)
       .reduce((s,r) => s + N(r.cantidad_L), 0);
     const mantPost = ins
       .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===c.insumo && r.uso===c.uso
@@ -656,14 +668,16 @@ function renderResumenProd() {
   const id = document.getElementById('rp-sel').value;
   if (!id || !D) return;
 
-  const prods   = (D.producciones||[]).filter(p => p.id_prod === id);
-  const fecha   = (prods[0]?.fecha||'').slice(0,10);
+  const prods    = (D.producciones||[]).filter(p => p.id_prod === id);
+  const fecha    = F10(prods[0]?.fecha);
   const clientes = [...new Set(prods.map(p => p.cliente))];
   const tonsTotal = prods.reduce((s,p) => s + N(p.tons_real), 0);
 
   const ins = (D.insumos||[])
     .filter(r => r.id_prod === id && r.tipo_uso === 'PRODUCCION')
     .sort((a,b) => a.insumo.localeCompare(b.insumo));
+
+  const sg = v => v==null ? '—' : (v>0?'+':'') + f2(v);
 
   document.getElementById('rp-body').innerHTML = `
     <div style="padding:12px 16px;border-bottom:1px solid var(--bd);font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
@@ -674,23 +688,28 @@ function renderResumenProd() {
     <div class="tw">
       <table><thead><tr>
         <th>Insumo</th><th>Uso</th>
-        <th class="rt">Inicio (L)</th>
-        <th class="rt">Suministro (L)</th>
-        <th class="rt">Término (L)</th>
-        <th class="rt">Consumo (L)</th>
+        <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
+        <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th>
         <th class="rt">L / ton</th>
+        <th class="rt">Δ lím. alto</th><th class="rt">Δ lím. bajo</th>
         <th>Rango</th>
       </tr></thead><tbody>
-      ${ins.length ? ins.map(r => `<tr>
+      ${ins.length ? ins.map(r => {
+        const rend = N(r.rendimiento_L_ton);
+        const dA = rend>0 && r.rango_alto!=null ? rend - N(r.rango_alto) : null;
+        const dB = rend>0 && r.rango_bajo!=null ? rend - N(r.rango_bajo) : null;
+        return `<tr>
         <td>${r.insumo}</td>
-        <td style="color:var(--muted)">${r.uso}</td>
+        <td style="color:var(--muted)">${lbl(r.uso)}</td>
         <td class="rt">${f2(r.inicio_L)}</td>
         <td class="rt ${N(r.suministro_L)>0?'pos':''}">${N(r.suministro_L)>0 ? f2(r.suministro_L) : '—'}</td>
         <td class="rt">${f2(r.termino_L)}</td>
         <td class="rt amb">${f2(r.consumo_L)}</td>
-        <td class="rt ${r.rango==='ALTO'?'neg':r.rango==='BAJO'?'pos':'amb'}">${N(r.rendimiento_L_ton)>0 ? f2(r.rendimiento_L_ton) : '—'}</td>
+        <td class="rt ${r.rango==='ALTO'?'neg':r.rango==='BAJO'?'pos':'amb'}">${rend>0 ? f2(rend) : '—'}</td>
+        <td class="rt ${dA>0?'neg':''}" style="${dA>0?'':'color:var(--muted)'}">${sg(dA)}</td>
+        <td class="rt ${dB<0?'pos':''}" style="${dB<0?'':'color:var(--muted)'}">${sg(dB)}</td>
         <td>${tagR(r.rango)}</td>
-      </tr>`).join('') : '<tr><td colspan="8" class="empty">Sin datos de insumos</td></tr>'}
+      </tr>`;}).join('') : '<tr><td colspan="10" class="empty">Sin datos de insumos</td></tr>'}
       </tbody></table>
     </div>`;
 }
@@ -714,7 +733,7 @@ function rendimientos() {
 function onInsumoChange() {
   const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
   const insumo=document.getElementById('ri').value;
-  const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>r.uso))];
+  const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>lbl(r.uso)))];
   const sel_u=document.getElementById('ru');
   sel_u.innerHTML='<option value="">Todos los usos</option>'+usos.map(u=>`<option value="${u}">${u}</option>`).join('');
   REND_TAB==='serie' ? renderRend() : renderRendScatter();
@@ -732,7 +751,7 @@ function renderRend() {
   const hasta=document.getElementById('rh').value;
 
   let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
-  if(uso)   filt=filt.filter(r=>r.uso===uso);
+  if(uso)   filt=filt.filter(r=>lbl(r.uso)===uso);
   if(desde) filt=filt.filter(r=>r.fecha>=desde);
   if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
   filt=filt.sort((a,b)=>a.fecha.localeCompare(b.fecha));
@@ -756,7 +775,7 @@ function renderRend() {
   // Labels con 2 líneas: ID y producción+consumo
   const labs=filt.map(r=>{
     const tons=tonsMap[r.id_prod]||0;
-    const suffix=uso?'':`· ${r.uso}`;
+    const suffix=uso?'':`· ${lbl(r.uso)}`;
     return [`${r.id_prod} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
   });
 
@@ -779,7 +798,7 @@ function renderRend() {
       <th class="rt">Tons real</th><th class="rt">Consumo (L)</th><th class="rt">L/ton</th><th>Rango</th>
     </tr></thead><tbody>
     ${filt.map(r=>`<tr>
-      <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${r.uso}</td>
+      <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${lbl(r.uso)}</td>
       <td class="rt">${f2(tonsMap[r.id_prod]||0)}</td>
       <td class="rt">${f2(N(r.consumo_L))}</td>
       <td class="rt">${f2(r.rendimiento_L_ton)}</td>
@@ -795,14 +814,14 @@ function renderRendScatter() {
   const hasta=document.getElementById('rh').value;
 
   let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
-  if(uso)   filt=filt.filter(r=>r.uso===uso);
+  if(uso)   filt=filt.filter(r=>lbl(r.uso)===uso);
   if(desde) filt=filt.filter(r=>r.fecha>=desde);
   if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
 
   const tonsMap={};
   uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
 
-  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton), id:r.id_prod, uso:r.uso}));
+  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton),id:r.id_prod, uso:lbl(r.uso)}));
 
   if(!points.length){
     if(CH['cRendScat']){CH['cRendScat'].destroy();delete CH['cRendScat'];}
@@ -867,17 +886,20 @@ function isoWeek(dateStr) {
 
 // ── Nómina prorrateada ────────────────────
 function calcNomina(prodList) {
+  const isProd = p => String(p.id_prod||'').startsWith('PROD-');
+
   const nomSem = {};
   (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA')
     .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
 
-  // Número de producciones por semana (división simple, no ponderada por toneladas)
+  // Conteo sobre TODAS las producciones de la semana (no la lista filtrada), sin MANT
   const countSem = {};
-  prodList.forEach(p => { const w=isoWeek(p.fecha); countSem[w]=(countSem[w]||0)+1; });
+  uniq(D.producciones||[]).filter(isProd)
+    .forEach(p => { const w=isoWeek(p.fecha); countSem[w]=(countSem[w]||0)+1; });
 
   return prodList.map(p => {
-    const w = isoWeek(p.fecha);
-    const nom = (countSem[w]>0 && nomSem[w]) ? nomSem[w]/countSem[w] : 0;
+    const w   = isoWeek(p.fecha);
+    const nom = (isProd(p) && countSem[w] && nomSem[w]) ? nomSem[w]/countSem[w] : 0;
     return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
   });
 }
@@ -993,7 +1015,7 @@ function insumos() {
   // Consumo total por insumo+uso
   const cm={};
   ins.forEach(r=>{
-    const k=`${r.insumo} · ${r.uso}`;
+    const k=`${r.insumo} · ${lbl(r.uso)}`;
     cm[k]=(cm[k]||0)+N(r.consumo_L);
   });
   const names=Object.keys(cm);
@@ -1021,8 +1043,8 @@ function insumos() {
   // Tabla estadísticas de rendimiento
   const rm={};
   ins.filter(r=>N(r.rendimiento_L_ton)>0).forEach(r=>{
-    const k=`${r.insumo}|${r.uso}`;
-    if(!rm[k]) rm[k]={insumo:r.insumo,uso:r.uso,v:[],rangos:{BAJO:0,MEDIO:0,ALTO:0}};
+    const k=`${r.insumo}|${lbl(r.uso)}`;
+    if(!rm[k]) rm[k]={insumo:r.insumo,uso:lbl(r.uso),v:[],rangos:{BAJO:0,MEDIO:0,ALTO:0}};
     rm[k].v.push(N(r.rendimiento_L_ton));
     if(r.rango && rm[k].rangos[r.rango]!==undefined) rm[k].rangos[r.rango]++;
   });
@@ -1059,7 +1081,7 @@ function insumos() {
 // ══════════════════════════════════════════
 function continuidad() {
   const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
-  const combos=[...new Set(ins.map(r=>`${r.insumo}||${r.uso}`))].sort();
+  const combos=[...new Set(ins.map(r=>`${r.insumo}||${lbl(r.uso)}`))].sort();
   const sel=document.getElementById('ci');
   if(!sel.options.length)
     sel.innerHTML=combos.map(c=>{
@@ -1072,57 +1094,53 @@ function continuidad() {
 function renderCont() {
   const val = document.getElementById('ci').value;
   if (!val) return;
-  const [insumo, uso] = val.split('||');
+  const [insumo, uso] = val.split('||');           // uso ya mapeado
+  const match = r => r.insumo===insumo && lbl(r.uso)===uso;
 
-    const desde = document.getElementById('cd').value;
+  const desde = document.getElementById('cd').value;
   const hasta = document.getElementById('ch').value;
 
   const prodRows = (D.insumos||[])
-    .filter(r => r.tipo_uso==='PRODUCCION' && r.insumo===insumo && r.uso===uso)
-    .filter(r => (!desde || r.fecha.slice(0,10) >= desde) && (!hasta || r.fecha.slice(0,10) <= hasta))
-    .sort((a,b) => a.fecha.localeCompare(b.fecha));
+    .filter(r => r.tipo_uso==='PRODUCCION' && match(r))
+    .filter(r => (!desde || F10(r.fecha) >= desde) && (!hasta || F10(r.fecha) <= hasta))
+    .sort((a,b) => F10(a.fecha).localeCompare(F10(b.fecha)));
 
   if (!prodRows.length) {
     document.getElementById('c-stats').textContent = 'Sin datos';
     document.getElementById('c-tbl').innerHTML = '<div class="empty">Sin registros</div>';
+    if (CH['cCont']) { CH['cCont'].destroy(); delete CH['cCont']; }
     return;
   }
 
   const prodMap = {};
-  prodRows.forEach(r => { prodMap[r.fecha.slice(0,10)] = r; });
+  prodRows.forEach(r => { prodMap[F10(r.fecha)] = r; });
 
   const sumiDia = {};
-  (D.suministros||[])
-    .filter(s => s.insumo === insumo)
-    .forEach(s => {
-      const f = (s.fecha||'').slice(0,10);
-      sumiDia[f] = (sumiDia[f]||0) + N(s.cantidad_L);
-    });
+  (D.suministros||[]).filter(match).forEach(s => {
+    const f = F10(s.fecha); sumiDia[f] = (sumiDia[f]||0) + N(s.cantidad_L);
+  });
 
   const mantDia = {};
-  (D.insumos||[])
-    .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===insumo && r.uso===uso)
-    .forEach(r => {
-      const f = (r.fecha||'').slice(0,10);
-      mantDia[f] = (mantDia[f]||0) + N(r.consumo_L);
-    });
+  (D.insumos||[]).filter(r => r.tipo_uso==='MANTENIMIENTO' && match(r)).forEach(r => {
+    const f = F10(r.fecha); mantDia[f] = (mantDia[f]||0) + N(r.consumo_L);
+  });
 
   const dias = [];
-  let cur = new Date(prodRows[0].fecha.slice(0,10) + 'T12:00:00Z');
-  const fin = new Date(prodRows[prodRows.length-1].fecha.slice(0,10) + 'T12:00:00Z');
-  while (cur <= fin) {
-    dias.push(cur.toISOString().slice(0,10));
-    cur.setDate(cur.getDate() + 1);
-  }
+  let cur = new Date(F10(prodRows[0].fecha) + 'T12:00:00Z');
+  const fin = new Date(F10(prodRows[prodRows.length-1].fecha) + 'T12:00:00Z');
+  while (cur <= fin) { dias.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate() + 1); }
 
   const dataNivel = [], dataInicio = [];
-  let nivel = N(prodRows[0].inicio_L);
+  const cut = new Set();                           // índices de segmentos a ocultar
+  let nivel = N(prodRows[0].inicio_L), lastUso = null, lastIdx = -1;
 
-  dias.forEach(dia => {
+  dias.forEach((dia, i) => {
     const prod = prodMap[dia];
     const sumi = sumiDia[dia] || 0;
     const mant = mantDia[dia] || 0;
     if (prod) {
+      if (lastUso && prod.uso !== lastUso) for (let j = lastIdx + 1; j <= i; j++) cut.add(j);
+      lastUso = prod.uso; lastIdx = i;
       dataInicio.push(N(prod.inicio_L));
       nivel = N(prod.termino_L) - mant;
     } else {
@@ -1135,80 +1153,60 @@ function renderCont() {
   const dataSumi    = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
   const dataConsumo = dias.map(dia => {
     const prod = prodMap[dia];
-    const mant = mantDia[dia] || 0;
-    const total = (prod ? N(prod.consumo_L) : 0) + mant;
+    const total = (prod ? N(prod.consumo_L) : 0) + (mantDia[dia] || 0);
     return total > 0 ? total : null;
   });
 
   const cierres = prodRows.map(r => N(r.termino_L));
   const avg = cierres.reduce((s,v)=>s+v,0) / cierres.length;
   document.getElementById('c-stats').textContent =
-    `  Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días`;
+    `  Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días${cut.size?'  ·  incluye cambio de equipo':''}`;
 
-  // Restaurar estado de botones
-  document.querySelectorAll('[data-cv]').forEach(b =>
-    b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+  document.querySelectorAll('[data-cv]').forEach(b => b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+
+  const hideSeg = (ctx, v) => cut.has(ctx.p1DataIndex) ? 'transparent' : v;
 
   const allDatasets = [
-    {
-      key:'nivel', label:'Nivel al cierre (L)', data:dataNivel,
+    { key:'nivel', label:'Nivel al cierre (L)', data:dataNivel,
       borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)',
+      segment:{ borderColor: ctx => hideSeg(ctx,'#f59e0b'), backgroundColor: ctx => hideSeg(ctx,'rgba(245,158,11,.08)') },
       pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
       pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
-      tension:0, fill:true, yAxisID:'y'
-    },
-    {
-      key:'inicio', label:'Inicio producción (L)', data:dataInicio,
-      showLine:false, spanGaps:false,
-      pointBackgroundColor:'#818cf8', pointBorderColor:'#818cf8',
-      pointRadius:6, fill:false, yAxisID:'y'
-    },
-    {
-      key:'promedio', label:'Promedio cierre', data:dias.map(()=>avg),
-      borderColor:'#6b7280', borderDash:[5,4], pointRadius:0, fill:false, yAxisID:'y'
-    },
-    {
-      key:'sumi', label:'Suministro (L)', type:'bar', data:dataSumi,
-      backgroundColor:'rgba(34,211,238,.5)', borderColor:'#22d3ee',
-      borderWidth:1, yAxisID:'yExtra', order:10
-    },
-    {
-      key:'consumo', label:'Consumo (L)', type:'bar', data:dataConsumo,
-      backgroundColor:'rgba(220,38,38,.4)', borderColor:'#dc2626',
-      borderWidth:1, yAxisID:'yExtra', order:10
-    }
+      tension:0, fill:true, yAxisID:'y' },
+    { key:'inicio', label:'Inicio producción (L)', data:dataInicio,
+      showLine:false, spanGaps:false, pointBackgroundColor:'#818cf8', pointBorderColor:'#818cf8',
+      pointRadius:6, fill:false, yAxisID:'y' },
+    { key:'promedio', label:'Promedio cierre', data:dias.map(()=>avg),
+      borderColor:'#6b7280', borderDash:[5,4], pointRadius:0, fill:false, yAxisID:'y' },
+    { key:'sumi', label:'Suministro (L)', type:'bar', data:dataSumi,
+      backgroundColor:'rgba(34,211,238,.5)', borderColor:'#22d3ee', borderWidth:1, yAxisID:'yExtra', order:10 },
+    { key:'consumo', label:'Consumo (L)', type:'bar', data:dataConsumo,
+      backgroundColor:'rgba(220,38,38,.4)', borderColor:'#dc2626', borderWidth:1, yAxisID:'yExtra', order:10 }
   ];
 
   const showExtra = CONT_VIS.sumi || CONT_VIS.consumo;
 
-  mkChart('cCont', 'line', {
-    labels: dias,
-    datasets: allDatasets.filter(d => CONT_VIS[d.key])
-  }, {
+  mkChart('cCont', 'line', { labels: dias, datasets: allDatasets.filter(d => CONT_VIS[d.key]) }, {
     scales: {
       x: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
       y: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
-      yExtra: {
-        display: showExtra,
-        position: 'right',
-        grid: { drawOnChartArea:false },
-        ticks: { color:'#9ca3af', font:{size:9} },
-        title: { display:true, text:'Sumi. / Consumo (L)', color:'#9ca3af', font:{size:9} }
-      }
+      yExtra: { display: showExtra, position:'right', grid:{ drawOnChartArea:false },
+        ticks:{ color:'#9ca3af', font:{size:9} },
+        title:{ display:true, text:'Sumi. / Consumo (L)', color:'#9ca3af', font:{size:9} } }
     }
   });
 
+  const mapped = prodRows.some(r => lbl(r.uso) !== r.uso);
   document.getElementById('c-tbl').innerHTML = `
     <table><thead><tr>
-      <th>Producción</th><th>Fecha</th>
+      <th>Producción</th><th>Fecha</th>${mapped?'<th>Equipo</th>':''}
       <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
-      <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th>
-      <th class="rt">Mant. (L)</th>
+      <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th><th class="rt">Mant. (L)</th>
     </tr></thead><tbody>
     ${prodRows.map(r => {
-      const f = (r.fecha||'').slice(0,10);
+      const f = F10(r.fecha);
       return `<tr>
-        <td class="amb">${r.id_prod}</td><td>${f}</td>
+        <td class="amb">${r.id_prod}</td><td>${f}</td>${mapped?`<td style="color:var(--muted)">${r.uso}</td>`:''}
         <td class="rt">${f2(r.inicio_L)}</td>
         <td class="rt">${f2(r.suministro_L)}</td>
         <td class="rt">${f2(r.termino_L)}</td>
