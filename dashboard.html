@@ -159,7 +159,10 @@ select:focus,input:focus{border-color:var(--amb)}
           <div class="tw" id="r-tbl"></div>
         </div>
         <div class="pn">
-          <div class="pnh">Nivel de tanques — cierre y estimado actual</div>
+                    <div class="pnh">
+            <span id="tk-title">Nivel de tanques — cierre y estimado actual</span>
+            <select id="tk-sel" onchange="renderTanques()" style="max-width:170px"></select>
+          </div>
           <div class="tw" id="r-stk"></div>
         </div>
       
@@ -604,62 +607,7 @@ function resumen() {
       <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
     </tr>`).join('')}</tbody></table>`;
 
-    // Nivel de tanques
-  const ins = D.insumos || [];
-  const cats = D.recipientes || [];
-
-  // Mapa de capacidades desde el catálogo
-  const capMap = {};
-  cats.forEach(c => { capMap[`${c.insumo}|${c.uso}`] = N(c.cap_total_L); });
-
-  // Último cierre por insumo+uso (solo producciones)
-  const lev = {};
-  ins.filter(r => r.tipo_uso==='PRODUCCION')
-     .sort((a,b) => a.fecha.localeCompare(b.fecha))
-     .forEach(r => {
-       const k = `${r.insumo}|${r.uso}`;
-       lev[k] = { insumo:r.insumo, uso:r.uso, L:N(r.termino_L), fecha:r.fecha.slice(0,10) };
-     });
-
-  // Construir filas desde el catálogo (todos los tanques, hayan producido o no)
-  const rows = cats.map(c => {
-    const k = `${c.insumo}|${c.uso}`;
-    const cap = N(c.cap_total_L);
-    const base = lev[k] || { L:0, fecha:'—' };
-
-    const sumiPost = (D.suministros||[])
-      .filter(s => s.insumo===c.insumo && s.uso===c.uso && F10(s.fecha) > base.fecha)
-      .reduce((s,r) => s + N(r.cantidad_L), 0);
-    const mantPost = ins
-      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===c.insumo && r.uso===c.uso
-               && (r.fecha||'').slice(0,10) > base.fecha)
-      .reduce((s,r) => s + N(r.consumo_L), 0);
-
-    const estimado = base.L + sumiPost - mantPost;
-    const diff     = estimado - base.L;
-    const pct      = cap > 0 ? estimado / cap : null;
-    const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
-
-    return { insumo:c.insumo, uso:c.uso, cap, L:base.L, fecha:base.fecha, estimado, diff, pct, pctColor };
-  });
-
-  document.getElementById('r-stk').innerHTML = rows.length
-    ? `<table><thead><tr>
-        <th>Insumo</th><th>Uso</th>
-        <th class="rt">Capacidad (L)</th>
-        <th class="rt">Último cierre (L)</th><th>Fecha</th>
-        <th class="rt">Estimado hoy (L)</th><th class="rt">% lleno</th><th class="rt">Δ</th>
-      </tr></thead><tbody>
-      ${rows.map(r => `<tr>
-        <td>${r.insumo}</td><td style="color:var(--muted)">${r.uso}</td>
-        <td class="rt">${r.cap > 0 ? f2(r.cap) : '—'}</td>
-        <td class="rt amb">${r.L > 0 ? f2(r.L) : '—'}</td><td>${r.fecha}</td>
-        <td class="rt ${r.estimado < r.cap * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
-        <td class="rt ${r.pctColor}">${r.pct !== null ? (r.pct*100).toFixed(1)+'%' : '—'}</td>
-        <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
-      </tr>`).join('')}
-      </tbody></table>`
-    : '<div class="empty">Sin datos de catálogo</div>';
+  renderTanques();
     // Poblar selector
     const rpSel = document.getElementById('rp-sel');
   const prevSel = rpSel.value;
@@ -669,6 +617,72 @@ function resumen() {
   ).join('');
     if (prevSel && allU.some(p => p.id_prod === prevSel)) rpSel.value = prevSel;
   renderResumenProd();
+}
+
+  function renderTanques() {
+  if (!D) return;
+  const ins  = D.insumos || [];
+  const cats = D.recipientes || [];
+  const sel  = document.getElementById('tk-sel');
+
+  // Opciones: Hoy + fechas con movimiento (producción, mant. o suministro), más reciente primero
+  const fechas = [...new Set([
+    ...ins.map(r => F10(r.fecha)),
+    ...(D.suministros||[]).map(s => F10(s.fecha))
+  ].filter(Boolean))].sort().reverse();
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Hoy (estimado)</option>' +
+    fechas.map(f => `<option value="${f}">${f}</option>`).join('');
+  if (prev && fechas.includes(prev)) sel.value = prev;
+
+  const esHoy = !sel.value;
+  const corte = sel.value || '9999-12-31';
+  document.getElementById('tk-title').textContent =
+    esHoy ? 'Nivel de tanques — cierre y estimado actual' : `Nivel de tanques — al ${corte}`;
+
+  // Último cierre de producción hasta la fecha de corte
+  const lev = {};
+  ins.filter(r => r.tipo_uso==='PRODUCCION' && F10(r.fecha) <= corte)
+     .sort((a,b) => F10(a.fecha).localeCompare(F10(b.fecha)))
+     .forEach(r => { lev[`${r.insumo}|${r.uso}`] = { L:N(r.termino_L), fecha:F10(r.fecha) }; });
+
+  const rows = cats.map(c => {
+    const cap  = N(c.cap_total_L);
+    const base = lev[`${c.insumo}|${c.uso}`] || { L:0, fecha:'' };
+    const enVentana = f => f > base.fecha && f <= corte;
+
+    const sumiPost = (D.suministros||[])
+      .filter(s => s.insumo===c.insumo && s.uso===c.uso && enVentana(F10(s.fecha)))
+      .reduce((t,s) => t + N(s.cantidad_L), 0);
+    const mantPost = ins
+      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===c.insumo && r.uso===c.uso && enVentana(F10(r.fecha)))
+      .reduce((t,r) => t + N(r.consumo_L), 0);
+
+    const estimado = base.L + sumiPost - mantPost;
+    const diff     = estimado - base.L;
+    const pct      = cap > 0 ? estimado / cap : null;
+    const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
+    return { insumo:c.insumo, uso:c.uso, cap, L:base.L, fecha:base.fecha||'—', estimado, diff, pct, pctColor };
+  });
+
+  document.getElementById('r-stk').innerHTML = rows.length
+    ? `<table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Capacidad (L)</th>
+        <th class="rt">Último cierre (L)</th><th>Fecha cierre</th>
+        <th class="rt">${esHoy ? 'Estimado hoy (L)' : 'Nivel al ' + corte + ' (L)'}</th>
+        <th class="rt">% lleno</th><th class="rt">Δ</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td class="rt">${r.cap > 0 ? f2(r.cap) : '—'}</td>
+        <td class="rt amb">${r.L > 0 ? f2(r.L) : '—'}</td><td>${r.fecha}</td>
+        <td class="rt ${r.estimado < r.cap * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
+        <td class="rt ${r.pctColor}">${r.pct !== null ? (r.pct*100).toFixed(1)+'%' : '—'}</td>
+        <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+    : '<div class="empty">Sin datos de catálogo</div>';
 }
   function resumenProdUltima() {
   const u = uniq(D.producciones||[]);
