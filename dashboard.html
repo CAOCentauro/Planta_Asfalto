@@ -83,6 +83,18 @@ select:focus,input:focus{border-color:var(--amb)}
 .ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
 .ftb:hover{border-color:var(--amb);color:var(--amb)}
 .ftb.active{background:rgba(245,158,11,.12);border-color:var(--amb);color:var(--amb)}
+  /* DROPDOWN PRODUCCIONES */
+.dd{position:relative}
+.dd-btn{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer;min-width:210px;display:flex;justify-content:space-between;gap:10px}
+.dd-btn:hover,.dd.open .dd-btn{border-color:var(--amb)}
+.dd-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);width:360px;max-height:380px;overflow-y:auto;background:var(--s1);border:1px solid var(--bd);z-index:50;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.dd.open .dd-panel{display:block}
+.dd-acts{display:flex;gap:6px;margin-bottom:6px}
+.dd-panel input[type=text]{width:100%;margin-bottom:6px}
+.dd-item{display:flex;gap:10px;align-items:center;padding:6px 4px;font-size:12px;cursor:pointer}
+.dd-item:hover{background:rgba(245,158,11,.06)}
+.dd-item input{accent-color:var(--amb)}
+.dd-f{color:var(--muted);min-width:80px}
 
 /* UTILS */
 .pos{color:#4ade80}.neg{color:#f87171}.amb{color:var(--amb)}.rt{text-align:right}
@@ -226,12 +238,27 @@ select:focus,input:focus{border-color:var(--amb)}
 <section class="sec" id="sec-financiero">
   <div class="ph">
     <h2>Financiero</h2>
-    <div class="flt">
-      <input type="date" id="fd" oninput="renderFin()" title="Desde">
-      <input type="date" id="fh" oninput="renderFin()" title="Hasta">
-      <select id="fp" multiple onchange="renderFin()"
-        style="height:60px;min-width:180px" title="Ctrl+clic para selección múltiple">
+        <div class="flt">
+      <select id="f-per" onchange="setFinPeriodo(this.value)">
+        <option value="mes">Este mes</option>
+        <option value="mesant">Mes anterior</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="todo">Todo</option>
+        <option value="custom">Personalizado</option>
       </select>
+      <input type="date" id="fd" oninput="onFinFechaManual()" title="Desde">
+      <input type="date" id="fh" oninput="onFinFechaManual()" title="Hasta">
+      <div class="dd" id="fp-dd">
+        <button class="dd-btn" onclick="toggleDD(event)"><span id="fp-lbl">Todas</span><span>▾</span></button>
+        <div class="dd-panel" onclick="event.stopPropagation()">
+          <div class="dd-acts">
+            <button class="ftb" onclick="fpTodas(true)">Todas</button>
+            <button class="ftb" onclick="fpTodas(false)">Ninguna</button>
+          </div>
+          <input type="text" id="fp-q" placeholder="Buscar cliente o fecha…" oninput="renderFpList()">
+          <div id="fp-list"></div>
+        </div>
+      </div>
       <button class="ftb" onclick="limpiarFinFiltros()" title="Limpiar filtros">✕</button>
     </div>
   </div>
@@ -977,23 +1004,85 @@ function calcNomina(prodList) {
   });
 }
 
-// ── Producciones filtradas ────────────────
-function getFinProds() {
-  let prods = uniq(D.producciones||[]).sort((a,b)=>a.fecha.localeCompare(b.fecha));
-  const desde = document.getElementById('fd')?.value;
-  const hasta  = document.getElementById('fh')?.value;
-  const sel    = [...(document.getElementById('fp')?.selectedOptions||[])].map(o=>o.value);
-  if (desde) prods = prods.filter(p=>p.fecha>=desde);
-  if (hasta)  prods = prods.filter(p=>p.fecha<=hasta);
-  if (sel.length) prods = prods.filter(p=>sel.includes(p.id_prod));
-  return calcNomina(prods);
+// ── Filtros de Financiero ─────────────────
+const FIN_PER_DEFAULT = 'mes';     // periodo al abrir: 'mes' | 'mesant' | '30' | 'todo'
+let FP_EXCL = new Set();           // producciones desmarcadas en el dropdown
+let FIN_INIT = false;
+
+function isoLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
+function rangoPeriodo(p) {
+  const h = new Date(), y = h.getFullYear(), m = h.getMonth();
+  if (p==='mes')    return [isoLocal(new Date(y,m,1)),   isoLocal(new Date(y,m+1,0))];
+  if (p==='mesant') return [isoLocal(new Date(y,m-1,1)), isoLocal(new Date(y,m,0))];
+  if (p==='30')     { const d = new Date(h); d.setDate(d.getDate()-29); return [isoLocal(d), isoLocal(h)]; }
+  return ['',''];   // todo
+}
+function setFinPeriodo(p) {
+  if (p !== 'custom') {
+    const [a,b] = rangoPeriodo(p);
+    document.getElementById('fd').value = a;
+    document.getElementById('fh').value = b;
+  }
+  renderFpList(); renderFin();
+}
+function onFinFechaManual() {
+  document.getElementById('f-per').value = 'custom';
+  renderFpList(); renderFin();
+}
+function prodsEnRango() {
+  let prods = uniq(D.producciones||[]);                       // ya viene ascendente
+  const desde = document.getElementById('fd').value;
+  const hasta = document.getElementById('fh').value;
+  if (desde) prods = prods.filter(p => p.fecha >= desde);
+  if (hasta) prods = prods.filter(p => p.fecha <= hasta);
+  return prods;
+}
+function getFinProds() {
+  return calcNomina(prodsEnRango().filter(p => !FP_EXCL.has(p.id_prod)));
+}
+function updFpLbl() {
+  const n = prodsEnRango().length;
+  const k = prodsEnRango().filter(p => !FP_EXCL.has(p.id_prod)).length;
+  document.getElementById('fp-lbl').textContent =
+    k === n ? `Todas las producciones (${n})` : `${k} de ${n} producciones`;
+}
+function renderFpList() {
+  const q = document.getElementById('fp-q').value.toLowerCase().trim();
+  const lista = [...prodsEnRango()].reverse()
+    .filter(p => !q || `${p.fecha} ${p.clientes.join(' ')} ${p.id_prod}`.toLowerCase().includes(q));
+  document.getElementById('fp-list').innerHTML = lista.length
+    ? lista.map(p => `<label class="dd-item">
+        <input type="checkbox" value="${p.id_prod}" ${FP_EXCL.has(p.id_prod)?'':'checked'} onchange="fpToggle(this)">
+        <span class="dd-f">${p.fecha}</span><span>${p.clientes.join(', ')}</span>
+        <span style="margin-left:auto;color:var(--muted)">${f2(p.tons_real)} t</span>
+      </label>`).join('')
+    : '<div class="empty" style="padding:16px">Sin producciones en el periodo</div>';
+  updFpLbl();
+}
+function fpToggle(cb) {
+  cb.checked ? FP_EXCL.delete(cb.value) : FP_EXCL.add(cb.value);
+  updFpLbl(); renderFin();
+}
+function fpTodas(todas) {
+  if (todas) FP_EXCL.clear();
+  else prodsEnRango().forEach(p => FP_EXCL.add(p.id_prod));
+  renderFpList(); renderFin();
+}
+function toggleDD(e) {
+  e.stopPropagation();
+  document.getElementById('fp-dd').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('fp-dd')?.classList.remove('open'));
 
 function limpiarFinFiltros() {
+  document.getElementById('f-per').value = 'todo';
   document.getElementById('fd').value = '';
   document.getElementById('fh').value = '';
-  [...(document.getElementById('fp')?.options||[])].forEach(o=>o.selected=false);
-  renderFin();
+  document.getElementById('fp-q').value = '';
+  FP_EXCL.clear();
+  renderFpList(); renderFin();
 }
 
 // ── Toggle gráfica ────────────────────────
@@ -1005,12 +1094,14 @@ function setFinMode(mode) {
 
 // ── Financiero principal ──────────────────
 function financiero() {
-  const allU = uniq(D.producciones||[]).reverse();
-  const fp = document.getElementById('fp');
-  if (!fp.options.length)
-    fp.innerHTML = allU.map(p=>
-      `<option value="${p.id_prod}">${p.id_prod} · ${p.fecha.slice(0,10)} · ${p.clientes.join(', ')}</option>`
-    ).join('');
+  if (!FIN_INIT) {                                   // solo la primera vez: periodo por defecto
+    FIN_INIT = true;
+    document.getElementById('f-per').value = FIN_PER_DEFAULT;
+    const [a,b] = rangoPeriodo(FIN_PER_DEFAULT);
+    document.getElementById('fd').value = a;
+    document.getElementById('fh').value = b;
+  }
+  renderFpList();
   document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===FIN_MODE));
   renderFin();
 }
@@ -1027,7 +1118,7 @@ function renderFin() {
   const mgReal   = ing>0?utilReal/ing:0;
 
   document.getElementById('f-met').innerHTML=`
-    <div class="mc m"><div class="ml">Ingresos</div><div class="mv" style="font-size:17px">${$(ing)}</div><div class="ms">${prods.length} producciones</div></div>
+    <div class="mc m"><div class="ml">Ingresos</div><div class="mv" style="font-size:17px">${$(ing)}</div><div class="ms">${prods.length} producciones · ${(()=>{const d=document.getElementById('fd').value,h=document.getElementById('fh').value;return d||h?`${d||'inicio'} → ${h||'hoy'}`:'todo el histórico';})()}</div></div>
     <div class="mc r"><div class="ml">Gs. insumos</div><div class="mv" style="font-size:17px">${$(gsIns)}</div></div>
     <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div></div>
     <div class="mc r"><div class="ml">Otros gastos</div><div class="mv" style="font-size:17px">${$(otros)}</div></div>
