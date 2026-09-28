@@ -208,7 +208,14 @@ select:focus,input:focus{border-color:var(--amb)}
     </div>
     <div id="rt-scatter" style="display:none">
       <div class="pn">
-        <div class="pnh">Rendimiento (L/ton) vs Toneladas producidas</div>
+                <div class="pnh">
+          <span>Rendimiento (L/ton) vs Toneladas producidas</span>
+          <select id="rt-trend" onchange="renderRendScatter()">
+            <option value="lin">Tendencia lineal</option>
+            <option value="log">Tendencia logarítmica</option>
+            <option value="exp">Tendencia exponencial</option>
+          </select>
+        </div>
         <div class="pnb"><div class="cw" style="height:300px"><canvas id="cRendScat"></canvas></div></div>
       </div>
     </div>
@@ -244,7 +251,10 @@ select:focus,input:focus{border-color:var(--amb)}
       <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
     </div>
     <div class="pn">
-      <div class="pnh">Desglose por producción</div>
+            <div class="pnh">
+        <span>Desglose por producción</span>
+        <button class="ftb" id="sort-fin" onclick="toggleSort('fin')">↓ Más reciente primero</button>
+      </div>
       <div class="tw" id="f-tbl"></div>
     </div>
   </div>
@@ -298,7 +308,10 @@ select:focus,input:focus{border-color:var(--amb)}
         <div class="pnb"><div class="cw"><canvas id="cCont"></canvas></div></div>
       </div>
       <div class="pn">
-        <div class="pnh">Detalle de registros</div>
+                <div class="pnh">
+          <span>Detalle de registros</span>
+          <button class="ftb" id="sort-cont" onclick="toggleSort('cont')">↓ Más reciente primero</button>
+        </div>
         <div class="tw" id="c-tbl"></div>
       </div>
     </div>
@@ -354,7 +367,14 @@ let D = null, CH = {}, FIN_MODE = 'all';
 let REND_TAB = 'serie';
 let CONT_VIS = {nivel:true, inicio:true, promedio:true, sumi:true, consumo:true};
 let ANOM_ALL = [];
-
+let SORT = { cont:'desc', fin:'desc' };   // default: más reciente primero
+const ordenar = (arr, k) => SORT[k]==='desc' ? [...arr].reverse() : arr;   // arr ya viene ascendente
+function toggleSort(k) {
+  SORT[k] = SORT[k]==='desc' ? 'asc' : 'desc';
+  const b = document.getElementById('sort-'+k);
+  if (b) b.textContent = SORT[k]==='desc' ? '↓ Más reciente primero' : '↑ Más antiguo primero';
+  k==='cont' ? renderCont() : renderFin();
+}
 function anomalias() {
   const ins = D.insumos || [];
   const sum = D.suministros || [];
@@ -460,7 +480,11 @@ async function loadData() {
     const r = await fetch(SCRIPT_URL + '?action=all');
     const j = await r.json();
     if (j.status !== 'ok') throw new Error(j.message);
-            D = j.data;
+                D = j.data;
+    // Normalizar todas las fechas a YYYY-MM-DD
+    Object.values(D).forEach(arr => Array.isArray(arr) && arr.forEach(o => {
+      if (o && o.fecha) o.fecha = F10(o.fecha);
+    }));
     // Enmascarar usos ocultos (solo display; Sheets no cambia)
     ['insumos','suministros','recipientes'].forEach(k => { D[k] = (D[k]||[]).filter(visible); });
     anomalias();
@@ -804,7 +828,7 @@ function renderRend() {
   const labs=filt.map(r=>{
     const tons=tonsMap[r.id_prod]||0;
     const suffix=uso?'':`· ${lbl(r.uso)}`;
-    return [`${r.id_prod} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
+    return [`${F10(r.fecha)} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
   });
 
   document.getElementById('r-avg').textContent=`Promedio: ${f2(avg)} L/ton`;
@@ -833,7 +857,29 @@ function renderRend() {
       <td>${tagR(r.rango)}</td>
     </tr>`).join('')}</tbody></table>`;
 }
-
+// Ajuste por mínimos cuadrados: lineal y=a+bx · log y=a+b·ln(x) · exp y=a·e^(bx)
+function fitTrend(pts, tipo) {
+  let P = pts.filter(p => isFinite(p.x) && isFinite(p.y));
+  if (tipo==='log') P = P.filter(p => p.x > 0);
+  if (tipo==='exp') P = P.filter(p => p.y > 0);
+  if (P.length < 3) return null;
+  const tx = tipo==='log' ? p => Math.log(p.x) : p => p.x;
+  const ty = tipo==='exp' ? p => Math.log(p.y) : p => p.y;
+  const n = P.length;
+  let sx=0, sy=0, sxy=0, sxx=0;
+  P.forEach(p => { const X=tx(p), Y=ty(p); sx+=X; sy+=Y; sxy+=X*Y; sxx+=X*X; });
+  const den = n*sxx - sx*sx;
+  if (!den) return null;
+  const b = (n*sxy - sx*sy)/den, a = (sy - b*sx)/n;
+  const f = tipo==='log' ? x => a + b*Math.log(x)
+          : tipo==='exp' ? x => Math.exp(a + b*x)
+          :                x => a + b*x;
+  const my    = P.reduce((s,p)=>s+p.y,0)/n;
+  const ssTot = P.reduce((s,p)=>s+(p.y-my)**2,0);
+  const ssRes = P.reduce((s,p)=>s+(p.y-f(p.x))**2,0);
+  return { f, r2: ssTot ? 1-ssRes/ssTot : 0,
+           nombre: {lin:'lineal', log:'logarítmica', exp:'exponencial'}[tipo] };
+}
 function renderRendScatter() {
   const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
   const insumo=document.getElementById('ri').value;
@@ -849,22 +895,21 @@ function renderRendScatter() {
   const tonsMap={};
   uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
 
-  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton),id:r.id_prod, uso:lbl(r.uso)}));
+  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton),id:r.id_prod, fecha:F10(r.fecha), uso:lbl(r.uso)}));
 
   if(!points.length){
     if(CH['cRendScat']){CH['cRendScat'].destroy();delete CH['cRendScat'];}
     return;
   }
 
-  // Línea de tendencia (regresión lineal)
-  const n=points.length;
-  const sx=points.reduce((s,p)=>s+p.x,0), sy=points.reduce((s,p)=>s+p.y,0);
-  const sxy=points.reduce((s,p)=>s+p.x*p.y,0), sxx=points.reduce((s,p)=>s+p.x*p.x,0);
-  const denom=n*sxx-sx*sx;
-  const slope=denom?((n*sxy-sx*sy)/denom):0;
-  const intercept=(sy-slope*sx)/n;
-  const xMin=Math.min(...points.map(p=>p.x)), xMax=Math.max(...points.map(p=>p.x));
-  const trendLine=n>2?[{x:xMin,y:slope*xMin+intercept},{x:xMax,y:slope*xMax+intercept}]:[];
+    // Línea de tendencia (lineal / logarítmica / exponencial)
+  const tipoT = document.getElementById('rt-trend')?.value || 'lin';
+  const fit   = fitTrend(points, tipoT);
+  const xs    = points.map(p=>p.x).filter(x => tipoT!=='log' || x>0);
+  const xMin  = Math.min(...xs), xMax = Math.max(...xs);
+  const trendLine = fit
+    ? Array.from({length:40}, (_,i) => { const x = xMin + (xMax-xMin)*i/39; return {x, y:fit.f(x)}; })
+    : [];
 
   if(CH['cRendScat']) CH['cRendScat'].destroy();
   const c=document.getElementById('cRendScat');
@@ -874,7 +919,7 @@ function renderRendScatter() {
     data:{datasets:[
       {label:'L/ton',data:points,
        backgroundColor:'rgba(245,158,11,.75)',pointRadius:7,pointHoverRadius:9},
-      ...(trendLine.length?[{label:'Tendencia',data:trendLine,type:'line',
+            ...(trendLine.length?[{label:`Tendencia ${fit.nombre} · R² ${fit.r2.toFixed(2)}`,data:trendLine,type:'line',
         borderColor:'#6b7280',borderDash:[4,4],pointRadius:0,fill:false}]:[])
     ]},
     options:{
@@ -884,7 +929,7 @@ function renderRendScatter() {
         tooltip:{callbacks:{
           label:ctx=>{
             const p=ctx.raw;
-            return p.id?`${p.id}${p.uso?' · '+p.uso:''}: ${f2(p.x)}t → ${f2(p.y)} L/ton`
+            return p.id?`${p.fecha}${p.uso?' · '+p.uso:''}: ${f2(p.x)}t → ${f2(p.y)} L/ton`
               :`Tendencia: ${f2(p.y)} L/ton`;
           }
         }}
@@ -998,7 +1043,7 @@ function renderFin() {
       <th class="rt">Nómina</th><th class="rt">Otros gs.</th>
       <th class="rt">Ut. operativa</th><th class="rt">Ut. real</th><th class="rt">Margen real</th>
     </tr></thead><tbody>
-    ${prods.map(p=>{
+        ${ordenar(prods,'fin').map(p=>{
       const mgR = N(p.ingreso_total)>0 ? N(p.utilidad_real)/N(p.ingreso_total) : 0;
       return `<tr>
         <td class="amb">${p.id_prod}</td><td>${p.fecha.slice(0,10)}</td><td>${p.clientes.join(', ')}</td>
@@ -1015,7 +1060,7 @@ function renderFin() {
 }
 
 function renderFinChart(prods) {
-  const labs = prods.map(p=>p.id_prod);
+    const labs = prods.map(p=>F10(p.fecha));
   const ds = {
     ing:      { label:'Ingreso',       data:prods.map(p=>N(p.ingreso_total)),                        backgroundColor:'rgba(245,158,11,.5)' },
     gs_ins:   { label:'Gs. insumos',   data:prods.map(p=>N(p.gastos_insumos)+N(p.gasto_material)),   backgroundColor:'rgba(220,38,38,.6)' },
@@ -1231,7 +1276,7 @@ function renderCont() {
       <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
       <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th><th class="rt">Mant. (L)</th>
     </tr></thead><tbody>
-    ${prodRows.map(r => {
+        ${ordenar(prodRows,'cont').map(r => {
       const f = F10(r.fecha);
       return `<tr>
         <td class="amb">${r.id_prod}</td><td>${f}</td>${mapped?`<td style="color:var(--muted)">${r.uso}</td>`:''}
