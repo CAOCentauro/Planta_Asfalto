@@ -73,6 +73,9 @@ tr:hover td{background:rgba(245,158,11,.03)}
 .ta{background:rgba(220,38,38,.15);color:#f87171}
 .tm{background:rgba(245,158,11,.15);color:#fbbf24}
 .tb{background:rgba(22,163,74,.15);color:#4ade80}
+.tsel tbody tr{cursor:pointer}
+.tsel tbody tr.sel td{background:rgba(245,158,11,.12)}
+.tsel tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--amb)}
 
 /* FILTERS */
 .flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
@@ -214,7 +217,10 @@ select:focus,input:focus{border-color:var(--amb)}
         <div class="pnb"><div class="cw"><canvas id="cRend"></canvas></div></div>
       </div>
       <div class="pn">
-        <div class="pnh">Detalle por producción</div>
+        <div class="pnh">
+          <span>Detalle por producción</span>
+          <div style="display:flex;gap:6px"><span id="sel-rend"></span><button class="ftb" id="sort-rend" onclick="toggleSort('rend')">↓ Más reciente primero</button></div>
+        </div>
         <div class="tw" id="r-det"></div>
       </div>
     </div>
@@ -280,7 +286,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <div class="pn">
             <div class="pnh">
         <span>Desglose por producción</span>
-        <button class="ftb" id="sort-fin" onclick="toggleSort('fin')">↓ Más reciente primero</button>
+        <div style="display:flex;gap:6px"><span id="sel-fin"></span><button class="ftb" id="sort-fin" onclick="toggleSort('fin')">↓ Más reciente primero</button></div>
       </div>
       <div class="tw" id="f-tbl"></div>
     </div>
@@ -302,7 +308,7 @@ select:focus,input:focus{border-color:var(--amb)}
         </div>
       </div>
       <div class="pn">
-        <div class="pnh">Estadísticas de rendimiento por insumo · uso</div>
+        <div class="pnh"><span>Estadísticas de rendimiento por insumo · uso</span><span id="sel-ins"></span></div>
         <div class="tw" id="i-rnd"></div>
       </div>
     </div>
@@ -337,7 +343,7 @@ select:focus,input:focus{border-color:var(--amb)}
       <div class="pn">
                 <div class="pnh">
           <span>Detalle de registros</span>
-          <button class="ftb" id="sort-cont" onclick="toggleSort('cont')">↓ Más reciente primero</button>
+          <div style="display:flex;gap:6px"><span id="sel-cont"></span><button class="ftb" id="sort-cont" onclick="toggleSort('cont')">↓ Más reciente primero</button></div>
         </div>
         <div class="tw" id="c-tbl"></div>
       </div>
@@ -394,14 +400,27 @@ let D = null, CH = {}, FIN_MODE = 'all';
 let REND_TAB = 'serie';
 let CONT_VIS = {nivel:true, inicio:true, promedio:true, sumi:true, consumo:true};
 let ANOM_ALL = [];
-let SORT = { cont:'desc', fin:'desc' };   // default: más reciente primero
+let SORT = { cont:'desc', fin:'desc', rend:'desc' };   // default: más reciente primero
 const ordenar = (arr, k) => SORT[k]==='desc' ? [...arr].reverse() : arr;   // arr ya viene ascendente
 function toggleSort(k) {
   SORT[k] = SORT[k]==='desc' ? 'asc' : 'desc';
   const b = document.getElementById('sort-'+k);
   if (b) b.textContent = SORT[k]==='desc' ? '↓ Más reciente primero' : '↑ Más antiguo primero';
-  k==='cont' ? renderCont() : renderFin();
+  ({cont:renderCont, fin:renderFin, rend:renderRend})[k]();
 }
+
+// ── Selección de filas → la gráfica muestra solo lo seleccionado ──
+let SEL = { fin:new Set(), rend:new Set(), cont:new Set(), ins:new Set() };
+const RENDER_SEL = { fin:()=>renderFin(), rend:()=>renderRend(), cont:()=>renderCont(), ins:()=>insumos() };
+const selCls  = (k,id) => SEL[k].has(id) ? 'sel' : '';
+const soloSel = (k, arr, key) => { const s = arr.filter(x => SEL[k].has(key(x))); return s.length ? s : arr; };
+function updSel(k) {
+  const el = document.getElementById('sel-'+k);
+  if (el) el.innerHTML = SEL[k].size
+    ? `<button class="ftb active" onclick="clrSel('${k}')">✕ ${SEL[k].size} en gráfica</button>` : '';
+}
+function selRow(k, id) { SEL[k].has(id) ? SEL[k].delete(id) : SEL[k].add(id); RENDER_SEL[k](); updSel(k); }
+function clrSel(k)     { SEL[k].clear(); RENDER_SEL[k](); updSel(k); }
 function anomalias() {
   const ins = D.insumos || [];
   const sum = D.suministros || [];
@@ -845,14 +864,15 @@ function renderRend() {
   const tonsMap={};
   uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
 
-  const vals=filt.map(r=>N(r.rendimiento_L_ton));
-  const avg=vals.reduce((s,v)=>s+v,0)/vals.length;
+  const cr=soloSel('rend',filt,r=>r.id_prod+'|'+r.uso);      // filas seleccionadas (o todas)
+  const avg=filt.reduce((s,r)=>s+N(r.rendimiento_L_ton),0)/filt.length;
+  const vals=cr.map(r=>N(r.rendimiento_L_ton));
     const mismoRango=new Set(filt.map(r=>`${r.rango_bajo}|${r.rango_alto}`)).size===1;
   const bajo=mismoRango?N(filt[0].rango_bajo):0;
   const alto=mismoRango?N(filt[0].rango_alto):0;
 
   // Labels con 2 líneas: ID y producción+consumo
-  const labs=filt.map(r=>{
+  const labs=cr.map(r=>{
     const tons=tonsMap[r.id_prod]||0;
     const suffix=uso?'':`· ${lbl(r.uso)}`;
     return [`${F10(r.fecha)} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
@@ -872,11 +892,11 @@ function renderRend() {
   });
 
   document.getElementById('r-det').innerHTML=`
-    <table><thead><tr>
+    <table class="tsel"><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Uso</th>
       <th class="rt">Tons real</th><th class="rt">Consumo (L)</th><th class="rt">L/ton</th><th>Rango</th>
     </tr></thead><tbody>
-    ${filt.map(r=>`<tr>
+    ${ordenar(filt,'rend').map(r=>`<tr class="${selCls('rend',r.id_prod+'|'+r.uso)}" onclick="selRow('rend','${r.id_prod}|${r.uso}')">
       <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${lbl(r.uso)}</td>
       <td class="rt">${f2(tonsMap[r.id_prod]||0)}</td>
       <td class="rt">${f2(N(r.consumo_L))}</td>
@@ -1089,7 +1109,7 @@ function limpiarFinFiltros() {
 function setFinMode(mode) {
   FIN_MODE = mode;
   document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===mode));
-  if (D) renderFinChart(getFinProds());
+  if (D) renderFinChart(soloSel('fin', getFinProds(), p=>p.id_prod));
 }
 
 // ── Financiero principal ──────────────────
@@ -1125,10 +1145,10 @@ function renderFin() {
     <div class="mc ${utilOp>=0?'g':'r'}"><div class="ml">Ut. operativa</div><div class="mv" style="font-size:15px">${$(utilOp)}</div><div class="ms">Margen ${fp(mgOp)}</div></div>
     <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Ut. real (c/nómina)</div><div class="mv" style="font-size:15px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)}</div></div>`;
 
-  renderFinChart(prods);
+  renderFinChart(soloSel('fin', prods, p=>p.id_prod));
 
   document.getElementById('f-tbl').innerHTML=`
-    <table><thead><tr>
+    <table class="tsel"><thead><tr>
       <th>Producción</th><th>Fecha</th><th>Cliente(s)</th>
       <th class="rt">Ingreso</th><th class="rt">Gs. insumos</th>
       <th class="rt">Nómina</th><th class="rt">Otros gs.</th>
@@ -1136,7 +1156,7 @@ function renderFin() {
     </tr></thead><tbody>
         ${ordenar(prods,'fin').map(p=>{
       const mgR = N(p.ingreso_total)>0 ? N(p.utilidad_real)/N(p.ingreso_total) : 0;
-      return `<tr>
+      return `<tr class="${selCls('fin',p.id_prod)}" onclick="selRow('fin','${p.id_prod}')">
         <td class="amb">${p.id_prod}</td><td>${p.fecha.slice(0,10)}</td><td>${p.clientes.join(', ')}</td>
         <td class="rt">${$(p.ingreso_total)}</td>
         <td class="rt neg">${$(N(p.gastos_insumos)+N(p.gasto_material))}</td>
@@ -1182,7 +1202,7 @@ function insumos() {
     const k=`${r.insumo} · ${lbl(r.uso)}`;
     cm[k]=(cm[k]||0)+N(r.consumo_L);
   });
-  const names=Object.keys(cm);
+  const names=soloSel('ins', Object.keys(cm), k=>k.replace(' · ','|'));
   mkChart('cIns','bar',{
     labels:names,
     datasets:[{label:'Litros consumidos',data:names.map(k=>cm[k]),
@@ -1223,12 +1243,12 @@ function insumos() {
   });
 
   document.getElementById('i-rnd').innerHTML=`
-    <table><thead><tr>
+    <table class="tsel"><thead><tr>
       <th>Insumo</th><th>Uso</th>
       <th class="rt">Promedio</th><th class="rt">σ</th><th class="rt">% en rango</th>
       <th class="rt">BAJO</th><th class="rt">MEDIO</th><th class="rt">ALTO</th><th class="rt">Total</th>
     </tr></thead><tbody>
-    ${rrows.map(r=>`<tr>
+    ${rrows.map(r=>`<tr class="${selCls('ins',r.insumo+'|'+r.uso)}" onclick="selRow('ins','${r.insumo}|${r.uso}')">
       <td>${r.insumo}</td><td>${r.uso}</td>
       <td class="rt amb">${f2(r.avg)}</td>
       <td class="rt">${f2(r.sigma)}</td>
@@ -1314,6 +1334,17 @@ function renderCont() {
     dataNivel.push(nivel);
   });
 
+  // Filas seleccionadas → recortar la gráfica a ese tramo (desde la producción anterior)
+  const selR = prodRows.filter(r => SEL.cont.has(r.id_prod));
+  if (selR.length) {
+    const iPrev = prodRows.indexOf(selR[0]) - 1;
+    const fIni  = F10((iPrev >= 0 ? prodRows[iPrev] : selR[0]).fecha);
+    const fFin  = F10(selR[selR.length-1].fecha);
+    const i0 = dias.indexOf(fIni), i1 = dias.indexOf(fFin);
+    [dias, dataNivel, dataInicio].forEach(a => { a.splice(i1+1); a.splice(0, i0); });
+    const c2 = [...cut].map(j => j - i0); cut.clear(); c2.forEach(j => cut.add(j));
+  }
+
   const dataSumi    = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
   const dataConsumo = dias.map(dia => {
     const prod = prodMap[dia];
@@ -1362,14 +1393,14 @@ function renderCont() {
 
   const mapped = prodRows.some(r => lbl(r.uso) !== r.uso);
   document.getElementById('c-tbl').innerHTML = `
-    <table><thead><tr>
+    <table class="tsel"><thead><tr>
       <th>Producción</th><th>Fecha</th>${mapped?'<th>Equipo</th>':''}
       <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
       <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th><th class="rt">Mant. (L)</th>
     </tr></thead><tbody>
         ${ordenar(prodRows,'cont').map(r => {
       const f = F10(r.fecha);
-      return `<tr>
+      return `<tr class="${selCls('cont',r.id_prod)}" onclick="selRow('cont','${r.id_prod}')">
         <td class="amb">${r.id_prod}</td><td>${f}</td>${mapped?`<td style="color:var(--muted)">${r.uso}</td>`:''}
         <td class="rt">${f2(r.inicio_L)}</td>
         <td class="rt">${f2(r.suministro_L)}</td>
