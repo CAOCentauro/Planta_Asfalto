@@ -6,6 +6,8 @@
 <title>Planta de Asfalto — Panel</title>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <style>
 :root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -61,6 +63,8 @@ nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(245,1
 .pnh{padding:11px 16px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
 .pnb{padding:16px}
 .cw{position:relative;height:250px}
+.cw canvas{cursor:grab}
+.cw canvas:active{cursor:grabbing}
 
 /* TABLES */
 .tw{overflow-x:auto}
@@ -395,6 +399,7 @@ select:focus,input:focus{border-color:var(--amb)}
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhfIDfclX_CXOMH_FBDZVaQKQ8Qe6oBWQKCvHoPIQgWsUcSBz7Q0BSmGba2LKBtSfq/exec';
 const PASSWORD   = 'Hola1';
+if (window.ChartZoom) Chart.register(ChartZoom);
 
 let D = null, CH = {}, FIN_MODE = 'all';
 let REND_TAB = 'serie';
@@ -618,22 +623,32 @@ function mesAct(arr,f='fecha') {
   return arr.filter(r=>F10(r[f]).slice(0,7)===ym);
 }
 
-function mkChart(id,type,data,extra={}) {
+function mkChart(id,type,data,extra={},ventana=0) {
   if(CH[id]) CH[id].destroy();
   const c=document.getElementById(id);
   if(!c) return;
-  CH[id]=new Chart(c,{
-    type,data,
-    options:{
-      responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}}},
-      scales:type!=='pie'?{
-        x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}},
-        y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}}
-      }:undefined,
-      ...extra
-    }
-  });
+  const options={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}}},
+    scales:type!=='pie'?{
+      x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}},
+      y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}}
+    }:undefined,
+    ...extra
+  };
+  // Desplazamiento horizontal: muestra los últimos `ventana` puntos y permite arrastrar
+  const n=(data.labels||[]).length;
+  if(ventana && n>ventana){
+    options.scales = options.scales || {};
+    options.scales.x = {...(options.scales.x||{}), min:n-ventana, max:n-1};
+    options.plugins = {...(options.plugins||{}), zoom:{
+      pan:  {enabled:true, mode:'x'},
+      zoom: {wheel:{enabled:true, modifierKey:'ctrl'}, pinch:{enabled:true}, mode:'x'},
+      limits:{x:{min:0, max:n-1, minRange:2}}
+    }};
+  }
+  CH[id]=new Chart(c,{type,data,options});
+  c.ondblclick = () => CH[id]?.resetZoom?.();     // doble clic → vista inicial
 }
 
 function tagR(r) {
@@ -889,7 +904,7 @@ function renderRend() {
       bajo?{label:'Rango bajo',data:labs.map(()=>bajo),borderColor:'rgba(22,163,74,.5)',borderDash:[2,4],pointRadius:0}:null,
       alto?{label:'Rango alto',data:labs.map(()=>alto),borderColor:'rgba(220,38,38,.5)',borderDash:[2,4],pointRadius:0}:null,
     ].filter(Boolean)
-  });
+  }, {}, 12);
 
   document.getElementById('r-det').innerHTML=`
     <table class="tsel"><thead><tr>
@@ -1187,7 +1202,7 @@ function renderFinChart(prods) {
     util_op:   [ds.util_op],
     util_real: [ds.util_real],
   };
-  mkChart('cFin','bar',{labels:labs, datasets: modeDs[FIN_MODE]||modeDs.all});
+  mkChart('cFin','bar',{labels:labs, datasets: modeDs[FIN_MODE]||modeDs.all}, {}, 12);
 }
 
 // ══════════════════════════════════════════
@@ -1389,7 +1404,7 @@ function renderCont() {
         ticks:{ color:'#9ca3af', font:{size:9} },
         title:{ display:true, text:'Sumi. / Consumo (L)', color:'#9ca3af', font:{size:9} } }
     }
-  });
+  }, 30);
 
   const mapped = prodRows.some(r => lbl(r.uso) !== r.uso);
   document.getElementById('c-tbl').innerHTML = `
