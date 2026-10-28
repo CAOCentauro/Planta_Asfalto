@@ -4,12 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planta de Asfalto — Panel</title>
+<script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <style>
-:root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px}
+:root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px;
+  --pos:#4ade80;--neg:#f87171;--warn:#fbbf24;--grid:#1c1c1c;--tick:#6b6b6b;--leg:#9ca3af;--shadow:rgba(0,0,0,.5);color-scheme:dark}
+:root[data-theme="light"]{--bg:#f5f5f4;--s1:#ffffff;--s2:#f0efed;--bd:#e2e0dc;--amb:#d97706;--text:#1c1917;--muted:#78716c;
+  --pos:#15803d;--neg:#b91c1c;--warn:#b45309;--grid:#ebe9e6;--tick:#78716c;--leg:#57534e;--shadow:rgba(0,0,0,.12);color-scheme:light}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
 
@@ -38,6 +42,8 @@ nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(245,1
 .sb-foot span{display:block;margin-top:3px;color:var(--text)}
 .btn-r{margin-top:10px;padding:6px 10px;background:transparent;border:1px solid var(--bd);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;width:100%}
 .btn-r:hover{border-color:var(--amb);color:var(--amb)}
+.btn-r + .btn-r{margin-top:6px}
+.theme-fab{position:fixed;top:16px;right:16px;width:auto;margin:0}
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column}
 
 /* PROGRESS BAR */
@@ -74,9 +80,9 @@ td{padding:8px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(245,158,11,.03)}
 .tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600}
-.ta{background:rgba(220,38,38,.15);color:#f87171}
-.tm{background:rgba(245,158,11,.15);color:#fbbf24}
-.tb{background:rgba(22,163,74,.15);color:#4ade80}
+.ta{background:rgba(220,38,38,.15);color:var(--neg)}
+.tm{background:rgba(245,158,11,.15);color:var(--warn)}
+.tb{background:rgba(22,163,74,.15);color:var(--pos)}
 .tsel tbody tr{cursor:pointer}
 .tsel tbody tr.sel td{background:rgba(245,158,11,.12)}
 .tsel tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--amb)}
@@ -94,7 +100,7 @@ select:focus,input:focus{border-color:var(--amb)}
 .dd{position:relative}
 .dd-btn{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer;min-width:210px;display:flex;justify-content:space-between;gap:10px}
 .dd-btn:hover,.dd.open .dd-btn{border-color:var(--amb)}
-.dd-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);width:360px;max-height:380px;overflow-y:auto;background:var(--s1);border:1px solid var(--bd);z-index:50;padding:8px;box-shadow:0 8px 24px rgba(0,0,0,.5)}
+.dd-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);width:360px;max-height:380px;overflow-y:auto;background:var(--s1);border:1px solid var(--bd);z-index:50;padding:8px;box-shadow:0 8px 24px var(--shadow)}
 .dd.open .dd-panel{display:block}
 .dd-acts{display:flex;gap:6px;margin-bottom:6px}
 .dd-panel input[type=text]{width:100%;margin-bottom:6px}
@@ -104,7 +110,7 @@ select:focus,input:focus{border-color:var(--amb)}
 .dd-f{color:var(--muted);min-width:80px}
 
 /* UTILS */
-.pos{color:#4ade80}.neg{color:#f87171}.amb{color:var(--amb)}.rt{text-align:right}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.amb{color:var(--amb)}.rt{text-align:right}
 .empty{padding:36px;text-align:center;color:var(--muted)}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 @media(max-width:860px){.two{grid-template-columns:1fr}}
@@ -131,6 +137,7 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <!-- LOGIN -->
 <div id="login">
+  <button class="btn-r theme-fab theme-btn" onclick="toggleTheme()">☀ Modo claro</button>
   <div class="lbox">
     <h1>Control de planta</h1>
     <p>Acceso restringido — personal autorizado</p>
@@ -163,6 +170,7 @@ select:focus,input:focus{border-color:var(--amb)}
     Última actualización
     <span id="lu">—</span>
     <button class="btn-r" onclick="reload()">↺ Actualizar</button>
+    <button class="btn-r theme-btn" onclick="toggleTheme()">☀ Modo claro</button>
   </div>
 </div>
 
@@ -185,7 +193,7 @@ select:focus,input:focus{border-color:var(--amb)}
           </div>
           <div class="tw" id="r-stk"></div>
         </div>
-      
+
     </div>
     <div class="pn">
   <div class="pnh">
@@ -452,6 +460,35 @@ function toggleSort(k) {
   ({cont:renderCont, fin:renderFin, rend:renderRend})[k]();
 }
 
+// ── TEMA (oscuro / claro) ─────────────────
+// Colores de ejes y leyendas de las gráficas, tomados de las variables CSS del tema activo
+function chartColors() {
+  const s = getComputedStyle(document.documentElement), v = k => s.getPropertyValue(k).trim();
+  return { grid:v('--grid'), tick:v('--tick'), leg:v('--leg') };
+}
+function setTheme(t) {
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('theme', t); } catch(e) {}
+  document.querySelectorAll('.theme-btn').forEach(b =>
+    b.textContent = t==='light' ? '☾ Modo oscuro' : '☀ Modo claro');
+  // Repinta las gráficas existentes sin volver a calcularlas
+  const c = chartColors();
+  Object.values(CH).forEach(ch => {
+    const o = ch.options;
+    if (o.plugins?.legend?.labels) o.plugins.legend.labels.color = c.leg;
+    Object.values(o.scales || {}).forEach(s => {
+      if (s.grid)  s.grid.color  = c.grid;
+      if (s.ticks) s.ticks.color = c.tick;
+      if (s.title) s.title.color = c.tick;
+    });
+    ch.update('none');
+  });
+}
+function toggleTheme() {
+  setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light');
+}
+
 // ── Selección de filas → la gráfica muestra solo lo seleccionado ──
 let SEL = { fin:new Set(), rend:new Set(), cont:new Set(), ins:new Set(), cli:new Set() };
 const RENDER_SEL = { fin:()=>renderFin(), rend:()=>renderRend(), cont:()=>renderCont(), ins:()=>insumos(), cli:()=>renderClientes() };
@@ -631,7 +668,7 @@ const visible = r => !USOS_OCULTOS.includes(r?.uso);
 const lbl = u => INSUMO_MAP[u] || u;                                  // solo display
 const MOM = s => String(s?.momento || '').trim().toUpperCase();        // ANTES | DURANTE | ''
 const F10 = s => String(s || '').slice(0,10);
-  
+
 function std(arr) {
   if (!arr.length) return 0;
   const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
@@ -665,12 +702,13 @@ function mkChart(id,type,data,extra={},ventana=0) {
   if(CH[id]) CH[id].destroy();
   const c=document.getElementById(id);
   if(!c) return;
+  const tc=chartColors();
   const options={
     responsive:true,maintainAspectRatio:false,
-    plugins:{legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}}},
+    plugins:{legend:{labels:{color:tc.leg,boxWidth:10,font:{size:11}}}},
     scales:type!=='pie'?{
-      x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}},
-      y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}}}
+      x:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}}},
+      y:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}}}
     }:undefined,
     ...extra
   };
@@ -1076,6 +1114,7 @@ function renderRendScatter() {
   if(CH['cRendScat']) CH['cRendScat'].destroy();
   const c=document.getElementById('cRendScat');
   if(!c) return;
+  const tc=chartColors();
   CH['cRendScat']=new Chart(c,{
     type:'scatter',
     data:{datasets:[
@@ -1087,7 +1126,7 @@ function renderRendScatter() {
     options:{
       responsive:true,maintainAspectRatio:false,
       plugins:{
-        legend:{labels:{color:'#9ca3af',boxWidth:10,font:{size:11}}},
+        legend:{labels:{color:tc.leg,boxWidth:10,font:{size:11}}},
         tooltip:{callbacks:{
           label:ctx=>{
             const p=ctx.raw;
@@ -1097,10 +1136,10 @@ function renderRendScatter() {
         }}
       },
       scales:{
-        x:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}},
-           title:{display:true,text:'Toneladas producidas',color:'#6b6b6b',font:{size:11}}},
-        y:{grid:{color:'#1c1c1c'},ticks:{color:'#6b6b6b',font:{size:10}},
-           title:{display:true,text:'L / tonelada',color:'#6b6b6b',font:{size:11}}}
+        x:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}},
+           title:{display:true,text:'Toneladas producidas',color:tc.tick,font:{size:11}}},
+        y:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}},
+           title:{display:true,text:'L / tonelada',color:tc.tick,font:{size:11}}}
       }
     }
   });
@@ -1621,14 +1660,15 @@ function renderCont() {
   ];
 
   const showExtra = CONT_VIS.sumi || CONT_VIS.consumo;
+  const tc = chartColors();
 
   mkChart('cCont', 'line', { labels: dias, datasets: allDatasets.filter(d => CONT_VIS[d.key]) }, {
     scales: {
-      x: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
-      y: { grid:{color:'#1c1c1c'}, ticks:{color:'#6b6b6b',font:{size:10}} },
+      x: { grid:{color:tc.grid}, ticks:{color:tc.tick,font:{size:10}} },
+      y: { grid:{color:tc.grid}, ticks:{color:tc.tick,font:{size:10}} },
       yExtra: { display: showExtra, position:'right', grid:{ drawOnChartArea:false },
-        ticks:{ color:'#9ca3af', font:{size:9} },
-        title:{ display:true, text:'Sumi. / Consumo (L)', color:'#9ca3af', font:{size:9} } }
+        ticks:{ color:tc.tick, font:{size:9} },
+        title:{ display:true, text:'Sumi. / Consumo (L)', color:tc.tick, font:{size:9} } }
     }
   }, 30);
 
@@ -1693,6 +1733,8 @@ function renderHist() {
       </tr>`).join('')}</tbody></table>`
     :'<div class="empty">Sin registros con esos filtros</div>';
 }
+
+setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
 </script>
 </body>
 </html>
