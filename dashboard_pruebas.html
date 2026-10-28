@@ -130,6 +130,8 @@ select:focus,input:focus{border-color:var(--amb)}
 .rtab:hover{color:var(--text)}
 .rtab.active{color:var(--amb);border-bottom-color:var(--amb)}
 .rtab-bar{border-bottom:1px solid var(--bd);padding:0 24px;display:flex;flex-shrink:0}
+/* SUBSECCIÓN DENTRO DE UN PANEL */
+.sub{padding:10px 16px;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
 
 /* REPORTE PDF (hoja blanca tamaño carta, igual en ambos temas) */
 .rep-wrap{position:fixed;left:-10000px;top:0}
@@ -321,8 +323,7 @@ select:focus,input:focus{border-color:var(--amb)}
           <button class="ftb active" data-fmode="all"       onclick="setFinMode('all')">Todos</button>
           <button class="ftb"        data-fmode="ing"       onclick="setFinMode('ing')">Ingresos</button>
           <button class="ftb"        data-fmode="gas"       onclick="setFinMode('gas')">Gastos</button>
-          <button class="ftb"        data-fmode="util_op"   onclick="setFinMode('util_op')">Ut. operativa</button>
-          <button class="ftb"        data-fmode="util_real" onclick="setFinMode('util_real')">Ut. real</button>
+          <button class="ftb"        data-fmode="util_real" onclick="setFinMode('util_real')">Utilidad</button>
         </div>
       </div>
       <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
@@ -814,11 +815,11 @@ function deltaHtml(cur, prev, bueno='up', tipo='pct') {
 const cmpLine = (html, lbl) => html ? `<div class="ms">${html} <span style="color:var(--muted)">${lbl}</span></div>` : '';
 function totales(prods) {             // prods ya pasados por calcNomina
   const sum = f => prods.reduce((s,p)=>s+N(f(p)),0);
-  const ing = sum(p=>p.ingreso_total), utilOp = sum(p=>p.utilidad), utilReal = sum(p=>p.utilidad_real);
+  const ing = sum(p=>p.ingreso_total), utilReal = sum(p=>p.utilidad_real);
   return { n:prods.length, tons:sum(p=>p.tons_real), ing,
            gsIns:sum(p=>N(p.gastos_insumos)+N(p.gasto_material)), nom:sum(p=>p.nomina_prorrateada),
-           otros:sum(p=>p.otros_gastos), utilOp, utilReal,
-           mgOp: ing>0 ? utilOp/ing : null, mgReal: ing>0 ? utilReal/ing : null };
+           otros:sum(p=>p.otros_gastos), utilReal,
+           mgReal: ing>0 ? utilReal/ing : null };
 }
 const prodsEntre = r => r ? uniq(D.producciones||[]).filter(p => p.fecha>=r.desde && p.fecha<=r.hasta) : [];
 
@@ -830,9 +831,8 @@ function resumen() {
   const um=mesAct(u);
   const tonsMes=um.reduce((s,p)=>s+N(p.tons_real),0);
   const ingMes=um.reduce((s,p)=>s+N(p.ingreso_total),0);
-  const utilMes=um.reduce((s,p)=>s+N(p.utilidad),0);
   const utilRealMes=calcNomina(um).reduce((s,p)=>s+N(p.utilidad_real),0);
-  const mgProm=ingMes>0?utilMes/ingMes:0;
+  const mgProm=ingMes>0?utilRealMes/ingMes:0;
   const last=u[u.length-1];
 
   // Mes en curso vs mismos días del mes anterior
@@ -846,16 +846,17 @@ function resumen() {
       <div class="ms">${last?.fecha||'—'} · ${f2(last?.tons_real)} ton</div></div>
     <div class="mc"><div class="ml">Toneladas este mes</div>
       <div class="mv">${f2(tonsMes)}</div>
-      <div class="ms">${um.length} producción${um.length!==1?'es':''}</div>
+      <div class="ms">${um.length} ${um.length!==1?'producciones':'producción'}</div>
       ${cmpLine(deltaHtml(tonsMes, T0.tons, 'up'), lblAnt)}</div>
     <div class="mc ${mcColor(mgProm)}"><div class="ml">Margen promedio del mes</div>
-           <div class="mv">${fp(mgProm)}</div><div class="ms">Ponderado · antes de nómina</div>
-      ${cmpLine(deltaHtml(ingMes>0?mgProm:null, T0.mgOp, 'up', 'pp'), lblAnt)}</div>
-    <div class="mc ${utilRealMes>=0?'g':'r'}"><div class="ml">Utilidad real del mes</div>
-      <div class="mv" style="font-size:17px">${$(utilRealMes)}</div><div class="ms">Operativa ${$(utilMes)} − nómina</div>
+           <div class="mv">${fp(mgProm)}</div><div class="ms">Ponderado · incluye nómina</div>
+      ${cmpLine(deltaHtml(ingMes>0?mgProm:null, T0.mgReal, 'up', 'pp'), lblAnt)}</div>
+    <div class="mc ${utilRealMes>=0?'g':'r'}"><div class="ml">Utilidad del mes</div>
+      <div class="mv" style="font-size:17px">${$(utilRealMes)}</div><div class="ms">Ingresos − gastos − nómina</div>
       ${cmpLine(deltaHtml(utilRealMes, T0.utilReal, 'up'), lblAnt)}</div>`;
 
-  const l5=[...u].reverse().slice(0,5);
+  const l5=calcNomina([...u].reverse().slice(0,5))
+    .map(p => ({ ...p, margen: N(p.ingreso_total)>0 ? p.utilidad_real/N(p.ingreso_total) : null }));
   document.getElementById('r-tbl').innerHTML=`
     <table><thead><tr><th>ID</th><th>Fecha</th><th>Cliente(s)</th>
       <th class="rt">Tons</th><th class="rt">Ingreso</th><th class="rt">Margen</th></tr></thead><tbody>
@@ -996,6 +997,66 @@ function renderResumenProd() {
         <td>${tagR(r.rango)}</td>
       </tr>`;}).join('') : '<tr><td colspan="10" class="empty">Sin datos de insumos</td></tr>'}
       </tbody></table>
+    </div>
+    ${seguimientoHtml(id)}
+    ${desgloseHtml(id)}`;
+}
+
+// Término del registro anterior (+ suministros intermedios) contra el inicio de esta producción
+function seguimientoHtml(id) {
+  const { ins, disc } = datosReporte(id);
+  if (!ins.length) return '';
+  return `
+    <div class="sub"><span>Seguimiento con la producción pasada</span>
+      ${disc.length
+        ? `<span class="neg">⚠ ${disc.length} insumo${disc.length!==1?'s':''} no coincide${disc.length!==1?'n':''}</span>`
+        : '<span class="pos">✓ Término anterior = inicio actual</span>'}</div>
+    <div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th>Registro anterior</th>
+      <th class="rt">Término anterior (L)</th><th class="rt">Sumi. intermedio (L)</th>
+      <th class="rt">Inicio esperado (L)</th><th class="rt">Inicio registrado (L)</th>
+      <th class="rt">Diferencia (L)</th><th>Estado</th>
+    </tr></thead><tbody>
+    ${ins.map(r => {
+      const c = CONT_INFO[`${r.id_prod}|${r.insumo}|${r.uso}`];
+      if (!c) return `<tr><td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td colspan="6" style="color:var(--muted)">Sin registro anterior</td><td><span class="tag tm">Primer registro</span></td></tr>`;
+      const ok = Math.abs(c.merma) <= 2;
+      return `<tr>
+        <td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td><span class="amb">${c.prev.id_prod}</span> <span style="color:var(--muted)">${F10(c.prev.fecha)}</span></td>
+        <td class="rt">${f2(c.prev.termino_L)}</td>
+        <td class="rt ${c.antes?'pos':''}">${c.antes ? f2(c.antes) : '—'}</td>
+        <td class="rt">${f2(c.esperado)}</td>
+        <td class="rt ${ok?'':'neg'}">${f2(r.inicio_L)}</td>
+        <td class="rt ${ok?'':'neg'}" style="${ok?'color:var(--muted)':''}">${ok ? f2(-c.merma) : (c.merma>0?'Faltante ':'Sobrante ')+f2(Math.abs(c.merma))}</td>
+        <td>${ok ? '<span class="tag tb">Coincide</span>' : '<span class="tag ta">Revisar</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+// Desglose de gastos igual que en el reporte PDF
+function desgloseHtml(id) {
+  const { p, ins, agrKg, otros, gastos } = datosReporte(id);
+  const ing = N(p.ingreso_total), ut = ing - gastos;
+  const fila = (a, b, cons, pu, tot) => `<tr><td>${a}</td><td style="color:var(--muted)">${b}</td>
+    <td class="rt">${cons}</td><td class="rt">${pu}</td><td class="rt">${$(tot)}</td></tr>`;
+  return `
+    <div class="sub"><span>Desglose de gastos</span></div>
+    <div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th class="rt">Consumo</th><th class="rt">Precio unitario</th><th class="rt">Costo total</th>
+    </tr></thead><tbody>
+      ${ins.map(r => fila(r.insumo, lbl(r.uso), f2(r.consumo_L)+' L', $(r.costo_unit), r.costo_total)).join('')}
+      ${agrKg ? fila('Teórico: agregados (grava y arena)', 'PRODUCCION', f2(agrKg)+' kg', $(N(p.gasto_material)/agrKg), p.gasto_material) : ''}
+      ${otros.map(g => fila(g.descripcion||'Otro gasto', g.categoria||'', '—', '—', g.monto)).join('')}
+      ${N(p.nomina_prorrateada) ? fila('Nómina de producción', 'Prorrateada en la semana', '—', '—', p.nomina_prorrateada) : ''}
+      <tr><td colspan="4" class="rt" style="font-weight:600">Total</td><td class="rt amb" style="font-weight:600">${$(gastos)}</td></tr>
+    </tbody></table></div>
+    <div class="sub" style="border-bottom:none;text-transform:none;letter-spacing:0;font-size:12px;justify-content:flex-start;gap:20px;flex-wrap:wrap">
+      <span>Ingreso <b style="color:var(--text)">${$(ing)}</b></span>
+      <span>Gastos <b style="color:var(--text)">${$(gastos)}</b></span>
+      <span>Utilidad <b class="${ut>=0?'pos':'neg'}">${$(ut)}</b></span>
+      <span>Margen <b class="${ut/ing>=.35?'pos':ut/ing>=.2?'':'neg'}">${ing ? fp(ut/ing) : '—'}</b></span>
     </div>`;
 }
 
@@ -1130,7 +1191,7 @@ function htmlReporte(d) {
         <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><path d="M0,-11a7,7 0 0 1 7,7c0,5 -7,14 -7,14s-7,-9 -7,-14a7,7 0 0 1 7,-7z" fill="#f7941d"/><circle cy="-4" r="2.8" fill="#fff"/></svg>
           <span>Mina El Centauro, San Juan<br>Totolapan, Tepetlaoxtoc, Edo de Mex.</span></div>
         <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><path d="M-9,-7c0,-2 2,-4 4,-4l3,6l-3,3c1,3 4,6 7,7l3,-3l6,3c0,2 -2,4 -4,4c-9,0 -16,-7 -16,-16z" fill="#f7941d"/></svg>
-          <span>Teléfonos<br>55 7796 3818<br>55 4796 5493</span></div>
+          <span>Teléfonos<br>55 6685 2302<br>55 4796 5493</span></div>
         <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><g fill="none" stroke="#f7941d" stroke-width="2"><circle r="10"/><ellipse rx="4.5" ry="10"/><path d="M-10,0h20M-8.5,-5h17M-8.5,5h17"/></g></svg>
           <a href="https://caocentauro.com/">https://caocentauro.com/</a></div>
       </div>
@@ -1443,6 +1504,16 @@ function calcNomina(prodList) {
     return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
   });
 }
+// Igual, pero por renglón de cliente: una producción con varios clientes reparte su nómina por toneladas
+function filasConNomina(rows) {
+  const nom = {}, tonsId = {};
+  calcNomina(uniq(D.producciones||[])).forEach(p => { nom[p.id_prod] = p.nomina_prorrateada; tonsId[p.id_prod] = N(p.tons_real); });
+  return rows.map(p => {
+    const n  = tonsId[p.id_prod] ? (nom[p.id_prod]||0) * N(p.tons_real)/tonsId[p.id_prod] : 0;
+    const ut = N(p.utilidad) - n;
+    return { ...p, nomina_prorrateada:n, utilidad_real:ut, margen_real: N(p.ingreso_total)>0 ? ut/N(p.ingreso_total) : null };
+  });
+}
 
 // ── Filtros de Financiero ─────────────────
 const FIN_PER_DEFAULT = 'mes';     // periodo al abrir: 'mes' | 'mesant' | '30' | 'todo'
@@ -1552,9 +1623,7 @@ function renderFin() {
   const gsIns    = prods.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material),0);
   const nom      = prods.reduce((s,p)=>s+N(p.nomina_prorrateada),0);
   const otros    = prods.reduce((s,p)=>s+N(p.otros_gastos),0);
-  const utilOp   = prods.reduce((s,p)=>s+N(p.utilidad),0);
   const utilReal = prods.reduce((s,p)=>s+N(p.utilidad_real),0);
-  const mgOp     = ing>0?utilOp/ing:0;
   const mgReal   = ing>0?utilReal/ing:0;
 
   // Periodo anterior equivalente (sin comparación si el periodo es "Todo")
@@ -1569,8 +1638,7 @@ function renderFin() {
     <div class="mc r"><div class="ml">Gs. insumos</div><div class="mv" style="font-size:17px">${$(gsIns)}</div>${cmp('gsIns', gsIns, 'down')}</div>
     <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div>${cmp('nom', nom, 'down')}</div>
     <div class="mc r"><div class="ml">Otros gastos</div><div class="mv" style="font-size:17px">${$(otros)}</div>${cmp('otros', otros, 'down')}</div>
-    <div class="mc ${utilOp>=0?'g':'r'}"><div class="ml">Ut. operativa</div><div class="mv" style="font-size:15px">${$(utilOp)}</div><div class="ms">Margen ${fp(mgOp)}</div>${cmp('utilOp', utilOp, 'up')}</div>
-    <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Ut. real (c/nómina)</div><div class="mv" style="font-size:15px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)}</div>${cmp('utilReal', utilReal, 'up')}</div>`;
+    <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Utilidad</div><div class="mv" style="font-size:17px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)} · incluye nómina</div>${cmp('utilReal', utilReal, 'up')}</div>`;
 
   renderFinChart(soloSel('fin', prods, p=>p.id_prod));
 
@@ -1579,7 +1647,7 @@ function renderFin() {
       <th>Producción</th><th>Fecha</th><th>Cliente(s)</th>
       <th class="rt">Ingreso</th><th class="rt">Gs. insumos</th>
       <th class="rt">Nómina</th><th class="rt">Otros gs.</th>
-      <th class="rt">Ut. operativa</th><th class="rt">Ut. real</th><th class="rt">Margen real</th>
+      <th class="rt">Utilidad</th><th class="rt">Margen</th>
     </tr></thead><tbody>
         ${ordenar(prods,'fin').map(p=>{
       const mgR = N(p.ingreso_total)>0 ? N(p.utilidad_real)/N(p.ingreso_total) : 0;
@@ -1589,7 +1657,6 @@ function renderFin() {
         <td class="rt neg">${$(N(p.gastos_insumos)+N(p.gasto_material))}</td>
         <td class="rt neg">${N(p.nomina_prorrateada)>0?$(p.nomina_prorrateada):'—'}</td>
         <td class="rt neg">${$(p.otros_gastos)}</td>
-        <td class="rt ${N(p.utilidad)>=0?'pos':'neg'}">${$(p.utilidad)}</td>
         <td class="rt ${N(p.utilidad_real)>=0?'pos':'neg'}">${$(p.utilidad_real)}</td>
         <td class="rt ${mgR>=.35?'pos':mgR>=.2?'':'neg'}">${N(p.ingreso_total)>0?fp(mgR):'—'}</td>
       </tr>`;
@@ -1604,14 +1671,12 @@ function renderFinChart(prods) {
     gs_ins:   { label:'Gs. insumos',   data:prods.map(p=>N(p.gastos_insumos)+N(p.gasto_material)),   backgroundColor:'rgba(220,38,38,.6)' },
     gs_nom:   { label:'Nómina',        data:prods.map(p=>N(p.nomina_prorrateada)),                    backgroundColor:'rgba(251,146,60,.6)' },
     gs_otros: { label:'Otros gastos',  data:prods.map(p=>N(p.otros_gastos)),                         backgroundColor:'rgba(220,38,38,.3)' },
-    util_op:  { label:'Ut. operativa', data:prods.map(p=>N(p.utilidad)),                              backgroundColor:'rgba(22,163,74,.4)' },
-    util_real:{ label:'Ut. real',      data:prods.map(p=>N(p.utilidad_real)),                         backgroundColor:'rgba(22,163,74,.7)' },
+    util_real:{ label:'Utilidad',      data:prods.map(p=>N(p.utilidad_real)),                         backgroundColor:'rgba(22,163,74,.7)' },
   };
   const modeDs = {
-    all:       [ds.ing, ds.gs_ins, ds.gs_nom, ds.gs_otros, ds.util_op, ds.util_real],
+    all:       [ds.ing, ds.gs_ins, ds.gs_nom, ds.gs_otros, ds.util_real],
     ing:       [ds.ing],
     gas:       [ds.gs_ins, ds.gs_nom, ds.gs_otros],
-    util_op:   [ds.util_op],
     util_real: [ds.util_real],
   };
   mkChart('cFin','bar',{labels:labs, datasets: modeDs[FIN_MODE]||modeDs.all}, {}, 12);
@@ -1654,14 +1719,14 @@ function renderClientes() {
 
   // Agregado por cliente: volúmenes del periodo · recencia y frecuencia con todo el histórico
   const m = {};
-  (D.producciones||[])
+  filasConNomina(D.producciones||[])
     .filter(p => p.cliente && !CLIENTES_EXCLUIDOS.includes(String(p.cliente).trim().toUpperCase()))
     .forEach(p => {
       const k = String(p.cliente).trim();
       const c = m[k] = m[k] || { cliente:k, fechas:new Set(), ids:new Set(), idsPer:new Set(), tons:0, ing:0, util:0 };
       c.fechas.add(F10(p.fecha)); c.ids.add(p.id_prod);
       if (!desde || F10(p.fecha) >= desde) {
-        c.tons += N(p.tons_real); c.ing += N(p.ingreso_total); c.util += N(p.utilidad); c.idsPer.add(p.id_prod);
+        c.tons += N(p.tons_real); c.ing += N(p.ingreso_total); c.util += N(p.utilidad_real); c.idsPer.add(p.id_prod);
       }
     });
 
@@ -1701,7 +1766,7 @@ function renderClientes() {
 
   // Gráfica
   const key = { tons:'tons', ing:'ing', util:'util' }[CLI_MODE];
-  const lblM = { tons:'Toneladas', ing:'Ingreso ($)', util:'Utilidad operativa ($)' }[CLI_MODE];
+  const lblM = { tons:'Toneladas', ing:'Ingreso ($)', util:'Utilidad ($)' }[CLI_MODE];
   const graf = soloSel('cli', lista.filter(c => c[key] !== 0), c => c.cliente);
   mkChart('cCli','bar',{
     labels: graf.map(c => c.cliente),
@@ -1970,7 +2035,7 @@ function historial() {
 }
 
 function renderHist() {
-  let p=D.producciones||[];
+  let p=filasConNomina(D.producciones||[]);
   const c=document.getElementById('hc').value.toLowerCase().trim();
   const d=document.getElementById('hd').value;
   const h=document.getElementById('hh').value;
@@ -1986,7 +2051,7 @@ function renderHist() {
         <th>Producción</th><th>Fecha</th><th>Cliente</th><th>Mezcla</th>
         <th class="rt">Tons ped.</th><th class="rt">Tons real</th>
         <th class="rt">Precio/ton</th><th class="rt">Ingreso</th>
-        <th class="rt">Gastos</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
+        <th class="rt">Gastos</th><th class="rt">Nómina</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
       </tr></thead><tbody>
       ${p.map(x=>`<tr>
         <td class="amb">${x.id_prod}</td><td>${x.fecha}</td>
@@ -1994,8 +2059,9 @@ function renderHist() {
         <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
         <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
         <td class="rt neg">${$(N(x.gastos_insumos)+N(x.gasto_material)+N(x.otros_gastos))}</td>
-        <td class="rt ${N(x.utilidad)>=0?'pos':'neg'}">${$(x.utilidad)}</td>
-        <td class="rt ${N(x.margen)>=.35?'pos':N(x.margen)>=.2?'':'neg'}">${fp(x.margen)}</td>
+        <td class="rt neg">${x.nomina_prorrateada>0 ? $(x.nomina_prorrateada) : '—'}</td>
+        <td class="rt ${x.utilidad_real>=0?'pos':'neg'}">${$(x.utilidad_real)}</td>
+        <td class="rt ${N(x.margen_real)>=.35?'pos':N(x.margen_real)>=.2?'':'neg'}">${fp(x.margen_real)}</td>
       </tr>`).join('')}</tbody></table>`
     :'<div class="empty">Sin registros con esos filtros</div>';
 }
