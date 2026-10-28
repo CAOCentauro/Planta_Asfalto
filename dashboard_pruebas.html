@@ -230,7 +230,8 @@ select:focus,input:focus{border-color:var(--amb)}
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="rp-sel" onchange="renderResumenProd()" style="max-width:260px"></select>
       <button class="ftb active" onclick="resumenProdUltima()">↑ Última</button>
-      <button class="ftb" id="rp-dl" onclick="descargarReporte()">⬇ Descargar reporte</button>
+      <button class="ftb" onclick="descargarReporte(this)">⬇ Descargar reporte</button>
+      <button class="ftb" onclick="enviarWhatsApp(this)">💬 Enviar por WhatsApp</button>
     </div>
   </div>
   <div id="rp-body"></div>
@@ -640,6 +641,7 @@ async function loadData() {
     const j = await r.json();
     if (j.status !== 'ok') throw new Error(j.message);
                 D = j.data;
+    REP_CACHE = null;                               // datos nuevos → regenerar PDFs
     // Normalizar todas las fechas a YYYY-MM-DD
     Object.values(D).forEach(arr => Array.isArray(arr) && arr.forEach(o => {
       if (o && o.fecha) o.fecha = F10(o.fecha);
@@ -1136,30 +1138,96 @@ function htmlReporte(d) {
   </div>`;
 }
 
-async function descargarReporte() {
-  const id = document.getElementById('rp-sel').value;
-  if (!id || !D) return;
-  const btn = document.getElementById('rp-dl');
-  btn.disabled = true; btn.textContent = 'Generando…'; bar(true);
+// Número de WhatsApp para enviar reportes: lada + número, solo dígitos (ej. '525566852302').
+// Vacío → WhatsApp pide elegir el contacto.
+const WA_NUM = '525566852302';
+let REP_CACHE = null;   // {id, file} último PDF generado, para compartir al segundo toque
+
+const nombreReporte = id => `Reporte_produccion_${id.replace(/^PROD-/,'').replace(/-1$/,'')}.pdf`;
+
+// Genera el PDF del reporte y lo devuelve como File
+async function pdfReporte(id) {
+  if (REP_CACHE?.id === id) return REP_CACHE.file;
   const wrap = document.createElement('div');
   wrap.className = 'rep-wrap';
+  wrap.innerHTML = htmlReporte(datosReporte(id));
+  document.body.appendChild(wrap);
   try {
-    wrap.innerHTML = htmlReporte(datosReporte(id));
-    document.body.appendChild(wrap);
     if (!window.html2pdf) await cargarScript(H2P_URL);
-    await html2pdf().set({
+    const blob = await html2pdf().set({
       margin: 0,
-      filename: `Reporte_produccion_${id.replace(/^PROD-/,'').replace(/-1$/,'')}.pdf`,
       image: { type:'jpeg', quality:.95 },
       html2canvas: { scale:2, backgroundColor:'#ffffff' },
       jsPDF: { unit:'in', format:'letter', orientation:'portrait' },
       pagebreak: { mode:['css','legacy'], avoid:'tr' }
-    }).from(wrap.firstElementChild).save();
-  } catch(e) { alert('No se pudo generar el reporte: ' + e.message); }
-  finally {
-    wrap.remove();
-    btn.disabled = false; btn.textContent = '⬇ Descargar reporte'; bar(false);
-  }
+    }).from(wrap.firstElementChild).outputPdf('blob');
+    const file = new File([blob], nombreReporte(id), { type:'application/pdf' });
+    REP_CACHE = { id, file };
+    return file;
+  } finally { wrap.remove(); }
+}
+function bajarArchivo(file) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// Resumen en texto para el mensaje de WhatsApp
+function textoReporte(id) {
+  const { p, tons, gastos, disc } = datosReporte(id);
+  const [y, m, dd] = F10(p.fecha).split('-');
+  const ing = N(p.ingreso_total), ut = ing - gastos;
+  return [
+    `*Reporte de producción — ${+dd} de ${MESES[+m-1].toLowerCase()} ${y}*`,
+    `Cliente: ${p.clientes.join(', ')}`,
+    `Producción: ${f0(tons)} toneladas`,
+    `Ingreso: ${$(ing)}`,
+    `Gastos: ${$(gastos)}`,
+    `Utilidad: ${$(ut)}${ing ? ` (${(ut/ing*100).toFixed(2)}%)` : ''}`,
+    disc.length
+      ? `⚠️ ${disc.length} discrepancia${disc.length!==1?'s':''} de insumos:\n` + disc.map(({r,c}) =>
+          `• ${r.insumo} ${lbl(r.uso)}: ${c.merma>0?'faltante':'sobrante'} ${f2(Math.abs(c.merma))} L`).join('\n')
+      : '✅ Sin discrepancias de insumos'
+  ].join('\n');
+}
+
+// Deshabilita el botón mientras se genera el PDF
+async function accionReporte(btn, fn) {
+  const id = document.getElementById('rp-sel').value;
+  if (!id || !D) return;
+  const txt = btn.dataset.txt || (btn.dataset.txt = btn.textContent);
+  btn.disabled = true; btn.textContent = 'Generando…'; bar(true);
+  let etiqueta = txt;
+  try { etiqueta = (await fn(id)) || txt; }
+  catch(e) { if (e.name !== 'AbortError') alert('No se pudo generar el reporte: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = etiqueta; bar(false); }
+}
+
+function descargarReporte(btn) {
+  accionReporte(btn, async id => { bajarArchivo(await pdfReporte(id)); });
+}
+
+function enviarWhatsApp(btn) {
+  const prueba = new File([''], 'r.pdf', { type:'application/pdf' });
+  const compartir = !!navigator.canShare?.({ files:[prueba] });
+  // Sin menú Compartir: se abre la pestaña ya (si no, el navegador la bloquea) y se llena al terminar
+  const win = compartir ? null : window.open('', '_blank');
+  accionReporte(btn, async id => {
+    const file  = await pdfReporte(id);
+    const texto = textoReporte(id);
+    if (compartir) {
+      try { await navigator.share({ files:[file], text:texto }); }   // menú Compartir → WhatsApp
+      catch(e) {
+        // El navegador vence el permiso si el PDF tardó: el segundo toque usa el PDF ya generado
+        if (e.name === 'NotAllowedError') return '📤 Toca otra vez para enviar';
+        throw e;
+      }
+      return;
+    }
+    bajarArchivo(file);
+    const url = `https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto + '\n\n📎 Adjunto el PDF del reporte.');
+    if (win) win.location.href = url; else location.href = url;
+  });
 }
 
 // ══════════════════════════════════════════
