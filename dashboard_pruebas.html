@@ -196,6 +196,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <a href="#" data-s="continuidad">Continuidad</a>
     <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
     <a href="#" data-s="historial">Historial</a>
+    <a href="#" data-s="reportes">Reportes operador <span id="rep-badge" style="color:var(--amb)"></span></a>
   </nav>
   <div class="sb-foot">
     Última actualización
@@ -455,6 +456,21 @@ select:focus,input:focus{border-color:var(--amb)}
     </div>
   </section>
 
+  <!-- REPORTES DEL OPERADOR -->
+  <section class="sec" id="sec-reportes">
+    <div class="ph">
+      <h2>Reportes del operador</h2>
+      <div class="flt">
+        <select id="rep-est" onchange="renderReportes()">
+          <option value="PENDIENTE">Pendientes de capturar</option>
+          <option value="CAPTURADO">Capturados</option>
+          <option value="">Todos</option>
+        </select>
+      </div>
+    </div>
+    <div class="sb" id="rep-list"></div>
+  </section>
+
   <!-- HISTORIAL -->
   <section class="sec" id="sec-historial">
     <div class="ph">
@@ -476,7 +492,7 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <script>
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyhfIDfclX_CXOMH_FBDZVaQKQ8Qe6oBWQKCvHoPIQgWsUcSBz7Q0BSmGba2LKBtSfq/exec';
-const PASSWORD   = 'Hola1';
+let KEY = '';                                   // contraseña escrita al entrar (solo en memoria)
 if (window.ChartZoom) Chart.register(ChartZoom);
 
 let D = null, CH = {}, FIN_MODE = 'all';
@@ -624,23 +640,33 @@ function setRendTab(tab) {
   tab==='serie' ? renderRend() : renderRendScatter();
 }
 // ── AUTH ──────────────────────────────────
+// La contraseña no está en la página: el Apps Script la valida (CLAVE_ADMIN) y sin ella no entrega datos
 function login() {
-  if (document.getElementById('pw').value === PASSWORD) {
-    document.getElementById('login').style.display = 'none';
-    document.getElementById('app').style.display   = 'flex';
-    loadData();
-  } else {
-    document.getElementById('pwerr').style.display = 'block';
-  }
+  KEY = document.getElementById('pw').value;
+  document.getElementById('pwerr').style.display = 'none';
+  if (KEY) loadData();
 }
+const enApp = () => document.getElementById('app').style.display === 'flex';
 
 // ── DATA ──────────────────────────────────
+async function api(body) {
+  // Sin headers → text/plain: Apps Script lo acepta sin preflight CORS
+  const r = await fetch(SCRIPT_URL, { method:'POST', body: JSON.stringify({ ...body, key:KEY }) });
+  let j;
+  try { j = await r.json(); }
+  catch(e) { throw new Error('el servidor no respondió como se esperaba (¿ya se publicó la nueva versión del Apps Script?)'); }
+  if (j.status !== 'ok') throw new Error(j.message);
+  return j;
+}
+
 async function loadData() {
   bar(true);
   try {
-    const r = await fetch(SCRIPT_URL + '?action=all');
-    const j = await r.json();
-    if (j.status !== 'ok') throw new Error(j.message);
+    const j = await api({ action:'all' });
+    if (!enApp()) {                                 // primer ingreso: la contraseña fue aceptada
+      document.getElementById('login').style.display = 'none';
+      document.getElementById('app').style.display   = 'flex';
+    }
                 D = j.data;
     REP_CACHE = null;                               // datos nuevos → regenerar PDFs
     // Normalizar todas las fechas a YYYY-MM-DD
@@ -650,10 +676,14 @@ async function loadData() {
     // Enmascarar usos ocultos (solo display; Sheets no cambia)
     ['insumos','suministros','recipientes'].forEach(k => { D[k] = (D[k]||[]).filter(visible); });
     anomalias();
+    badgeReportes();
     document.getElementById('lu').textContent =
       new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     renderSec('resumen');
-  } catch(e) { alert('Error al cargar datos: ' + e.message); }
+  } catch(e) {
+    if (enApp()) alert('Error al cargar datos: ' + e.message);
+    else { const el = document.getElementById('pwerr'); el.textContent = e.message; el.style.display = 'block'; }
+  }
   finally    { bar(false); }
 }
 
@@ -687,7 +717,7 @@ function renderSec(id) {
   const el = document.getElementById('sec-'+id);
   if (el) el.classList.add('on');
   if (!D) return;
-  ({resumen,rendimientos,financiero,clientes,insumos,continuidad,anomalias,historial})[id]?.();
+  ({resumen,rendimientos,financiero,clientes,insumos,continuidad,anomalias,historial,reportes})[id]?.();
 }
 
 // ── HELPERS ───────────────────────────────
@@ -2026,6 +2056,98 @@ function renderCont() {
 // ══════════════════════════════════════════
 //  HISTORIAL
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  REPORTES DEL OPERADOR
+// ══════════════════════════════════════════
+// Lo escribe el operador: se escapa antes de ponerlo en la página
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const UNI = { L:'L', pct:'%', cm:'cm' };
+
+function badgeReportes() {
+  const n = (D.reportes||[]).filter(r => r.estado === 'PENDIENTE').length;
+  document.getElementById('rep-badge').textContent = n ? ` (${n})` : '';
+}
+function reportes() { renderReportes(); }
+
+// Último término conocido del tanque antes de la fecha: Insumos o un reporte anterior del operador
+function cierreAnterior(insumo, uso, fecha, idRep) {
+  let best = null;
+  (D.insumos||[]).filter(r => r.insumo===insumo && r.uso===uso && r.termino_L!=null && F10(r.fecha) < fecha)
+    .forEach(r => { if (!best || F10(r.fecha) >= best.fecha) best = { fecha:F10(r.fecha), L:N(r.termino_L), fuente:r.id_prod }; });
+  (D.reportes||[]).filter(x => x.id !== idRep && x.fecha < fecha).forEach(x => (x.reporte?.tanques||[]).forEach(t => {
+    if (t.insumo===insumo && t.uso===uso && t.termino_L!=null && (!best || x.fecha > best.fecha))
+      best = { fecha:x.fecha, L:N(t.termino_L), fuente:'Reporte del operador' };
+  }));
+  return best;
+}
+
+function renderReportes() {
+  if (!D) return;
+  const est = document.getElementById('rep-est').value;
+  const lista = (D.reportes||[]).filter(x => !est || x.estado === est)
+    .sort((a,b) => b.fecha.localeCompare(a.fecha) || String(b.recibido).localeCompare(String(a.recibido)));
+  document.getElementById('rep-list').innerHTML = lista.length ? lista.map(htmlReporteOp).join('')
+    : `<div class="pn"><div class="empty">${est==='PENDIENTE' ? '✓ No hay reportes pendientes' : 'Sin reportes'}</div></div>`;
+}
+
+function htmlReporteOp(x) {
+  const r = x.reporte || {};
+  const prods = r.producciones || [];
+  const tons = prods.reduce((s,p) => s + N(p.tons_real), 0);
+  const pend = x.estado === 'PENDIENTE';
+  const lec = (t, v, L) => v==null ? '—' : `${f2(v)} ${UNI[t.unidad]||''}${t.unidad!=='L' && L!=null ? ` <span style="color:var(--muted)">(${f2(L)} L)</span>` : ''}`;
+
+  const tanques = (r.tanques||[]).map(t => {
+    const prev = cierreAnterior(t.insumo, t.uso, x.fecha, x.id);
+    const sumiInter = prev ? (D.suministros||[]).filter(s => s.insumo===t.insumo && s.uso===t.uso && s.fecha > prev.fecha && s.fecha < x.fecha)
+                               .reduce((s,v) => s + N(v.cantidad_L), 0) : 0;
+    const esperado = prev ? prev.L + sumiInter + (t.suministro_antes ? N(t.suministro_L) : 0) : null;
+    const dif = esperado!=null && t.inicio_L!=null ? N(t.inicio_L) - esperado : null;
+    const ok = dif==null || Math.abs(dif) <= 2;
+    return `<tr>
+      <td>${esc(t.insumo)}</td><td style="color:var(--muted)">${esc(lbl(t.uso))}</td>
+      <td class="rt">${lec(t, t.inicio, t.inicio_L)}</td><td class="rt">${lec(t, t.termino, t.termino_L)}</td>
+      <td class="rt ${N(t.suministro_L)?'pos':''}">${N(t.suministro_L) ? f2(t.suministro_L)+' L'+(t.suministro_antes?' <span style="color:var(--muted)">(antes)</span>':'') : '—'}</td>
+      <td class="rt amb">${t.consumo_L!=null ? f2(t.consumo_L) : '—'}</td>
+      <td class="rt">${t.consumo_L!=null && tons ? f2(t.consumo_L/tons) : '—'}</td>
+      <td class="rt">${prev ? `${f2(esperado)} <span style="color:var(--muted)">${prev.fecha}</span>` : '<span style="color:var(--muted)">sin dato</span>'}</td>
+      <td class="rt ${ok?'':'neg'}">${dif==null ? '—' : ok ? '<span class="tag tb">Coincide</span>' : `${dif<0?'Faltan':'Sobran'} ${f2(Math.abs(dif))} L`}</td>
+    </tr>`;
+  }).join('');
+
+  const lista = (titulo, items) => items.length ? `<div class="sub" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;color:var(--text);display:block">
+      <b style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em">${titulo}</b><br>${items.join('<br>')}</div>` : '';
+
+  return `<div class="pn">
+    <div class="pnh">
+      <span>${x.fecha} · ${esc(x.operador) || 'Sin nombre'} <span class="tag ${pend?'tm':'tb'}">${pend?'Pendiente':'Capturado'}</span></span>
+      <button class="ftb ${pend?'active':''}" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? '✓ Marcar como capturado' : '↺ Volver a pendiente'}</button>
+    </div>
+    <div style="padding:12px 16px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
+      ${r.sin_produccion || !prods.length ? '<span style="color:var(--muted)">Sin producción</span>'
+        : prods.map(p => `<span>${esc(p.cliente)} · <b class="amb">${f2(p.tons_real)} ton</b>${p.tons_pedido ? ` <span style="color:var(--muted)">(pedido ${f2(p.tons_pedido)})</span>` : ''} · ${esc(p.mezcla)}</span>`).join('')}
+    </div>
+    ${tanques ? `<div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th class="rt">Inicio</th><th class="rt">Término</th><th class="rt">Cargó</th>
+      <th class="rt">Consumo (L)</th><th class="rt">L / ton</th><th class="rt">Inicio esperado (L)</th><th class="rt">Seguimiento</th>
+    </tr></thead><tbody>${tanques}</tbody></table></div>` : ''}
+    ${lista('Combustible comprado', (r.compras||[]).map(c => `${esc(c.insumo)}: ${f2(c.litros)} L${c.precio_L ? ` a ${$(c.precio_L)}` : ''}`))}
+    ${lista('Otros usos', (r.otros_usos||[]).map(o => `${f2(o.litros)} L ${esc(o.insumo)} — ${esc(o.descripcion)}`))}
+    ${lista('Material que entró', (r.agregados||[]).map(a => `${f0(a.viajes)} viajes de ${esc(a.material)}${a.procedencia ? ` — ${esc(a.procedencia)}` : ''}`))}
+    ${lista('Observaciones', r.observaciones ? [esc(r.observaciones).replace(/\n/g,'<br>')] : [])}
+  </div>`;
+}
+
+async function marcarReporte(id, estado, btn) {
+  btn.disabled = true;
+  try {
+    await api({ action:'marcar_reporte', id, estado });
+    const x = (D.reportes||[]).find(r => r.id === id);
+    if (x) x.estado = estado;
+    badgeReportes(); renderReportes();
+  } catch(e) { alert('No se pudo actualizar: ' + e.message); btn.disabled = false; }
+}
+
 function historial() {
   const mz=[...new Set((D.producciones||[]).map(p=>p.mezcla).filter(Boolean))];
   const sel=document.getElementById('hm');
