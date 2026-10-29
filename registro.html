@@ -28,6 +28,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--amb);outline-off
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
 .f{margin-bottom:10px}
+.hint{font-size:12px;color:var(--muted);margin:-2px 0 10px}
 .res{margin-top:10px;padding:8px 10px;border-radius:8px;font-size:14px;background:var(--bg)}
 .res:empty{display:none}
 .res.ok{background:var(--ok-bg);color:var(--ok)}
@@ -78,9 +79,10 @@ details[open].card summary{margin-bottom:10px}
   <details class="card" id="cfg">
     <summary>Configuración</summary>
     <div class="g2">
-      <div class="f"><label>Tu nombre</label><input id="operador" autocomplete="name"></div>
-      <div class="f"><label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off"></div>
+      <div class="f"><label>Tu nombre</label><input id="operador" autocomplete="name" placeholder="Ej. Emmanuel"></div>
+      <div class="f"><label>PIN</label><input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="El que te dieron"></div>
     </div>
+    <div class="hint">Se escriben una sola vez y se quedan guardados en este teléfono. El <b>nombre</b> aparece en cada registro para saber quién lo envió. El <b>PIN</b> es la clave que permite enviar; sin él, el registro no se guarda.</div>
     <button class="btn sm" onclick="guardarCfg()">Guardar y probar conexión</button>
     <div class="res" id="cfg-res"></div>
   </details>
@@ -116,13 +118,6 @@ details[open].card summary{margin-bottom:10px}
     <button class="btn add" onclick="addOtro()">+ Agregar otro uso</button>
   </div>
 
-  <!-- AGREGADOS -->
-  <div class="card">
-    <h2>Material que entró <span class="u">arena, grava… en viajes</span></h2>
-    <div id="agregados"></div>
-    <button class="btn add" onclick="addAgregado()">+ Agregar material</button>
-  </div>
-
   <!-- CUADRE -->
   <div class="card" id="cuadre-card">
     <h2>Cuadre de combustible</h2>
@@ -149,8 +144,8 @@ details[open].card summary{margin-bottom:10px}
 <datalist id="dl-usos">
   <option value="Camión International blanco"><option value="Generador para pintar"><option value="Lavar cadena"><option value="Destapar tubería"><option value="Mecheros"><option value="Limpieza"><option value="Calentar asfalto">
 </datalist>
-<datalist id="dl-minas">
-  <option value="Mina Frank"><option value="Mina San Pedro">
+<datalist id="dl-mezclas">
+  <option value="Concreto Asfáltico">
 </datalist>
 
 <script>
@@ -162,12 +157,11 @@ details[open].card summary{margin-bottom:10px}
 const CFG = {
   SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyhfIDfclX_CXOMH_FBDZVaQKQ8Qe6oBWQKCvHoPIQgWsUcSBz7Q0BSmGba2LKBtSfq/exec',
 };
-const MEZCLAS = ['Concreto Asfáltico', 'HMA 1/2"', 'HMA 3/8"'];
-const MATERIALES = ['Arena', 'Grava 3/4', 'Grava 1/2', 'Grava 3/8', 'Polvo', 'Otro'];
+const MEZCLA_DEF = 'Concreto Asfáltico';   // se puede borrar y escribir otra
 
 // Mismo catálogo que Cat_Recipientes. cmMax: tabla Cat_Tabla_cm_L (250 L en 43 cm)
 const TANQUES = [
-  { key:'asfalto',    nombre:'Asfalto (AC-20)',               insumo:'CEMENTO ASFALTICO',   uso:'GENERAL',          unidad:'L',   cap:124000 },
+  { key:'asfalto',    nombre:'Asfalto',                       insumo:'CEMENTO ASFALTICO',   uso:'GENERAL',          unidad:'L',   cap:124000 },
   { key:'alterno',    nombre:'Combustible alterno',           insumo:'COMBUSTIBLE ALTERNO', uso:'GENERAL',          unidad:'L',   cap:40000 },
   { key:'gen_grande', nombre:'Generador diésel',              insumo:'DIESEL',              uso:'GENERADOR GRANDE', unidad:'pct', cap:500 },
   { key:'quemador',   nombre:'Quemador',                      insumo:'DIESEL',              uso:'QUEMADOR',         unidad:'L',   cap:480 },
@@ -250,18 +244,18 @@ function addCliente(p = {}) {
   el.className = 'item';
   el.innerHTML = `
     <div class="irow">
-      <div><label>Cliente</label><input data-k="cliente" list="dl-clientes" autocapitalize="characters"></div>
+      <div><label>Cliente</label><input data-k="cliente" list="dl-clientes" autocapitalize="characters" placeholder="Escribe o elige"></div>
       <div><label>Toneladas</label><input data-k="tons" inputmode="decimal"></div>
       <button class="btn x" type="button" title="Quitar">✕</button>
     </div>
     <div class="irow2">
-      <div><label>Mezcla</label><select data-k="mezcla">${MEZCLAS.map(m => `<option>${m}</option>`).join('')}</select></div>
+      <div><label>Mezcla</label><input data-k="mezcla" list="dl-mezclas" placeholder="Escribe o elige"></div>
       <div><label>Pedido (ton)</label><input data-k="pedido" inputmode="decimal" placeholder="opcional"></div>
     </div>`;
   el.querySelector('[data-k=cliente]').value = p.cliente || '';
   el.querySelector('[data-k=tons]').value    = p.tons_real ?? '';
   el.querySelector('[data-k=pedido]').value  = p.tons_pedido ?? '';
-  if (p.mezcla) el.querySelector('[data-k=mezcla]').value = p.mezcla;
+  el.querySelector('[data-k=mezcla]').value  = p.mezcla || MEZCLA_DEF;
   el.querySelector('.btn.x').onclick = () => { el.remove(); if (!$$('#clientes .item').length) addCliente(); alCambiar(); };
   $('#clientes').appendChild(el);
 }
@@ -283,23 +277,6 @@ function addOtro(o = {}) {
   $('#otros').appendChild(el);
 }
 
-function addAgregado(a = {}) {
-  const el = document.createElement('div');
-  el.className = 'item';
-  el.innerHTML = `
-    <div class="irow">
-      <div><label>Material</label><select data-k="material">${MATERIALES.map(m => `<option>${m}</option>`).join('')}</select></div>
-      <div><label>Viajes</label><input data-k="viajes" inputmode="numeric"></div>
-      <button class="btn x" type="button" title="Quitar">✕</button>
-    </div>
-    <div class="f" style="margin:8px 0 0"><label>¿De dónde? (mina)</label><input data-k="proc" list="dl-minas"></div>`;
-  if (a.material) el.querySelector('[data-k=material]').value = a.material;
-  el.querySelector('[data-k=viajes]').value = a.viajes ?? '';
-  el.querySelector('[data-k=proc]').value   = a.procedencia || '';
-  el.querySelector('.btn.x').onclick = () => { el.remove(); alCambiar(); };
-  $('#agregados').appendChild(el);
-}
-
 // ══════════════════════════════════════════
 //  LEER / LLENAR EL FORMULARIO
 // ══════════════════════════════════════════
@@ -308,7 +285,7 @@ function recolectar() {
     cliente:     el.querySelector('[data-k=cliente]').value.trim().toUpperCase(),
     tons_real:   num(el.querySelector('[data-k=tons]').value),
     tons_pedido: num(el.querySelector('[data-k=pedido]').value),
-    mezcla:      el.querySelector('[data-k=mezcla]').value,
+    mezcla:      el.querySelector('[data-k=mezcla]').value.trim(),
   })).filter(p => p.cliente || p.tons_real != null);
   const tonsTotal = producciones.reduce((s,p) => s + (p.tons_real || 0), 0);
 
@@ -338,11 +315,6 @@ function recolectar() {
       descripcion: el.querySelector('[data-k=desc]').value.trim(),
       litros:      num(el.querySelector('[data-k=litros]').value),
     })).filter(o => o.descripcion || o.litros),
-    agregados: $$('#agregados .item').map(el => ({
-      material:    el.querySelector('[data-k=material]').value,
-      viajes:      num(el.querySelector('[data-k=viajes]').value),
-      procedencia: el.querySelector('[data-k=proc]').value.trim(),
-    })).filter(a => a.viajes || a.procedencia),
     observaciones: $('#obs').value.trim(),
     creado: new Date().toISOString(),
     version: 2,
@@ -370,8 +342,6 @@ function llenar(r) {
   });
   $('#otros').innerHTML = '';
   (r.otros_usos || []).forEach(addOtro);
-  $('#agregados').innerHTML = '';
-  (r.agregados || []).forEach(addAgregado);
   $('#obs').value = r.observaciones || '';
   alCambiar();
 }
@@ -414,7 +384,6 @@ function revisar(r) {
   });
 
   r.otros_usos.forEach(o => { if (!o.litros) errores.push(`Faltan los litros de "${o.descripcion || 'otro uso'}"`); });
-  r.agregados.forEach(a => { if (!a.viajes) errores.push(`Faltan los viajes de ${a.material}`); });
 
   // Cuadre: lo comprado contra lo repartido en tanques y otros usos
   const cuadre = COMPRAS.map(c => {
@@ -485,7 +454,6 @@ function textoReporte(r) {
     if (x.consumo_L != null) L.push(`Consumo ${fmt(x.consumo_L)} L`);
   });
   if (r.otros_usos.length) { L.push('', 'Otros usos'); r.otros_usos.forEach(o => L.push(`${fmt(o.litros)} L ${o.insumo.toLowerCase()} — ${o.descripcion}`)); }
-  if (r.agregados.length)  { L.push('', 'Material que entró'); r.agregados.forEach(a => L.push(`${fmt(a.viajes, 0)} viajes ${a.material.toLowerCase()}${a.procedencia ? ' — ' + a.procedencia : ''}`)); }
   if (r.observaciones) L.push('', 'Observaciones', r.observaciones);
   return L.join('\n');
 }
