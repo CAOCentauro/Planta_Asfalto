@@ -40,12 +40,12 @@ const Sesion = (() => {
     if (!s?.token) return alInicio();
     try {
       const j = await api({ action:'yo' });
-      s = { ...s, nombre:j.nombre, perfil:j.perfil, pantallas:j.pantallas, debe_cambiar:j.debe_cambiar };
+      s = { ...s, nombre:j.nombre, perfil:j.perfil, pantallas:j.pantallas };
       guardar(s);
     } catch(e) {
       if (e.servidor) throw e;
     }
-    if (s.debe_cambiar || !(s.pantallas || []).includes(pantalla)) return alInicio();
+    if (!(s.pantallas || []).includes(pantalla)) return alInicio();
     return s;
   }
 

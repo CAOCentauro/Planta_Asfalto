@@ -67,8 +67,8 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 
   <!-- CAMBIAR CONTRASEÑA -->
   <form class="card oculto" id="v-cambio" onsubmit="cambiar(event)">
-    <h1 id="c-titulo">Cambiar contraseña</h1>
-    <p id="c-texto">Escríbela dos veces para confirmar.</p>
+    <h1>Cambiar contraseña</h1>
+    <p>Escribe la actual y la nueva dos veces para confirmar.</p>
     <div class="f" id="f-actual"><label for="actual">Contraseña actual</label>
       <input id="actual" type="password" autocomplete="current-password"></div>
     <div class="f"><label for="nueva">Contraseña nueva</label>
@@ -87,7 +87,7 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
     <div class="hola"><b id="m-nombre">—</b><small id="m-perfil"></small></div>
     <div class="menu" id="menu"></div>
     <div class="pie">
-      <button class="lnk" onclick="abrirCambio(false)">Cambiar mi contraseña</button>
+      <button class="lnk" onclick="abrirCambio()">Cambiar mi contraseña</button>
       <button class="lnk" onclick="Sesion.salir()">Salir</button>
     </div>
     <div class="res" id="r-menu"></div>
@@ -106,7 +106,6 @@ const PERFIL_TXT = { desarrollador:'Desarrollador', admin:'Administrador', captu
 const MIN = 8;
 
 const $ = s => document.querySelector(s);
-let CLAVE_INICIAL = '';      // la que se acaba de escribir, para el cambio obligatorio
 
 function vista(id) {
   ['v-login','v-cambio','v-menu'].forEach(v => $('#'+v).classList.toggle('oculto', v !== id));
@@ -124,8 +123,7 @@ async function entrar(ev) {
     const j = await Sesion.api({ action:'login', usuario, contrasena });
     Sesion.guardar(j);
     $('#contrasena').value = '';
-    if (j.debe_cambiar) { CLAVE_INICIAL = contrasena; abrirCambio(true); }
-    else if (j.pantallas.length === 1) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
+    if (j.pantallas.length === 1) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
     else mostrarMenu();
   } catch(e) {
     res('r-login', e.servidor ? e.message : 'Sin conexión. Revisa el internet e intenta de nuevo.');
@@ -136,7 +134,6 @@ async function entrar(ev) {
 function mostrarMenu() {
   const s = Sesion.leer();
   if (!s?.token) return vista('v-login');
-  if (s.debe_cambiar) return abrirCambio(true);
   $('#m-nombre').textContent = s.nombre;
   $('#m-perfil').textContent = PERFIL_TXT[s.perfil] || s.perfil;
   $('#menu').innerHTML = (s.pantallas || []).filter(p => PANTALLAS[p]).map(p =>
@@ -144,20 +141,12 @@ function mostrarMenu() {
   vista('v-menu');
 }
 
-// ── Cambiar contraseña ─────────────────────
-// obligatorio: primera vez con la contraseña que se le dio (ya la escribió al entrar)
-function abrirCambio(obligatorio) {
+// ── Cambiar contraseña (opcional, desde el menú) ──
+function abrirCambio() {
   ['actual','nueva','nueva2'].forEach(k => $('#'+k).value = '');
-  $('#f-actual').classList.toggle('oculto', obligatorio);
-  $('#c-pie').classList.toggle('oculto', obligatorio);
-  $('#c-titulo').textContent = obligatorio ? 'Crea tu contraseña' : 'Cambiar contraseña';
-  $('#c-texto').textContent = obligatorio
-    ? 'Es tu primera vez: cambia la contraseña que te dieron por una tuya. Escríbela dos veces para confirmar.'
-    : 'Escribe la actual y la nueva dos veces para confirmar.';
-  $('#v-cambio').dataset.obligatorio = obligatorio ? '1' : '';
   res('r-cambio', ''); revisarNueva();
   vista('v-cambio');
-  $(obligatorio ? '#nueva' : '#actual').focus();
+  $('#actual').focus();
 }
 function revisarNueva() {
   const n = $('#nueva').value, n2 = $('#nueva2').value;
@@ -168,8 +157,7 @@ function revisarNueva() {
 }
 async function cambiar(ev) {
   ev.preventDefault();
-  const oblig = !!$('#v-cambio').dataset.obligatorio;
-  const actual = oblig ? CLAVE_INICIAL : $('#actual').value;
+  const actual = $('#actual').value;
   if (!actual) return res('r-cambio', 'Escribe tu contraseña actual');
   if (!revisarNueva()) return res('r-cambio', $('#nueva').value.length < MIN
     ? `La contraseña nueva debe tener al menos ${MIN} caracteres` : 'Las dos contraseñas nuevas no coinciden');
@@ -177,7 +165,6 @@ async function cambiar(ev) {
   try {
     const j = await Sesion.api({ action:'cambiar_contrasena', actual, nueva:$('#nueva').value });
     Sesion.guardar(j);
-    CLAVE_INICIAL = '';
     mostrarMenu();
     res('r-menu', '✓ Contraseña guardada', 'ok');
   } catch(e) {
@@ -194,7 +181,6 @@ async function cambiar(ev) {
     if (m === 'vencida') res('r-login', 'Tu sesión terminó. Vuelve a entrar.');
     return $('#usuario').focus();
   }
-  if (s.debe_cambiar) { Sesion.borrar(); vista('v-login'); return; }   // volver a escribir la inicial
   mostrarMenu();
   try {                                                                // refresca perfil y pantallas
     const j = await Sesion.api({ action:'yo' });
