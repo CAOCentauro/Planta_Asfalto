@@ -183,6 +183,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <a href="#" data-s="rendimientos">Rendimientos</a>
     <a href="#" data-s="financiero">Financiero</a>
     <a href="#" data-s="clientes">Clientes</a>
+    <a href="#" data-s="pagos">Pagos</a>
     <a href="#" data-s="insumos">Insumos</a>
     <a href="#" data-s="continuidad">Continuidad</a>
     <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
@@ -370,6 +371,43 @@ select:focus,input:focus{border-color:var(--amb)}
     </div>
   </section>
 
+  <!-- PAGOS DE CLIENTES -->
+  <section class="sec" id="sec-pagos">
+    <div class="ph">
+      <h2>Pagos de clientes</h2>
+      <div class="flt">
+        <select id="pg-ver" onchange="renderPagos()">
+          <option value="saldo">Clientes con saldo</option>
+          <option value="">Todos los clientes</option>
+        </select>
+        <a class="ftb" href="pagos.html" style="text-decoration:none;padding:6px 10px">+ Registrar pago</a>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="mg" id="pg-met"></div>
+      <div class="pn">
+        <div class="pnh">Antigüedad de lo que se debe</div>
+        <div class="pnb"><div class="mg" id="pg-tramos"></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh"><span>Saldo por cliente</span><span style="font-weight:400;text-transform:none;letter-spacing:0">Clic en un cliente para ver su estado de cuenta</span></div>
+        <div class="tw" id="pg-tbl"></div>
+      </div>
+      <div class="pn" id="pg-edo-pn" style="display:none">
+        <div class="pnh"><span id="pg-edo-tit">Estado de cuenta</span><button class="ftb" onclick="cerrarEdo()">✕ Cerrar</button></div>
+        <div id="pg-edo"></div>
+      </div>
+      <div class="pn">
+        <div class="pnh">Ventas vs cobranza por mes</div>
+        <div class="pnb"><div class="cw"><canvas id="cPag"></canvas></div></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted)">
+        Lo que debe cada cliente sale de Producciones (toneladas × precio, sin IVA). Cada pago se aplica primero a la producción
+        que diga y, si no dice, a la más antigua pendiente. Lo que sobra queda como saldo a favor.
+      </div>
+    </div>
+  </section>
+
   <!-- INSUMOS -->
   <section class="sec" id="sec-insumos">
     <div class="ph"><h2>Insumos</h2></div>
@@ -485,6 +523,7 @@ select:focus,input:focus{border-color:var(--amb)}
 </div><!-- /app -->
 
 <script src="sesion.js"></script>
+<script src="cobranza.js"></script>
 <script>
 if (window.ChartZoom) Chart.register(ChartZoom);
 
@@ -687,7 +726,7 @@ function renderSec(id) {
   const el = document.getElementById('sec-'+id);
   if (el) el.classList.add('on');
   if (!D) return;
-  ({resumen,rendimientos,financiero,clientes,insumos,continuidad,anomalias,historial,reportes})[id]?.();
+  ({resumen,rendimientos,financiero,clientes,pagos,insumos,continuidad,anomalias,historial,reportes})[id]?.();
 }
 
 // ── HELPERS ───────────────────────────────
@@ -2026,6 +2065,135 @@ function renderCont() {
 // ══════════════════════════════════════════
 //  HISTORIAL
 // ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  PAGOS DE CLIENTES (cálculo en cobranza.js)
+// ══════════════════════════════════════════
+let PG_CLI = '';                                  // cliente abierto en el estado de cuenta
+const cuentas = () => Cobranza.calcular(D.producciones||[], D.pagos||[], isoLocal(new Date()));
+function pagos() { renderPagos(); }
+
+function renderPagos() {
+  if (!D) return;
+  const cs = cuentas(), TOL = Cobranza.TOL;
+  const deben  = cs.filter(c => c.saldo > TOL).sort((a,b) => b.saldo - a.saldo);
+  const aFavor = cs.filter(c => c.saldo < -TOL).reduce((s,c) => s - c.saldo, 0);
+  const porCobrar = deben.reduce((s,c) => s + c.saldo, 0);
+  const tramos = Cobranza.TRAMOS.map((t, i) => ({ nombre:t[2], monto:cs.reduce((s,c) => s + c.tramos[i].monto, 0) }));
+  const mas30  = tramos[2].monto + tramos[3].monto;
+
+  // Cobrado este mes vs los mismos días del mes anterior
+  const vig = (D.pagos||[]).filter(p => p.estado !== 'ANULADO' && !Cobranza.EXCLUIDOS.includes(String(p.cliente||'').trim().toUpperCase()));
+  const hoy = isoLocal(new Date()), mIni = rangoPeriodo('mes')[0], rAnt = rangoAnterior(mIni, hoy);
+  const cobrado = r => vig.filter(p => F10(p.fecha) >= r.desde && F10(p.fecha) <= r.hasta).reduce((s,p) => s + N(p.monto), 0);
+  const cobMes = cobrado({ desde:mIni, hasta:hoy }), cobAnt = rAnt ? cobrado(rAnt) : null;
+
+  document.getElementById('pg-met').innerHTML = `
+    <div class="mc ${porCobrar > TOL ? 'r' : 'g'}"><div class="ml">Por cobrar</div>
+      <div class="mv" style="font-size:17px">${$(porCobrar)}</div><div class="ms">${deben.length} cliente${deben.length!==1?'s':''} con saldo</div></div>
+    <div class="mc ${mas30 > TOL ? 'r' : 'g'}"><div class="ml">Con más de 30 días</div>
+      <div class="mv" style="font-size:17px">${$(mas30)}</div><div class="ms">${porCobrar ? fp(mas30/porCobrar)+' de lo que se debe' : 'nada atrasado'}</div></div>
+    <div class="mc g"><div class="ml">Cobrado este mes</div>
+      <div class="mv" style="font-size:17px">${$(cobMes)}</div>${cmpLine(deltaHtml(cobMes, cobAnt, 'up'), etiquetaRango(rAnt))}</div>
+    <div class="mc m"><div class="ml">Cliente con más saldo</div>
+      <div class="mv" style="font-size:17px">${deben[0] ? esc(deben[0].cliente) : '—'}</div>
+      <div class="ms">${deben[0] ? $(deben[0].saldo) + (porCobrar ? ' · ' + fp(deben[0].saldo/porCobrar) + ' del total' : '') : 'Nadie debe'}</div></div>
+    ${aFavor > TOL ? `<div class="mc g"><div class="ml">Saldo a favor de clientes</div><div class="mv" style="font-size:17px">${$(aFavor)}</div><div class="ms">anticipos sin aplicar</div></div>` : ''}`;
+
+  document.getElementById('pg-tramos').innerHTML = tramos.map((t, i) => `
+    <div class="mc ${t.monto <= TOL ? 'g' : i >= 2 ? 'r' : ''}"><div class="ml">${t.nombre}</div>
+      <div class="mv" style="font-size:16px">${$(t.monto)}</div>
+      <div class="ms">${porCobrar ? fp(t.monto/porCobrar) : '—'}</div></div>`).join('');
+
+  // Tabla por cliente
+  const ver = document.getElementById('pg-ver').value;
+  const lista = cs.filter(c => !ver || Math.abs(c.saldo) > TOL).sort((a,b) => b.saldo - a.saldo || a.cliente.localeCompare(b.cliente));
+  document.getElementById('pg-tbl').innerHTML = lista.length ? `
+    <table class="tsel"><thead><tr>
+      <th>Cliente</th><th>Estado</th><th class="rt">Producido</th><th class="rt">Pagado</th><th class="rt">Saldo</th>
+      <th>Último pago</th><th class="rt">Adeudo más viejo</th><th class="rt">Producciones pendientes</th>
+    </tr></thead><tbody>
+    ${lista.map(c => `<tr class="${PG_CLI===c.cliente?'sel':''}" data-c="${esc(c.cliente)}" onclick="abrirEdo(this.dataset.c)">
+      <td>${esc(c.cliente)}</td>
+      <td><span class="tag ${c.estado.cls}">${c.estado.t}</span></td>
+      <td class="rt">${$(c.producido)}</td>
+      <td class="rt pos">${$(c.pagado)}</td>
+      <td class="rt ${c.saldo > TOL ? 'neg' : 'pos'}" style="font-weight:600">${c.saldo < -TOL ? $(-c.saldo) + ' a favor' : $(Math.max(0, c.saldo))}</td>
+      <td>${c.ultimoPago || '<span style="color:var(--muted)">sin pagos</span>'}</td>
+      <td class="rt ${c.masViejo > 60 ? 'neg' : c.masViejo > 30 ? 'amb' : ''}">${c.pendientes.length ? c.masViejo + ' días' : '—'}</td>
+      <td class="rt">${c.pendientes.length || '—'}</td>
+    </tr>`).join('')}</tbody></table>`
+    : `<div class="empty">${ver ? '✓ Ningún cliente tiene saldo pendiente' : 'Sin clientes'}</div>`;
+
+  // Ventas vs cobranza por mes (últimos 12 meses con movimiento)
+  const ym = s => F10(s).slice(0,7);
+  const ventas = {}, cobros = {};
+  (D.producciones||[]).filter(p => p.cliente && !Cobranza.EXCLUIDOS.includes(String(p.cliente).trim().toUpperCase()))
+    .forEach(p => { ventas[ym(p.fecha)] = (ventas[ym(p.fecha)]||0) + N(p.ingreso_total); });
+  vig.forEach(p => { cobros[ym(p.fecha)] = (cobros[ym(p.fecha)]||0) + N(p.monto); });
+  const meses = [...new Set([...Object.keys(ventas), ...Object.keys(cobros)])].filter(Boolean).sort().slice(-12);
+  const nomMes = m => new Date(m + '-15T12:00:00Z').toLocaleDateString('es-MX', { month:'short', year:'numeric', timeZone:'UTC' }).replace('.', '');
+  mkChart('cPag', 'bar', { labels:meses.map(nomMes), datasets:[
+    { label:'Producido (ventas)', data:meses.map(m => ventas[m]||0), backgroundColor:'rgba(245,158,11,.55)' },
+    { label:'Cobrado',            data:meses.map(m => cobros[m]||0), backgroundColor:'rgba(22,163,74,.65)' },
+  ]});
+
+  if (PG_CLI) renderEdo(cs);
+}
+
+function abrirEdo(cliente) {
+  PG_CLI = PG_CLI === cliente ? '' : cliente;
+  renderPagos();
+  if (PG_CLI) document.getElementById('pg-edo-pn').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+function cerrarEdo() { PG_CLI = ''; renderPagos(); }
+
+// Estado de cuenta: producciones y pagos en orden, con saldo corrido
+function renderEdo(cs) {
+  const pn = document.getElementById('pg-edo-pn');
+  const c = cs.find(x => x.cliente === PG_CLI);
+  if (!c) { pn.style.display = 'none'; return; }
+  pn.style.display = '';
+  const TOL = Cobranza.TOL;
+  document.getElementById('pg-edo-tit').innerHTML = `Estado de cuenta · ${esc(c.cliente)} · <span class="${c.saldo > TOL ? 'neg' : 'pos'}">${
+    c.saldo < -TOL ? $(-c.saldo) + ' a favor' : c.saldo > TOL ? 'debe ' + $(c.saldo) : 'al corriente'}</span>`;
+  const anulados = (D.pagos||[]).filter(p => p.estado === 'ANULADO' && String(p.cliente||'').trim().toUpperCase() === c.cliente);
+  const tagG = { Pagada:'tb', Parcial:'tm', Pendiente:'ta' };
+
+  document.getElementById('pg-edo').innerHTML = `
+    <div class="tw"><table><thead><tr>
+      <th>Fecha</th><th>Movimiento</th><th class="rt">Cargo</th><th class="rt">Abono</th><th class="rt">Saldo</th><th></th>
+    </tr></thead><tbody>
+    ${Cobranza.movimientos(c).map(m => m.tipo === 'cargo' ? `<tr>
+        <td>${m.fecha}</td>
+        <td><span class="amb">${esc(m.ref)}</span> · ${f2(m.g.tons)} t
+          <span class="tag ${tagG[m.g.estado]}">${m.g.estado}</span>${m.g.pendiente > TOL ? ` <span style="color:var(--muted)">faltan ${$(m.g.pendiente)} · ${m.g.dias} días</span>` : ''}</td>
+        <td class="rt">${$(m.cargo)}</td><td class="rt">—</td>
+        <td class="rt ${m.saldo > TOL ? 'neg' : 'pos'}">${$(m.saldo)}</td><td></td></tr>`
+      : `<tr>
+        <td>${m.fecha}</td>
+        <td>Pago <span class="amb">${esc(m.ref)}</span> · ${esc(m.p.forma||'')}${m.p.referencia ? ' · ' + esc(m.p.referencia) : ''}
+          <div style="color:var(--muted);font-size:11px;white-space:normal">${m.p.aplicaciones.map(a => `${esc(a.id_prod)}: ${$(a.monto)}`).join(' · ')}${m.p.resto > 0.005 ? ` · a favor: ${$(m.p.resto)}` : ''}${m.p.capturo ? ` · capturó ${esc(m.p.capturo)}` : ''}</div></td>
+        <td class="rt">—</td><td class="rt pos">${$(m.abono)}</td>
+        <td class="rt ${m.saldo > TOL ? 'neg' : 'pos'}">${$(m.saldo)}</td>
+        <td><button class="ftb" data-id="${esc(m.ref)}" onclick="anularPago(this.dataset.id, this)">Anular</button></td></tr>`).join('')}
+    </tbody></table></div>
+    ${anulados.length ? `<div class="sub" style="text-transform:none;letter-spacing:0;font-weight:400;display:block">
+      <b style="font-size:11px;text-transform:uppercase;letter-spacing:.05em">Pagos anulados</b><br>
+      ${anulados.map(p => `${esc(p.id_pago)} · ${F10(p.fecha)} · ${$(p.monto)} — anuló ${esc(p.anulado_por||'')}: ${esc(p.motivo_anulacion||'')}`).join('<br>')}</div>` : ''}`;
+}
+
+async function anularPago(id, btn) {
+  const motivo = prompt(`¿Por qué se anula el pago ${id}? (queda registrado)`);
+  if (!motivo || !motivo.trim()) return;
+  btn.disabled = true;
+  try {
+    await api({ action:'pago_anular', id, motivo:motivo.trim() });
+    const p = (D.pagos||[]).find(x => x.id_pago === id);
+    if (p) Object.assign(p, { estado:'ANULADO', anulado_por:Sesion.leer()?.nombre || '', motivo_anulacion:motivo.trim() });
+    renderPagos();
+  } catch(e) { alert('No se pudo anular: ' + e.message); btn.disabled = false; }
+}
+
 // ══════════════════════════════════════════
 //  REPORTES DEL OPERADOR
 // ══════════════════════════════════════════

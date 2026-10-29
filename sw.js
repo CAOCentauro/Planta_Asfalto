@@ -4,9 +4,9 @@
  * Lo que va al Apps Script (POST) no pasa por aquí.
  */
 
-const CACHE_NAME = 'planta-v7';
-const APP_SHELL  = ['/', '/index.html', '/registro.html', '/compras.html', '/dashboard.html',
-                    '/sesion.js', '/manifest.json'];
+const CACHE_NAME = 'planta-v9';
+const APP_SHELL  = ['/', '/index.html', '/registro.html', '/compras.html', '/pagos.html', '/dashboard.html',
+                    '/usuarios.html', '/sesion.js', '/cobranza.js', '/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

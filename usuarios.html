@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#d97706">
+<title>Usuarios</title>
+<style>
+:root{--bg:#f3f3f0;--card:#fff;--bd:#d9d9d3;--text:#1a1a1a;--muted:#66665f;--amb:#d97706;--amb-bg:#fff6e5;
+  --ok:#15803d;--ok-bg:#eaf8ef;--warn:#9a4a06;--warn-bg:#fff1dc;--err:#b91c1c;--err-bg:#fdeaea;--in:#fbfbf9}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0b0b;--card:#151515;--bd:#2c2c2c;--text:#e8e8e8;--muted:#8d8d86;--amb:#f59e0b;--amb-bg:#2a1f08;
+  --ok:#4ade80;--ok-bg:#0f2417;--warn:#fbbf24;--warn-bg:#2a2108;--err:#f87171;--err-bg:#2a1010;--in:#0f0f0f}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg)}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.4;padding-bottom:40px}
+header{background:var(--card);border-bottom:3px solid var(--amb);padding:12px 16px;position:sticky;top:0;z-index:10}
+header .in{max-width:640px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;gap:8px}
+header h1{font-size:17px}
+header small{display:block;color:var(--muted);font-size:12px}
+main{max-width:640px;margin:0 auto;padding:12px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:10px;padding:14px}
+.card h2{font-size:16px;margin-bottom:10px}
+.card h2 .u{display:block;font-size:12px;color:var(--muted);font-weight:500;margin-top:1px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+input,select{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--in);color:var(--text);min-width:0}
+input:focus,select:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb)}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+@media (max-width:520px){.g3{grid-template-columns:1fr 1fr}.g3>div:first-child{grid-column:1/-1}}
+.hint{font-size:12px;color:var(--muted);margin-top:6px}
+.btn{font:inherit;font-size:15px;font-weight:600;padding:9px 14px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--text);cursor:pointer;text-decoration:none;display:inline-block}
+.btn.p{background:var(--amb);border-color:var(--amb);color:#000}
+.btn.sm{font-size:13px;padding:7px 10px}
+.btn:disabled{opacity:.5;cursor:default}
+.fila-btn{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.res{margin-top:10px;padding:10px 12px;border-radius:8px;font-size:14px}
+.res:empty{display:none}
+.res.ok{background:var(--ok-bg);color:var(--ok)}
+.res.err{background:var(--err-bg);color:var(--err)}
+.clave{margin-top:10px;padding:12px;border-radius:8px;background:var(--amb-bg);border:1px dashed var(--amb)}
+.clave b{font-family:ui-monospace,Consolas,monospace;font-size:20px;letter-spacing:.05em;user-select:all}
+.clave small{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.u-item{border-top:1px solid var(--bd);padding:12px 0}
+.u-item:first-child{border-top:none;padding-top:0}
+.u-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.u-top b{font-size:16px}
+.u-top .id{color:var(--muted);font-size:13px}
+.meta{font-size:12px;color:var(--muted);margin-top:2px}
+.tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:var(--bg);border:1px solid var(--bd)}
+.tag.off{color:var(--err);border-color:var(--err)}
+.tag.yo{color:var(--amb);border-color:var(--amb)}
+.edit{margin-top:10px;padding:10px;border-radius:8px;background:var(--bg)}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px;color:var(--text)}
+.chk input{width:20px;height:20px;accent-color:var(--amb)}
+.oculto{display:none}
+</style>
+</head>
+<body>
+
+<header><div class="in">
+  <div><h1>Usuarios</h1><small id="h-op">—</small></div>
+  <div style="display:flex;gap:6px">
+    <a class="btn sm" href="index.html">Inicio</a>
+    <button class="btn sm" onclick="Sesion.salir()">Salir</button>
+  </div>
+</div></header>
+
+<main>
+  <!-- AGREGAR -->
+  <div class="card">
+    <h2>Agregar persona <span class="u">se le crea una contraseña inicial que se muestra una sola vez</span></h2>
+    <div class="g3">
+      <div><label>Nombre</label><input id="n-nombre" placeholder="Ej. Juan Pérez" oninput="sugerirUsuario()"></div>
+      <div><label>Usuario (para entrar)</label><input id="n-usuario" autocapitalize="none" spellcheck="false" placeholder="ej. juan"></div>
+      <div><label>Perfil</label><select id="n-perfil"></select></div>
+    </div>
+    <div class="hint" id="n-desc"></div>
+    <div class="fila-btn"><button class="btn p" id="b-agregar" onclick="agregar()">Agregar</button></div>
+    <div class="res" id="r-agregar"></div>
+    <div id="c-agregar"></div>
+  </div>
+
+  <!-- LISTA -->
+  <div class="card">
+    <h2>Personas con acceso</h2>
+    <div id="lista"><div class="hint">Cargando…</div></div>
+  </div>
+</main>
+
+<script src="sesion.js"></script>
+<script>
+const PERFIL_TXT = { desarrollador:'Desarrollador', admin:'Administrador', captura:'Captura', operador:'Operador' };
+const PERFIL_DESC = {
+  desarrollador: 'Ve todo y puede administrar a cualquier usuario.',
+  admin:         'Ve todo: panel de control, registro, compras y usuarios.',
+  captura:       'Registro de planta y compras.',
+  operador:      'Solo el registro de planta.',
+};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let LISTA = [], PERFILES = [], EDITANDO = null;
+
+function res(id, txt, tipo = 'err') { const el = $('#'+id); el.className = 'res ' + (txt ? tipo : ''); el.textContent = txt || ''; }
+const fAcceso = iso => iso ? new Date(iso).toLocaleString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'nunca ha entrado';
+
+// Usuario sugerido a partir del nombre: "Juan Pérez" → "juan"
+function sugerirUsuario() {
+  const u = $('#n-usuario');
+  if (u.dataset.tocado) return;
+  u.value = $('#n-nombre').value.trim().split(/\s+/)[0].normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9._-]/g, '');
+}
+
+// Contraseña recién creada: se muestra una vez para dársela a la persona
+function tarjetaClave(usuario, clave) {
+  return `<div class="clave">Usuario <b>${esc(usuario)}</b> · contraseña <b>${esc(clave)}</b>
+    <small>Cópiala y dásela ahora; después ya no se puede ver. Si quiere, la cambia desde el menú.</small>
+    <div class="fila-btn"><button class="btn sm" data-u="${esc(usuario)}" data-c="${esc(clave)}" onclick="copiar(this)">Copiar</button></div></div>`;
+}
+// Los botones leen el usuario de su bloque (data-u), no de texto dentro del onclick
+const idDe = el => el.closest('[data-u]').dataset.u;
+async function copiar(b) {
+  const t = `Planta de Asfalto\nhttps://planta.caocentauro.com\nUsuario: ${b.dataset.u}\nContraseña: ${b.dataset.c}`;
+  try { await navigator.clipboard.writeText(t); b.textContent = '✓ Copiado'; } catch(e) { prompt('Copia este texto:', t); }
+}
+
+// ── Cargar y pintar ────────────────────────
+async function cargar() {
+  try {
+    const j = await Sesion.api({ action:'usuarios_listar' });
+    LISTA = j.usuarios; PERFILES = j.perfiles;
+    $('#n-perfil').innerHTML = PERFILES.map(p => `<option value="${p}" ${p==='operador'?'selected':''}>${PERFIL_TXT[p]||p}</option>`).join('');
+    $('#n-desc').textContent = PERFIL_DESC[$('#n-perfil').value] || '';
+    pintar();
+  } catch(e) { $('#lista').innerHTML = `<div class="res err">${esc(e.message)}</div>`; }
+}
+
+function pintar() {
+  const orden = { desarrollador:0, admin:1, captura:2, operador:3 };
+  const l = [...LISTA].sort((a,b) => (b.activo - a.activo) || (orden[a.perfil] - orden[b.perfil]) || a.nombre.localeCompare(b.nombre));
+  $('#lista').innerHTML = l.length ? l.map(u => `
+    <div class="u-item" data-u="${esc(u.usuario)}">
+      <div class="u-top">
+        <div><b>${esc(u.nombre)}</b> <span class="id">${esc(u.usuario)}</span>
+          <div class="meta">${PERFIL_TXT[u.perfil] || esc(u.perfil)} · ${u.con_contrasena ? 'último acceso: ' + fAcceso(u.ultimo_acceso) : 'sin contraseña todavía'}</div></div>
+        <div>${u.soy_yo ? '<span class="tag yo">Tú</span> ' : ''}${u.activo ? '' : '<span class="tag off">Sin acceso</span>'}</div>
+      </div>
+      ${u.editable ? `<div class="fila-btn">
+        <button class="btn sm" onclick="editar(idDe(this))">Editar</button>
+        ${u.soy_yo ? '' : `<button class="btn sm" onclick="restablecer(idDe(this), this)">${u.con_contrasena ? 'Restablecer contraseña' : 'Crear contraseña'}</button>`}
+      </div>` : '<div class="meta">Solo un desarrollador puede modificarlo.</div>'}
+      ${EDITANDO === u.usuario ? formEditar(u) : ''}
+      <div data-k="out"></div>
+    </div>`).join('') : '<div class="hint">Todavía no hay usuarios.</div>';
+}
+
+function formEditar(u) {
+  return `<div class="edit">
+    <div class="g3">
+      <div><label>Nombre</label><input data-k="nombre" value="${esc(u.nombre)}"></div>
+      <div><label>Usuario</label><input value="${esc(u.usuario)}" disabled></div>
+      <div><label>Perfil</label><select data-k="perfil" ${u.soy_yo ? 'disabled' : ''}>
+        ${PERFILES.map(p => `<option value="${p}" ${p===u.perfil?'selected':''}>${PERFIL_TXT[p]||p}</option>`).join('')}</select></div>
+    </div>
+    <label class="chk"><input type="checkbox" data-k="activo" ${u.activo ? 'checked' : ''} ${u.soy_yo ? 'disabled' : ''}> Tiene acceso</label>
+    ${u.soy_yo ? '<div class="hint">No puedes cambiar tu propio perfil ni quitarte el acceso.</div>' : ''}
+    <div class="fila-btn">
+      <button class="btn p sm" onclick="guardar(idDe(this), this)">Guardar</button>
+      <button class="btn sm" onclick="EDITANDO=null; pintar()">Cancelar</button>
+    </div>
+  </div>`;
+}
+function editar(id) { EDITANDO = EDITANDO === id ? null : id; pintar(); }
+
+// ── Acciones ───────────────────────────────
+async function agregar() {
+  const datos = { nuevo:true, nombre:$('#n-nombre').value.trim(), usuario:$('#n-usuario').value.trim().toLowerCase(), perfil:$('#n-perfil').value };
+  if (!datos.nombre || !datos.usuario) return res('r-agregar', 'Escribe el nombre y el usuario');
+  const b = $('#b-agregar'); b.disabled = true; res('r-agregar', ''); $('#c-agregar').innerHTML = '';
+  try {
+    const j = await Sesion.api({ action:'usuario_guardar', datos });
+    $('#c-agregar').innerHTML = tarjetaClave(j.usuario, j.contrasena);
+    $('#n-nombre').value = ''; $('#n-usuario').value = ''; delete $('#n-usuario').dataset.tocado;
+    await cargar();
+  } catch(e) { res('r-agregar', e.message); }
+  finally { b.disabled = false; }
+}
+
+async function guardar(id, b) {
+  const box = document.querySelector(`.u-item[data-u="${CSS.escape(id)}"]`);
+  const u = LISTA.find(x => x.usuario === id);
+  const datos = { usuario:id, nombre:box.querySelector('[data-k=nombre]').value.trim(),
+                  perfil:box.querySelector('[data-k=perfil]').value, activo:box.querySelector('[data-k=activo]').checked };
+  if (!datos.activo && u.activo && !confirm(`¿Quitarle el acceso a ${u.nombre}? Ya no podrá entrar.`)) return;
+  b.disabled = true;
+  try {
+    await Sesion.api({ action:'usuario_guardar', datos });
+    EDITANDO = null;
+    await cargar();
+    mostrarEn(id, `<div class="res ok">✓ Guardado</div>`);
+  } catch(e) { b.disabled = false; mostrarEn(id, `<div class="res err">${esc(e.message)}</div>`); }
+}
+
+async function restablecer(id, b) {
+  const u = LISTA.find(x => x.usuario === id);
+  if (u.con_contrasena && !confirm(`¿Darle una contraseña nueva a ${u.nombre}? La que tiene dejará de funcionar.`)) return;
+  b.disabled = true;
+  try {
+    const j = await Sesion.api({ action:'usuario_restablecer', usuario:id });
+    await cargar();
+    mostrarEn(id, tarjetaClave(j.usuario, j.contrasena));
+  } catch(e) { b.disabled = false; mostrarEn(id, `<div class="res err">${esc(e.message)}</div>`); }
+}
+function mostrarEn(id, html) {
+  const el = document.querySelector(`.u-item[data-u="${CSS.escape(id)}"] [data-k=out]`);
+  if (el) el.innerHTML = html;
+}
+
+// ── Inicio ─────────────────────────────────
+Sesion.requerir('usuarios').then(s => {
+  $('#h-op').textContent = s.nombre;
+  $('#n-usuario').addEventListener('input', e => e.target.dataset.tocado = '1');
+  $('#n-perfil').addEventListener('change', e => $('#n-desc').textContent = PERFIL_DESC[e.target.value] || '');
+  cargar();
+}).catch(e => { $('#lista').innerHTML = `<div class="res err">${esc(e.message)}</div>`; });
+</script>
+</body>
+</html>
