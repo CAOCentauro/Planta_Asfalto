@@ -1,0 +1,2171 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Planta de Asfalto — Panel</title>
+<script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<style>
+:root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px;
+  --pos:#4ade80;--neg:#f87171;--warn:#fbbf24;--grid:#1c1c1c;--tick:#6b6b6b;--leg:#9ca3af;--shadow:rgba(0,0,0,.5);color-scheme:dark}
+:root[data-theme="light"]{--bg:#f5f5f4;--s1:#ffffff;--s2:#f0efed;--bd:#e2e0dc;--amb:#d97706;--text:#1c1917;--muted:#78716c;
+  --pos:#15803d;--neg:#b91c1c;--warn:#b45309;--grid:#ebe9e6;--tick:#78716c;--leg:#57534e;--shadow:rgba(0,0,0,.12);color-scheme:light}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
+
+/* LOGIN */
+#login{display:flex;align-items:center;justify-content:center;height:100vh}
+.lbox{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--amb);padding:40px;width:320px}
+.lbox h1{font-size:16px;font-weight:600;margin-bottom:4px}
+.lbox p{color:var(--muted);font-size:12px;margin-bottom:24px}
+.lbox input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);color:var(--text);font-family:inherit;font-size:14px;outline:none;margin-bottom:12px}
+.lbox input:focus{border-color:var(--amb)}
+.btn-p{width:100%;padding:10px;background:var(--amb);color:#000;border:none;font-weight:600;font-family:inherit;font-size:14px;cursor:pointer}
+.btn-p:hover{background:#d97706}
+.err{color:var(--red);font-size:12px;margin-top:8px;display:none}
+
+/* LAYOUT */
+#app{display:none;height:100vh}
+#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:18px 16px;border-bottom:1px solid var(--bd)}
+.sb-logo span{display:block;font-size:10px;color:var(--amb);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.sb-logo strong{display:block;font-size:14px;margin-top:3px}
+nav{padding:10px 0;flex:1}
+nav a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:color .12s,border-color .12s}
+nav a:hover{color:var(--text)}
+nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(245,158,11,.05)}
+.sb-foot{padding:12px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--muted)}
+.sb-foot span{display:block;margin-top:3px;color:var(--text)}
+.btn-r{margin-top:10px;padding:6px 10px;background:transparent;border:1px solid var(--bd);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;width:100%}
+.btn-r:hover{border-color:var(--amb);color:var(--amb)}
+.btn-r + .btn-r{margin-top:6px}
+.theme-fab{position:fixed;top:16px;right:16px;width:auto;margin:0}
+/* Botón de tema: color contrario al fondo (claro en modo oscuro, oscuro en modo claro) */
+.theme-btn{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:600}
+.theme-btn:hover{background:var(--amb);border-color:var(--amb);color:#000}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+
+/* PROGRESS BAR */
+#pbar{height:2px;background:var(--amb);width:0;transition:width .3s;position:fixed;top:0;left:0;right:0;z-index:999}
+
+/* SECTIONS */
+.sec{display:none;flex-direction:column;height:100%;overflow-y:auto}
+.sec.on{display:flex}
+.ph{padding:15px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:10;flex-shrink:0}
+.ph h2{font-size:15px;font-weight:600;flex:1}
+.sb{padding:24px;display:flex;flex-direction:column;gap:20px}
+
+/* METRIC CARDS */
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
+.mc{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--amb);padding:16px}
+.mc.r{border-left-color:var(--red)}.mc.g{border-left-color:var(--green)}.mc.m{border-left-color:var(--muted)}
+.ml{font-size:11px;color:var(--muted);margin-bottom:6px}
+.mv{font-size:24px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums}
+.ms{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* PANELS */
+.pn{background:var(--s1);border:1px solid var(--bd)}
+.pnh{padding:11px 16px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pnb{padding:16px}
+.cw{position:relative;height:250px}
+.cw canvas{cursor:grab}
+.cw canvas:active{cursor:grabbing}
+
+/* TABLES */
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(245,158,11,.03)}
+.tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600}
+.ta{background:rgba(220,38,38,.15);color:var(--neg)}
+.tm{background:rgba(245,158,11,.15);color:var(--warn)}
+.tb{background:rgba(22,163,74,.15);color:var(--pos)}
+.tsel tbody tr{cursor:pointer}
+.tsel tbody tr.sel td{background:rgba(245,158,11,.12)}
+.tsel tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--amb)}
+
+/* FILTERS */
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=text],input[type=date]{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;outline:none}
+select:focus,input:focus{border-color:var(--amb)}
+
+/* FINANCIERO TOGGLE */
+.ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
+.ftb:hover{border-color:var(--amb);color:var(--amb)}
+.ftb.active{background:rgba(245,158,11,.12);border-color:var(--amb);color:var(--amb)}
+  /* DROPDOWN PRODUCCIONES */
+.dd{position:relative}
+.dd-btn{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer;min-width:210px;display:flex;justify-content:space-between;gap:10px}
+.dd-btn:hover,.dd.open .dd-btn{border-color:var(--amb)}
+.dd-panel{display:none;position:absolute;right:0;top:calc(100% + 4px);width:360px;max-height:380px;overflow-y:auto;background:var(--s1);border:1px solid var(--bd);z-index:50;padding:8px;box-shadow:0 8px 24px var(--shadow)}
+.dd.open .dd-panel{display:block}
+.dd-acts{display:flex;gap:6px;margin-bottom:6px}
+.dd-panel input[type=text]{width:100%;margin-bottom:6px}
+.dd-item{display:flex;gap:10px;align-items:center;padding:6px 4px;font-size:12px;cursor:pointer}
+.dd-item:hover{background:rgba(245,158,11,.06)}
+.dd-item input{accent-color:var(--amb)}
+.dd-f{color:var(--muted);min-width:80px}
+
+/* UTILS */
+.pos{color:var(--pos)}.neg{color:var(--neg)}.amb{color:var(--amb)}.rt{text-align:right}
+.empty{padding:36px;text-align:center;color:var(--muted)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+
+/* MOBILE */
+#menu-btn{display:none;background:none;border:none;color:var(--text);font-size:20px;cursor:pointer;padding:0 8px}
+@media(max-width:640px){
+  #menu-btn{display:block;position:fixed;top:12px;left:12px;z-index:101;background:var(--s1);border:1px solid var(--bd);padding:4px 10px}
+  #sidebar{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:left .2s;width:220px}
+  #sidebar.open{left:0}
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+  #overlay.on{display:block}
+  #main{padding-top:44px}
+}
+/* RENDIMIENTO TABS */
+.rtab{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:10px 16px;font-size:12px;font-family:inherit;cursor:pointer;margin-bottom:-1px}
+.rtab:hover{color:var(--text)}
+.rtab.active{color:var(--amb);border-bottom-color:var(--amb)}
+.rtab-bar{border-bottom:1px solid var(--bd);padding:0 24px;display:flex;flex-shrink:0}
+/* SUBSECCIÓN DENTRO DE UN PANEL */
+.sub{padding:10px 16px;border-top:1px solid var(--bd);border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
+
+/* REPORTE PDF (hoja blanca tamaño carta, igual en ambos temas) */
+.rep-wrap{position:fixed;left:-10000px;top:0}
+.rep{width:816px;min-height:1050px;background:#fff;color:#000;font-family:'Inter',sans-serif;font-size:12px;position:relative;display:flex;flex-direction:column;overflow:hidden}
+.rep-bands{position:absolute;top:0;left:0}
+.rep-head{position:relative;padding:36px 64px 0}
+.rep-logo{display:flex;align-items:flex-end;height:74px}
+.rep-logo b{font-size:60px;font-weight:800;letter-spacing:-2px;line-height:.9}
+.rep-logo img{height:76px;margin-left:-16px}
+.rep-razon{font-size:20px;font-weight:700;margin-top:4px}
+.rep-meta{margin-top:18px;display:flex;flex-direction:column;gap:10px;font-size:14px;font-weight:700}
+.rep-body{position:relative;padding:4px 64px 22px}
+.rep h3{text-align:center;font-size:14px;font-weight:700;margin:14px 0 6px}
+.rep-nota{text-align:center;font-style:italic;font-size:10px;margin-bottom:8px}
+.rep-nota.mal{color:#b91c1c;font-style:normal;font-weight:600}
+.rep table{width:100%;border-collapse:collapse;font-size:11px;line-height:1.25;background:#fff}
+.rep th,.rep td,.rep tr:last-child td{border:1px solid #000;padding:2px 5px;text-align:center;white-space:normal;color:#000}
+.rep th{font-weight:700}
+.rep td.r{text-align:right}
+.rep td.y,.rep th.y{background:#ffff00;font-weight:700}
+.rep td.x{background:#fde2e2;color:#b91c1c;font-weight:700}
+.rep tr:last-child td.nb{border:none;border-top:1px solid #000}
+.rep-foot{margin-top:auto;position:relative;height:136px;color:#fff}
+.rep-foot > svg{position:absolute;inset:0}
+.rep-ct svg{flex-shrink:0}
+.rep-foot h4{position:absolute;left:92px;top:30px;font-size:15px;font-weight:700}
+.rep-ct{position:absolute;left:92px;right:40px;top:62px;display:flex;gap:28px;font-size:11.5px;line-height:1.55}
+.rep-ct div{display:flex;align-items:center;gap:10px}
+.rep-ct a{color:#4ea3ff}
+</style>
+</head>
+<body>
+<div id="pbar"></div>
+
+<!-- APP (se muestra cuando la sesión es válida; el acceso está en index.html) -->
+<div id="app">
+<button id="menu-btn" onclick="toggleMenu()">☰</button>
+<div id="overlay" onclick="closeMenu()"></div>
+<div id="sidebar">
+  <div class="sb-logo">
+    <span>Panel de control</span>
+    <strong>Planta de Asfalto</strong>
+  </div>
+  <nav>
+    <a href="#" class="active" data-s="resumen">Resumen</a>
+    <a href="#" data-s="rendimientos">Rendimientos</a>
+    <a href="#" data-s="financiero">Financiero</a>
+    <a href="#" data-s="clientes">Clientes</a>
+    <a href="#" data-s="insumos">Insumos</a>
+    <a href="#" data-s="continuidad">Continuidad</a>
+    <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
+    <a href="#" data-s="historial">Historial</a>
+    <a href="#" data-s="reportes">Reportes operador <span id="rep-badge" style="color:var(--amb)"></span></a>
+  </nav>
+  <div class="sb-foot">
+    <span id="sb-user" style="margin:0 0 8px;font-weight:600">—</span>
+    Última actualización
+    <span id="lu">—</span>
+    <button class="btn-r" onclick="reload()">↺ Actualizar</button>
+    <button class="btn-r theme-btn" onclick="toggleTheme()">☀ Modo claro</button>
+    <button class="btn-r" onclick="location.href='index.html'">⌂ Inicio</button>
+    <button class="btn-r" onclick="Sesion.salir()">Salir</button>
+  </div>
+</div>
+
+<div id="main">
+
+  <!-- RESUMEN -->
+  <section class="sec on" id="sec-resumen">
+    <div class="ph"><h2>Resumen</h2></div>
+    <div class="sb">
+      <div class="mg" id="r-met"></div>
+      <div class="two">
+        <div class="pn">
+          <div class="pnh">Últimas producciones</div>
+          <div class="tw" id="r-tbl"></div>
+        </div>
+        <div class="pn">
+                    <div class="pnh">
+            <span id="tk-title">Nivel de tanques — cierre y estimado actual</span>
+            <select id="tk-sel" onchange="renderTanques()" style="max-width:170px"></select>
+          </div>
+          <div class="tw" id="r-stk"></div>
+        </div>
+
+    </div>
+    <div class="pn">
+  <div class="pnh">
+    <span>Detalle de producción</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="rp-sel" onchange="renderResumenProd()" style="max-width:260px"></select>
+      <button class="ftb active" onclick="resumenProdUltima()">↑ Última</button>
+      <button class="ftb" onclick="descargarReporte(this)">⬇ Descargar reporte</button>
+      <button class="ftb" onclick="enviarWhatsApp(this)">💬 Enviar por WhatsApp</button>
+    </div>
+  </div>
+  <div id="rp-body"></div>
+</div>
+      </div>
+  </section>
+
+  <!-- RENDIMIENTOS -->
+<section class="sec" id="sec-rendimientos">
+  <div class="ph">
+    <h2>Rendimientos</h2>
+    <div class="flt">
+      <select id="ri" onchange="onInsumoChange()"></select>
+      <select id="ru" onchange="onRendFiltChange()"><option value="">Todos los usos</option></select>
+<input type="date" id="rd" oninput="onRendFiltChange()" title="Desde">
+<input type="date" id="rh" oninput="onRendFiltChange()" title="Hasta">
+    </div>
+  </div>
+  <div class="rtab-bar">
+    <button class="rtab active" data-tab="serie"   onclick="setRendTab('serie')">Serie temporal</button>
+    <button class="rtab"        data-tab="scatter" onclick="setRendTab('scatter')">Rend. vs Producción</button>
+  </div>
+  <div class="sb">
+    <div id="rt-serie">
+      <div class="pn">
+        <div class="pnh">L / tonelada producida <span id="r-avg" style="color:var(--amb)"></span></div>
+        <div class="pnb"><div class="cw"><canvas id="cRend"></canvas></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh">
+          <span>Detalle por producción</span>
+          <div style="display:flex;gap:6px"><span id="sel-rend"></span><button class="ftb" id="sort-rend" onclick="toggleSort('rend')">↓ Más reciente primero</button></div>
+        </div>
+        <div class="tw" id="r-det"></div>
+      </div>
+    </div>
+    <div id="rt-scatter" style="display:none">
+      <div class="pn">
+                <div class="pnh">
+          <span>Rendimiento (L/ton) vs Toneladas producidas</span>
+          <select id="rt-trend" onchange="renderRendScatter()">
+            <option value="lin">Tendencia lineal</option>
+            <option value="log">Tendencia logarítmica</option>
+            <option value="exp">Tendencia exponencial</option>
+          </select>
+        </div>
+        <div class="pnb"><div class="cw" style="height:300px"><canvas id="cRendScat"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+  <!-- FINANCIERO -->
+<section class="sec" id="sec-financiero">
+  <div class="ph">
+    <h2>Financiero</h2>
+        <div class="flt">
+      <select id="f-per" onchange="setFinPeriodo(this.value)">
+        <option value="mes">Este mes</option>
+        <option value="mesant">Mes anterior</option>
+        <option value="30">Últimos 30 días</option>
+        <option value="todo">Todo</option>
+        <option value="custom">Personalizado</option>
+      </select>
+      <input type="date" id="fd" oninput="onFinFechaManual()" title="Desde">
+      <input type="date" id="fh" oninput="onFinFechaManual()" title="Hasta">
+      <div class="dd" id="fp-dd">
+        <button class="dd-btn" onclick="toggleDD(event)"><span id="fp-lbl">Todas</span><span>▾</span></button>
+        <div class="dd-panel" onclick="event.stopPropagation()">
+          <div class="dd-acts">
+            <button class="ftb" onclick="fpTodas(true)">Todas</button>
+            <button class="ftb" onclick="fpTodas(false)">Ninguna</button>
+          </div>
+          <input type="text" id="fp-q" placeholder="Buscar cliente o fecha…" oninput="renderFpList()">
+          <div id="fp-list"></div>
+        </div>
+      </div>
+      <button class="ftb" onclick="limpiarFinFiltros()" title="Limpiar filtros">✕</button>
+    </div>
+  </div>
+  <div class="sb">
+    <div class="mg" id="f-met"></div>
+    <div class="pn">
+      <div class="pnh">
+        <span>Financiero por producción</span>
+        <div style="display:flex;gap:4px;flex-shrink:0;flex-wrap:wrap">
+          <button class="ftb active" data-fmode="all"       onclick="setFinMode('all')">Todos</button>
+          <button class="ftb"        data-fmode="ing"       onclick="setFinMode('ing')">Ingresos</button>
+          <button class="ftb"        data-fmode="gas"       onclick="setFinMode('gas')">Gastos</button>
+          <button class="ftb"        data-fmode="util_real" onclick="setFinMode('util_real')">Utilidad</button>
+        </div>
+      </div>
+      <div class="pnb"><div class="cw"><canvas id="cFin"></canvas></div></div>
+    </div>
+    <div class="pn">
+            <div class="pnh">
+        <span>Desglose por producción</span>
+        <div style="display:flex;gap:6px"><span id="sel-fin"></span><button class="ftb" id="sort-fin" onclick="toggleSort('fin')">↓ Más reciente primero</button></div>
+      </div>
+      <div class="tw" id="f-tbl"></div>
+    </div>
+  </div>
+</section>
+
+  <!-- CLIENTES -->
+  <section class="sec" id="sec-clientes">
+    <div class="ph">
+      <h2>Clientes</h2>
+      <div class="flt">
+        <select id="cl-per" onchange="renderClientes()" title="Periodo para volúmenes; la recencia siempre usa todo el histórico">
+          <option value="todo">Todo el histórico</option>
+          <option value="anio">Este año</option>
+          <option value="90">Últimos 90 días</option>
+          <option value="mes">Este mes</option>
+        </select>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="mg" id="cl-met"></div>
+      <div class="pn">
+        <div class="pnh">
+          <span>Volumen por cliente</span>
+          <div style="display:flex;gap:4px;flex-wrap:wrap">
+            <button class="ftb active" data-clm="tons" onclick="setCliMode('tons')">Toneladas</button>
+            <button class="ftb"        data-clm="ing"  onclick="setCliMode('ing')">Ingreso</button>
+            <button class="ftb"        data-clm="util" onclick="setCliMode('util')">Utilidad</button>
+          </div>
+        </div>
+        <div class="pnb"><div class="cw"><canvas id="cCli"></canvas></div></div>
+      </div>
+      <div class="pn">
+        <div class="pnh"><span>Detalle por cliente</span><span id="sel-cli"></span></div>
+        <div class="tw" id="cl-tbl"></div>
+        <div style="padding:10px 16px;font-size:11px;color:var(--muted);border-top:1px solid var(--bd)">
+          Estado: compara los días sin comprar contra la frecuencia habitual del cliente ·
+          Atención &gt; 1.5× su frecuencia · En riesgo &gt; 2× · Con una sola compra: Atención &gt; 30 días, Inactivo &gt; 60 días.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- INSUMOS -->
+  <section class="sec" id="sec-insumos">
+    <div class="ph"><h2>Insumos</h2></div>
+    <div class="sb">
+      <div class="two">
+        <div class="pn">
+          <div class="pnh">Consumo total acumulado (L)</div>
+          <div class="pnb"><div class="cw"><canvas id="cIns"></canvas></div></div>
+        </div>
+        <div class="pn">
+          <div class="pnh">Entradas de material recientes</div>
+          <div class="tw" id="i-ent"></div>
+        </div>
+      </div>
+      <div class="pn">
+        <div class="pnh"><span>Estadísticas de rendimiento por insumo · uso</span><span id="sel-ins"></span></div>
+        <div class="tw" id="i-rnd"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CONTINUIDAD -->
+  <section class="sec" id="sec-continuidad">
+    <div class="ph">
+  <h2>Continuidad</h2>
+  <div class="flt">
+    <select id="ci" onchange="renderCont()"></select>
+    <input type="date" id="cd" oninput="renderCont()" title="Desde">
+    <input type="date" id="ch" oninput="renderCont()" title="Hasta">
+  </div>
+</div>
+    <div class="sb">
+      <div class="pn">
+        <div class="pnh" style="flex-wrap:wrap;gap:8px">
+  <span>Nivel al cierre · Inicio (L)
+    <span id="c-stats" style="color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span>
+  </span>
+  <div style="display:flex;gap:4px;flex-wrap:wrap">
+    <button class="ftb active" data-cv="nivel"    onclick="toggleContVis('nivel')">Nivel</button>
+    <button class="ftb active" data-cv="inicio"   onclick="toggleContVis('inicio')">Inicio</button>
+    <button class="ftb active" data-cv="promedio" onclick="toggleContVis('promedio')">Promedio</button>
+    <button class="ftb active" data-cv="sumi"     onclick="toggleContVis('sumi')">Suministros</button>
+    <button class="ftb active" data-cv="consumo"  onclick="toggleContVis('consumo')">Consumos</button>
+  </div>
+</div>
+        <div class="pnb"><div class="cw"><canvas id="cCont"></canvas></div></div>
+      </div>
+      <div class="pn">
+                <div class="pnh">
+          <span>Detalle de registros</span>
+          <div style="display:flex;gap:6px"><span id="sel-cont"></span><button class="ftb" id="sort-cont" onclick="toggleSort('cont')">↓ Más reciente primero</button></div>
+        </div>
+        <div class="tw" id="c-tbl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ANOMALÍAS -->
+  <section class="sec" id="sec-anomalias">
+    <div class="ph">
+  <h2>Anomalías</h2>
+  <div class="flt">
+    <select id="at" onchange="renderAnom()">
+      <option value="">Todos los tipos</option>
+      <option value="Consumo negativo">Consumo negativo</option>
+      <option value="Rendimiento alto">Rendimiento alto</option>
+      <option value="Rendimiento bajo">Rendimiento bajo</option>
+      <option value="Sin costo">Sin costo</option>
+      <option value="Continuidad">Continuidad</option>
+    </select>
+  </div>
+</div>
+    <div class="sb">
+      <div class="pn">
+        <div class="pnh" id="an-hdr">Revisión de datos</div>
+        <div class="tw" id="an-tbl"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORTES DEL OPERADOR -->
+  <section class="sec" id="sec-reportes">
+    <div class="ph">
+      <h2>Reportes del operador</h2>
+      <div class="flt">
+        <select id="rep-est" onchange="renderReportes()">
+          <option value="PENDIENTE">Pendientes de capturar</option>
+          <option value="CAPTURADO">Capturados</option>
+          <option value="">Todos</option>
+        </select>
+      </div>
+    </div>
+    <div class="sb" id="rep-list"></div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="sec" id="sec-historial">
+    <div class="ph">
+      <h2>Historial</h2>
+      <div class="flt">
+        <input type="text" id="hc" placeholder="Cliente" oninput="renderHist()">
+        <input type="date" id="hd" oninput="renderHist()">
+        <input type="date" id="hh" oninput="renderHist()">
+        <select id="hm" onchange="renderHist()"><option value="">Todas las mezclas</option></select>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="pn"><div class="tw" id="h-tbl"></div></div>
+    </div>
+  </section>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script src="sesion.js"></script>
+<script>
+if (window.ChartZoom) Chart.register(ChartZoom);
+
+let D = null, CH = {}, FIN_MODE = 'all';
+let REND_TAB = 'serie';
+let CONT_VIS = {nivel:true, inicio:true, promedio:true, sumi:true, consumo:true};
+let ANOM_ALL = [];
+let CONT_INFO = {};   // continuidad por registro: `${id_prod}|${insumo}|${uso}` → {prev, antes, esperado, merma}
+let SORT = { cont:'desc', fin:'desc', rend:'desc' };   // default: más reciente primero
+const ordenar = (arr, k) => SORT[k]==='desc' ? [...arr].reverse() : arr;   // arr ya viene ascendente
+function toggleSort(k) {
+  SORT[k] = SORT[k]==='desc' ? 'asc' : 'desc';
+  const b = document.getElementById('sort-'+k);
+  if (b) b.textContent = SORT[k]==='desc' ? '↓ Más reciente primero' : '↑ Más antiguo primero';
+  ({cont:renderCont, fin:renderFin, rend:renderRend})[k]();
+}
+
+// ── TEMA (oscuro / claro) ─────────────────
+// Colores de ejes y leyendas de las gráficas, tomados de las variables CSS del tema activo
+function chartColors() {
+  const s = getComputedStyle(document.documentElement), v = k => s.getPropertyValue(k).trim();
+  return { grid:v('--grid'), tick:v('--tick'), leg:v('--leg') };
+}
+function setTheme(t) {
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('theme', t); } catch(e) {}
+  document.querySelectorAll('.theme-btn').forEach(b =>
+    b.textContent = t==='light' ? '☾ Modo oscuro' : '☀ Modo claro');
+  // Repinta las gráficas existentes sin volver a calcularlas
+  const c = chartColors();
+  Object.values(CH).forEach(ch => {
+    const o = ch.options;
+    if (o.plugins?.legend?.labels) o.plugins.legend.labels.color = c.leg;
+    Object.values(o.scales || {}).forEach(s => {
+      if (s.grid)  s.grid.color  = c.grid;
+      if (s.ticks) s.ticks.color = c.tick;
+      if (s.title) s.title.color = c.tick;
+    });
+    ch.update('none');
+  });
+}
+function toggleTheme() {
+  setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light');
+}
+
+// ── Selección de filas → la gráfica muestra solo lo seleccionado ──
+let SEL = { fin:new Set(), rend:new Set(), cont:new Set(), ins:new Set(), cli:new Set() };
+const RENDER_SEL = { fin:()=>renderFin(), rend:()=>renderRend(), cont:()=>renderCont(), ins:()=>insumos(), cli:()=>renderClientes() };
+const selCls  = (k,id) => SEL[k].has(id) ? 'sel' : '';
+const soloSel = (k, arr, key) => { const s = arr.filter(x => SEL[k].has(key(x))); return s.length ? s : arr; };
+function updSel(k) {
+  const el = document.getElementById('sel-'+k);
+  if (el) el.innerHTML = SEL[k].size
+    ? `<button class="ftb active" onclick="clrSel('${k}')">✕ ${SEL[k].size} en gráfica</button>` : '';
+}
+function selRow(k, id) { SEL[k].has(id) ? SEL[k].delete(id) : SEL[k].add(id); RENDER_SEL[k](); updSel(k); }
+function clrSel(k)     { SEL[k].clear(); RENDER_SEL[k](); updSel(k); }
+function anomalias() {
+  const ins = D.insumos || [];
+  const sum = D.suministros || [];
+  const al  = [];
+
+  ins.filter(r=>N(r.consumo_L)<0).forEach(r=>al.push({
+    id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+    tipo:'Consumo negativo', det:`consumo_L = ${f2(r.consumo_L)}`, lv:'error'}));
+
+  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&r.rango&&N(r.rendimiento_L_ton)>0).forEach(r=>{
+    if(r.rango==='ALTO') al.push({id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+      tipo:'Rendimiento alto', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${f2(r.rango_alto)}`, lv:'warn'});
+    if(r.rango==='BAJO') al.push({id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+      tipo:'Rendimiento bajo', det:`${f2(r.rendimiento_L_ton)} L/ton — límite ${f2(r.rango_bajo)}`, lv:'info'});
+  });
+
+  ins.filter(r=>r.tipo_uso==='PRODUCCION'&&!r.costo_unit&&N(r.consumo_L)>0).forEach(r=>al.push({
+    id:r.id_prod, f:F10(r.fecha), ins:r.insumo, uso:lbl(r.uso),
+    tipo:'Sin costo', det:'costo_unit vacío', lv:'warn'}));
+
+  // Continuidad / merma entre registros
+  // Cadena por tanque FÍSICO (uso original, no mapeado) e incluye MANT.
+  const gr = {};
+  CONT_INFO = {};
+  ins.filter(r=>r.inicio_L!=null && r.termino_L!=null)
+     .sort((a,b)=>F10(a.fecha).localeCompare(F10(b.fecha)) || String(a.id_prod).localeCompare(String(b.id_prod)))
+     .forEach(r=>{ const k=`${r.insumo}|${r.uso}`; (gr[k]=gr[k]||[]).push(r); });
+
+  Object.values(gr).forEach(rows=>{
+    for(let i=1;i<rows.length;i++){
+      const p=rows[i-1], c=rows[i];
+      const fp=F10(p.fecha), fc=F10(c.fecha);
+      const antes = sum.filter(s=>{
+        if(s.insumo!==c.insumo || s.uso!==c.uso) return false;
+        const fs=F10(s.fecha), m=MOM(s);
+        return (fs>fp && fs<fc && m!=='DURANTE') || (fs===fc && m==='ANTES');
+      }).reduce((t,s)=>t+N(s.cantidad_L),0);
+      const esperado = N(p.termino_L) + antes;
+      const merma    = esperado - N(c.inicio_L);          // + faltante · − sobrante
+      CONT_INFO[`${c.id_prod}|${c.insumo}|${c.uso}`] = { prev:p, antes, esperado, merma };
+      if(Math.abs(merma)>2) al.push({id:c.id_prod, f:fc, ins:c.insumo, uso:lbl(c.uso),
+        tipo:'Continuidad',
+        det:`Término ${p.id_prod}: ${f2(p.termino_L)}L${antes?' + sumi. antes '+f2(antes)+'L':''} → esperado ${f2(esperado)}L · inicio real ${f2(c.inicio_L)}L · ${merma>0?'faltante':'sobrante'} ${f2(Math.abs(merma))}L${lbl(c.uso)!==c.uso?' ('+c.uso+')':''}`,
+        lv:'warn'});
+    }
+  });
+
+  ANOM_ALL = al;
+  const errores = al.filter(a=>a.lv==='error'||a.lv==='warn').length;
+  document.getElementById('anom-badge').textContent = errores ? ` (${errores})` : '';
+  renderAnom();
+}
+
+function renderAnom() {
+  const tipo = document.getElementById('at').value;
+  const al   = tipo ? ANOM_ALL.filter(a=>a.tipo===tipo) : ANOM_ALL;
+
+  document.getElementById('an-hdr').textContent =
+    al.length===0
+      ? (tipo ? `Sin anomalías de tipo "${tipo}"` : 'Sin anomalías detectadas')
+      : `${al.length} anomalía${al.length!==1?'s':''} — ${tipo||'todos los tipos'}`;
+
+  document.getElementById('an-tbl').innerHTML = al.length
+    ? `<table><thead><tr>
+        <th>Producción</th><th>Fecha</th><th>Insumo</th><th>Uso</th>
+        <th>Tipo</th><th>Detalle</th>
+      </tr></thead><tbody>
+      ${al.map(a=>`<tr>
+        <td class="amb">${a.id}</td><td>${a.f}</td>
+        <td>${a.ins}</td><td>${a.uso}</td>
+        <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
+        <td>${a.det}</td>
+      </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">✓ Todo en orden</div>';
+}
+function toggleContVis(key) {
+  CONT_VIS[key] = !CONT_VIS[key];
+  document.querySelectorAll('[data-cv]').forEach(b =>
+    b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+  if (D) renderCont();
+}
+function setRendTab(tab) {
+  REND_TAB = tab;
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  document.getElementById('rt-serie').style.display   = tab==='serie'   ? '' : 'none';
+  document.getElementById('rt-scatter').style.display = tab==='scatter' ? '' : 'none';
+  if(!D) return;
+  tab==='serie' ? renderRend() : renderRendScatter();
+}
+// ── DATA ──────────────────────────────────
+// La sesión (index.html → sesion.js) lleva el token; el Apps Script revisa que el perfil pueda ver esto
+const api = body => Sesion.api(body, 60000);
+
+async function loadData() {
+  bar(true);
+  try {
+    const j = await api({ action:'all' });
+                D = j.data;
+    REP_CACHE = null;                               // datos nuevos → regenerar PDFs
+    // Normalizar todas las fechas a YYYY-MM-DD
+    Object.values(D).forEach(arr => Array.isArray(arr) && arr.forEach(o => {
+      if (o && o.fecha) o.fecha = F10(o.fecha);
+    }));
+    // Enmascarar usos ocultos (solo display; Sheets no cambia)
+    ['insumos','suministros','recipientes'].forEach(k => { D[k] = (D[k]||[]).filter(visible); });
+    anomalias();
+    badgeReportes();
+    document.getElementById('lu').textContent =
+      new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    renderSec('resumen');
+  } catch(e) { if (e.code !== 'SESION') alert('Error al cargar datos: ' + e.message); }
+  finally    { bar(false); }
+}
+
+async function reload() { await loadData(); }
+
+function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('on');
+}
+function closeMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('on');
+}
+function bar(on) {
+  const el = document.getElementById('pbar');
+  el.style.width = on ? '65%' : '100%';
+  if (!on) setTimeout(()=>el.style.width='0',400);
+}
+
+// ── NAV ───────────────────────────────────
+document.querySelectorAll('nav a').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  document.querySelectorAll('nav a').forEach(x=>x.classList.remove('active'));
+  a.classList.add('active');
+  renderSec(a.dataset.s);
+  closeMenu();
+}));
+
+function renderSec(id) {
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  const el = document.getElementById('sec-'+id);
+  if (el) el.classList.add('on');
+  if (!D) return;
+  ({resumen,rendimientos,financiero,clientes,insumos,continuidad,anomalias,historial,reportes})[id]?.();
+}
+
+// ── HELPERS ───────────────────────────────
+const N  = v => v==null ? 0 : parseFloat(v)||0;
+const f2 = v => v==null ? '—' : new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const fp = v => v==null ? '—' : (v*100).toFixed(1)+'%';
+const $  = v => v==null ? '—' : '$'+f2(v);
+// ── Configuración de display (reversible) ─────────────
+// Para volver a agrupar ambas máquinas, descomenta esta línea y comenta la siguiente:
+// const INSUMO_MAP = {'RETROEXCAVADORA':'MAQUINA ACARREADORA','PAYLOADER':'MAQUINA ACARREADORA'};
+const INSUMO_MAP = {};                        // sin renombres → PAYLOADER se ve como PAYLOADER
+const USOS_OCULTOS = ['RETROEXCAVADORA'];     // para volver a mostrarla: []
+const visible = r => !USOS_OCULTOS.includes(r?.uso);
+const lbl = u => INSUMO_MAP[u] || u;                                  // solo display
+const MOM = s => String(s?.momento || '').trim().toUpperCase();        // ANTES | DURANTE | ''
+const F10 = s => String(s || '').slice(0,10);
+
+function std(arr) {
+  if (!arr.length) return 0;
+  const avg = arr.reduce((s,v)=>s+v,0)/arr.length;
+  return Math.sqrt(arr.reduce((s,v)=>s+(v-avg)**2,0)/arr.length);
+}
+
+function uniq(prods) {
+  const m={};
+  prods.forEach(p=>{
+        if(!m[p.id_prod]) m[p.id_prod]={...p,ingreso_total:0,gastos_insumos:0,gasto_material:0,otros_gastos:0,utilidad:0,tons_real:0,clientes:[]};
+    m[p.id_prod].ingreso_total  += N(p.ingreso_total);
+    m[p.id_prod].gastos_insumos += N(p.gastos_insumos);
+    m[p.id_prod].gasto_material += N(p.gasto_material);
+    m[p.id_prod].otros_gastos   += N(p.otros_gastos);
+    m[p.id_prod].utilidad       += N(p.utilidad);
+    m[p.id_prod].tons_real      += N(p.tons_real);
+    if(!m[p.id_prod].clientes.includes(p.cliente)) m[p.id_prod].clientes.push(p.cliente);
+  });
+    return Object.values(m)
+    .map(x => ({ ...x, margen: x.ingreso_total > 0 ? x.utilidad / x.ingreso_total : null }))
+    .sort((a,b)=>a.fecha.localeCompare(b.fecha));
+}
+
+function mesAct(arr,f='fecha') {
+  const n=new Date();
+  const ym=`${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;
+  return arr.filter(r=>F10(r[f]).slice(0,7)===ym);
+}
+
+function mkChart(id,type,data,extra={},ventana=0) {
+  if(CH[id]) CH[id].destroy();
+  const c=document.getElementById(id);
+  if(!c) return;
+  const tc=chartColors();
+  const options={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:tc.leg,boxWidth:10,font:{size:11}}}},
+    scales:type!=='pie'?{
+      x:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}}},
+      y:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}}}
+    }:undefined,
+    ...extra
+  };
+  // Desplazamiento horizontal: muestra los últimos `ventana` puntos y permite arrastrar
+  const n=(data.labels||[]).length;
+  if(ventana && n>ventana){
+    options.scales = options.scales || {};
+    options.scales.x = {...(options.scales.x||{}), min:n-ventana, max:n-1};
+    options.plugins = {...(options.plugins||{}), zoom:{
+      pan:  {enabled:true, mode:'x'},
+      zoom: {wheel:{enabled:true, modifierKey:'ctrl'}, pinch:{enabled:true}, mode:'x'},
+      limits:{x:{min:0, max:n-1, minRange:2}}
+    }};
+  }
+  CH[id]=new Chart(c,{type,data,options});
+  c.ondblclick = () => CH[id]?.resetZoom?.();     // doble clic → vista inicial
+}
+
+function tagR(r) {
+  if(!r) return '';
+  return `<span class="tag ${{ALTO:'ta',MEDIO:'tm',BAJO:'tb'}[r]||''}">${r}</span>`;
+}
+function mcColor(v,hi=0.35,lo=0.2){return v>=hi?'g':v>=lo?'':'r'}
+
+// ── Comparación contra el periodo anterior ──────────────
+const diasEntre = (a,b) => Math.round((new Date(b+'T12:00:00Z') - new Date(a+'T12:00:00Z'))/86400000);
+// Periodo equivalente anterior. Si el rango es dentro de un mes y empieza el día 1,
+// compara contra los mismos días del mes anterior (mes en curso vs mismo avance del mes pasado).
+function rangoAnterior(desde, hasta) {
+  if (!desde) return null;                                   // "Todo" → sin comparación
+  const hoy = isoLocal(new Date());
+  const fin = (!hasta || hasta > hoy) ? hoy : hasta;         // no contar días futuros
+  if (fin < desde) return null;
+  const iso = d => d.toISOString().slice(0,10);
+  const d0 = new Date(desde+'T12:00:00Z'), d1 = new Date(fin+'T12:00:00Z');
+  const y = d0.getUTCFullYear(), m = d0.getUTCMonth();
+  const mismoMes = d1.getUTCFullYear()===y && d1.getUTCMonth()===m;
+  if (desde.endsWith('-01') && mismoMes) {
+    const ultPrev = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    const ultCur  = new Date(Date.UTC(y, m+1, 0)).getUTCDate();
+    const diaFin  = d1.getUTCDate()===ultCur ? ultPrev : Math.min(d1.getUTCDate(), ultPrev);
+    return { desde: iso(new Date(Date.UTC(y, m-1, 1))), hasta: iso(new Date(Date.UTC(y, m-1, diaFin))) };
+  }
+  const len  = Math.round((d1-d0)/86400000) + 1;
+  const pFin = new Date(d0); pFin.setUTCDate(pFin.getUTCDate()-1);
+  const pIni = new Date(pFin); pIni.setUTCDate(pIni.getUTCDate()-(len-1));
+  return { desde: iso(pIni), hasta: iso(pFin) };
+}
+function etiquetaRango(r) {
+  if (!r) return '';
+  const f = s => { const d = new Date(s+'T12:00:00Z');
+    return `${d.getUTCDate()} ${d.toLocaleDateString('es-MX',{month:'short',timeZone:'UTC'}).replace('.','')}`; };
+  return `vs ${f(r.desde)} – ${f(r.hasta)}`;
+}
+// bueno: 'up' si subir es bueno (ingresos, utilidad) · 'down' si bajar es bueno (gastos)
+function deltaHtml(cur, prev, bueno='up', tipo='pct') {
+  if (prev==null || cur==null) return '';
+  let d, txt;
+  if (tipo==='pp') { d = (cur - prev)*100; txt = `${Math.abs(d).toFixed(1)} pp`; }
+  else {
+    if (!prev) return cur ? '<span style="color:var(--muted)">sin base</span>' : '';
+    d = (cur - prev)/Math.abs(prev); txt = `${Math.abs(d*100).toFixed(1)}%`;
+  }
+  if (Math.abs(d) < 0.0005) return '<span style="color:var(--muted)">= sin cambio</span>';
+  const ok = bueno==='up' ? d>0 : d<0;
+  return `<span class="${ok?'pos':'neg'}">${d>0?'▲':'▼'} ${txt}</span>`;
+}
+const cmpLine = (html, lbl) => html ? `<div class="ms">${html} <span style="color:var(--muted)">${lbl}</span></div>` : '';
+function totales(prods) {             // prods ya pasados por calcNomina
+  const sum = f => prods.reduce((s,p)=>s+N(f(p)),0);
+  const ing = sum(p=>p.ingreso_total), utilReal = sum(p=>p.utilidad_real);
+  return { n:prods.length, tons:sum(p=>p.tons_real), ing,
+           gsIns:sum(p=>N(p.gastos_insumos)+N(p.gasto_material)), nom:sum(p=>p.nomina_prorrateada),
+           otros:sum(p=>p.otros_gastos), utilReal,
+           mgReal: ing>0 ? utilReal/ing : null };
+}
+const prodsEntre = r => r ? uniq(D.producciones||[]).filter(p => p.fecha>=r.desde && p.fecha<=r.hasta) : [];
+
+// ══════════════════════════════════════════
+//  RESUMEN
+// ══════════════════════════════════════════
+function resumen() {
+  const u=uniq(D.producciones||[]);
+  const um=mesAct(u);
+  const tonsMes=um.reduce((s,p)=>s+N(p.tons_real),0);
+  const ingMes=um.reduce((s,p)=>s+N(p.ingreso_total),0);
+  const utilRealMes=calcNomina(um).reduce((s,p)=>s+N(p.utilidad_real),0);
+  const mgProm=ingMes>0?utilRealMes/ingMes:0;
+  const last=u[u.length-1];
+
+  // Mes en curso vs mismos días del mes anterior
+  const rAnt = rangoAnterior(rangoPeriodo('mes')[0], isoLocal(new Date()));
+  const T0   = totales(calcNomina(prodsEntre(rAnt)));
+  const lblAnt = etiquetaRango(rAnt);
+
+  document.getElementById('r-met').innerHTML=`
+    <div class="mc"><div class="ml">Última producción</div>
+      <div class="mv" style="font-size:17px">${last?.clientes?.join(', ')||'—'}</div>
+      <div class="ms">${last?.fecha||'—'} · ${f2(last?.tons_real)} ton</div></div>
+    <div class="mc"><div class="ml">Toneladas este mes</div>
+      <div class="mv">${f2(tonsMes)}</div>
+      <div class="ms">${um.length} ${um.length!==1?'producciones':'producción'}</div>
+      ${cmpLine(deltaHtml(tonsMes, T0.tons, 'up'), lblAnt)}</div>
+    <div class="mc ${mcColor(mgProm)}"><div class="ml">Margen promedio del mes</div>
+           <div class="mv">${fp(mgProm)}</div><div class="ms">Ponderado · incluye nómina</div>
+      ${cmpLine(deltaHtml(ingMes>0?mgProm:null, T0.mgReal, 'up', 'pp'), lblAnt)}</div>
+    <div class="mc ${utilRealMes>=0?'g':'r'}"><div class="ml">Utilidad del mes</div>
+      <div class="mv" style="font-size:17px">${$(utilRealMes)}</div><div class="ms">Ingresos − gastos − nómina</div>
+      ${cmpLine(deltaHtml(utilRealMes, T0.utilReal, 'up'), lblAnt)}</div>`;
+
+  const l5=calcNomina([...u].reverse().slice(0,5))
+    .map(p => ({ ...p, margen: N(p.ingreso_total)>0 ? p.utilidad_real/N(p.ingreso_total) : null }));
+  document.getElementById('r-tbl').innerHTML=`
+    <table><thead><tr><th>ID</th><th>Fecha</th><th>Cliente(s)</th>
+      <th class="rt">Tons</th><th class="rt">Ingreso</th><th class="rt">Margen</th></tr></thead><tbody>
+    ${l5.map(p=>`<tr>
+      <td class="amb">${p.id_prod}</td><td>${p.fecha}</td><td>${p.clientes.join(', ')}</td>
+      <td class="rt">${f2(p.tons_real)}</td><td class="rt">${$(p.ingreso_total)}</td>
+      <td class="rt ${N(p.margen)>=.35?'pos':N(p.margen)>=.2?'':'neg'}">${fp(p.margen)}</td>
+    </tr>`).join('')}</tbody></table>`;
+
+  renderTanques();
+    // Poblar selector
+    const rpSel = document.getElementById('rp-sel');
+  const prevSel = rpSel.value;
+  const allU = uniq(D.producciones||[]).reverse();
+  rpSel.innerHTML = allU.map(p =>
+    `<option value="${p.id_prod}">${p.id_prod} · ${p.fecha.slice(0,10)} · ${p.clientes.join(', ')}</option>`
+  ).join('');
+    if (prevSel && allU.some(p => p.id_prod === prevSel)) rpSel.value = prevSel;
+  renderResumenProd();
+}
+
+  function renderTanques() {
+  if (!D) return;
+  const ins  = D.insumos || [];
+  const cats = D.recipientes || [];
+  const sel  = document.getElementById('tk-sel');
+
+  // Opciones: Hoy + fechas con movimiento (producción, mant. o suministro), más reciente primero
+  const fechas = [...new Set([
+    ...ins.map(r => F10(r.fecha)),
+    ...(D.suministros||[]).map(s => F10(s.fecha))
+  ].filter(Boolean))].sort().reverse();
+  const prev = sel.value;
+  sel.innerHTML = '<option value="">Hoy (estimado)</option>' +
+    fechas.map(f => `<option value="${f}">${f}</option>`).join('');
+  if (prev && fechas.includes(prev)) sel.value = prev;
+
+  const esHoy = !sel.value;
+  const corte = sel.value || '9999-12-31';
+  document.getElementById('tk-title').textContent =
+    esHoy ? 'Nivel de tanques — cierre y estimado actual' : `Nivel de tanques — al ${corte}`;
+
+  // Último cierre de producción hasta la fecha de corte
+  const lev = {};
+  ins.filter(r => r.tipo_uso==='PRODUCCION' && F10(r.fecha) <= corte)
+     .sort((a,b) => F10(a.fecha).localeCompare(F10(b.fecha)))
+     .forEach(r => { lev[`${r.insumo}|${r.uso}`] = { L:N(r.termino_L), fecha:F10(r.fecha) }; });
+
+  const rows = cats.map(c => {
+    const cap  = N(c.cap_total_L);
+    const base = lev[`${c.insumo}|${c.uso}`] || { L:0, fecha:'' };
+    const enVentana = f => f > base.fecha && f <= corte;
+
+    const sumiPost = (D.suministros||[])
+      .filter(s => s.insumo===c.insumo && s.uso===c.uso && enVentana(F10(s.fecha)))
+      .reduce((t,s) => t + N(s.cantidad_L), 0);
+    const mantPost = ins
+      .filter(r => r.tipo_uso==='MANTENIMIENTO' && r.insumo===c.insumo && r.uso===c.uso && enVentana(F10(r.fecha)))
+      .reduce((t,r) => t + N(r.consumo_L), 0);
+
+    const estimado = base.L + sumiPost - mantPost;
+    const diff     = estimado - base.L;
+    const pct      = cap > 0 ? estimado / cap : null;
+    const pctColor = pct === null ? '' : pct < 0.2 ? 'neg' : pct > 0.9 ? 'pos' : '';
+    return { insumo:c.insumo, uso:c.uso, cap, L:base.L, fecha:base.fecha||'—', estimado, diff, pct, pctColor };
+  });
+
+  document.getElementById('r-stk').innerHTML = rows.length
+    ? `<table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Capacidad (L)</th>
+        <th class="rt">Último cierre (L)</th><th>Fecha cierre</th>
+        <th class="rt">${esHoy ? 'Estimado hoy (L)' : 'Nivel al ' + corte + ' (L)'}</th>
+        <th class="rt">% lleno</th><th class="rt">Δ</th>
+      </tr></thead><tbody>
+      ${rows.map(r => `<tr>
+        <td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td class="rt">${r.cap > 0 ? f2(r.cap) : '—'}</td>
+        <td class="rt amb">${r.L > 0 ? f2(r.L) : '—'}</td><td>${r.fecha}</td>
+        <td class="rt ${r.estimado < r.cap * 0.2 ? 'neg' : 'pos'}">${f2(r.estimado)}</td>
+        <td class="rt ${r.pctColor}">${r.pct !== null ? (r.pct*100).toFixed(1)+'%' : '—'}</td>
+        <td class="rt ${r.diff > 0 ? 'pos' : r.diff < 0 ? 'neg' : ''}">${r.diff > 0 ? '+' : ''}${f2(r.diff)}</td>
+      </tr>`).join('')}
+      </tbody></table>`
+    : '<div class="empty">Sin datos de catálogo</div>';
+}
+  function resumenProdUltima() {
+  const u = uniq(D.producciones||[]);
+  if (!u.length) return;
+  document.getElementById('rp-sel').value = u[u.length-1].id_prod;
+  renderResumenProd();
+}
+
+function renderResumenProd() {
+  const id = document.getElementById('rp-sel').value;
+  if (!id || !D) return;
+
+  const prods    = (D.producciones||[]).filter(p => p.id_prod === id);
+  const fecha    = F10(prods[0]?.fecha);
+  const clientes = [...new Set(prods.map(p => p.cliente))];
+  const tonsTotal = prods.reduce((s,p) => s + N(p.tons_real), 0);
+
+  const ins = (D.insumos||[])
+    .filter(r => r.id_prod === id && r.tipo_uso === 'PRODUCCION')
+    .sort((a,b) => a.insumo.localeCompare(b.insumo));
+
+  const sg = v => v==null ? '—' : (v>0?'+':'') + f2(v);
+
+  document.getElementById('rp-body').innerHTML = `
+    <div style="padding:12px 16px;border-bottom:1px solid var(--bd);font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
+      <span style="color:var(--muted)">${fecha}</span>
+      <span>${clientes.join(' · ')}</span>
+      <span class="amb" style="font-weight:600">${f2(tonsTotal)} ton producidas</span>
+    </div>
+    <div class="tw">
+      <table><thead><tr>
+        <th>Insumo</th><th>Uso</th>
+        <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
+        <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th>
+        <th class="rt">L / ton</th>
+        <th class="rt">Δ lím. alto</th><th class="rt">Δ lím. bajo</th>
+        <th>Rango</th>
+      </tr></thead><tbody>
+      ${ins.length ? ins.map(r => {
+        const rend = N(r.rendimiento_L_ton);
+        const dA = rend>0 && r.rango_alto!=null ? rend - N(r.rango_alto) : null;
+        const dB = rend>0 && r.rango_bajo!=null ? rend - N(r.rango_bajo) : null;
+        return `<tr>
+        <td>${r.insumo}</td>
+        <td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td class="rt">${f2(r.inicio_L)}</td>
+        <td class="rt ${N(r.suministro_L)>0?'pos':''}">${N(r.suministro_L)>0 ? f2(r.suministro_L) : '—'}</td>
+        <td class="rt">${f2(r.termino_L)}</td>
+        <td class="rt amb">${f2(r.consumo_L)}</td>
+        <td class="rt ${r.rango==='ALTO'?'neg':r.rango==='BAJO'?'pos':'amb'}">${rend>0 ? f2(rend) : '—'}</td>
+        <td class="rt ${dA>0?'neg':''}" style="${dA>0?'':'color:var(--muted)'}">${sg(dA)}</td>
+        <td class="rt ${dB<0?'pos':''}" style="${dB<0?'':'color:var(--muted)'}">${sg(dB)}</td>
+        <td>${tagR(r.rango)}</td>
+      </tr>`;}).join('') : '<tr><td colspan="10" class="empty">Sin datos de insumos</td></tr>'}
+      </tbody></table>
+    </div>
+    ${seguimientoHtml(id)}
+    ${desgloseHtml(id)}`;
+}
+
+// Término del registro anterior (+ suministros intermedios) contra el inicio de esta producción
+function seguimientoHtml(id) {
+  const { ins, disc } = datosReporte(id);
+  if (!ins.length) return '';
+  return `
+    <div class="sub"><span>Seguimiento con la producción pasada</span>
+      ${disc.length
+        ? `<span class="neg">⚠ ${disc.length} insumo${disc.length!==1?'s':''} no coincide${disc.length!==1?'n':''}</span>`
+        : '<span class="pos">✓ Término anterior = inicio actual</span>'}</div>
+    <div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th>Registro anterior</th>
+      <th class="rt">Término anterior (L)</th><th class="rt">Sumi. intermedio (L)</th>
+      <th class="rt">Inicio esperado (L)</th><th class="rt">Inicio registrado (L)</th>
+      <th class="rt">Diferencia (L)</th><th>Estado</th>
+    </tr></thead><tbody>
+    ${ins.map(r => {
+      const c = CONT_INFO[`${r.id_prod}|${r.insumo}|${r.uso}`];
+      if (!c) return `<tr><td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td colspan="6" style="color:var(--muted)">Sin registro anterior</td><td><span class="tag tm">Primer registro</span></td></tr>`;
+      const ok = Math.abs(c.merma) <= 2;
+      return `<tr>
+        <td>${r.insumo}</td><td style="color:var(--muted)">${lbl(r.uso)}</td>
+        <td><span class="amb">${c.prev.id_prod}</span> <span style="color:var(--muted)">${F10(c.prev.fecha)}</span></td>
+        <td class="rt">${f2(c.prev.termino_L)}</td>
+        <td class="rt ${c.antes?'pos':''}">${c.antes ? f2(c.antes) : '—'}</td>
+        <td class="rt">${f2(c.esperado)}</td>
+        <td class="rt ${ok?'':'neg'}">${f2(r.inicio_L)}</td>
+        <td class="rt ${ok?'':'neg'}" style="${ok?'color:var(--muted)':''}">${ok ? f2(-c.merma) : (c.merma>0?'Faltante ':'Sobrante ')+f2(Math.abs(c.merma))}</td>
+        <td>${ok ? '<span class="tag tb">Coincide</span>' : '<span class="tag ta">Revisar</span>'}</td>
+      </tr>`;
+    }).join('')}</tbody></table></div>`;
+}
+
+// Desglose de gastos igual que en el reporte PDF
+function desgloseHtml(id) {
+  const { p, ins, agrKg, otros, gastos } = datosReporte(id);
+  const ing = N(p.ingreso_total), ut = ing - gastos;
+  const fila = (a, b, cons, pu, tot) => `<tr><td>${a}</td><td style="color:var(--muted)">${b}</td>
+    <td class="rt">${cons}</td><td class="rt">${pu}</td><td class="rt">${$(tot)}</td></tr>`;
+  return `
+    <div class="sub"><span>Desglose de gastos</span></div>
+    <div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th class="rt">Consumo</th><th class="rt">Precio unitario</th><th class="rt">Costo total</th>
+    </tr></thead><tbody>
+      ${ins.map(r => fila(r.insumo, lbl(r.uso), f2(r.consumo_L)+' L', $(r.costo_unit), r.costo_total)).join('')}
+      ${agrKg ? fila('Teórico: agregados (grava y arena)', 'PRODUCCION', f2(agrKg)+' kg', $(N(p.gasto_material)/agrKg), p.gasto_material) : ''}
+      ${otros.map(g => fila(g.descripcion||'Otro gasto', g.categoria||'', '—', '—', g.monto)).join('')}
+      ${N(p.nomina_prorrateada) ? fila('Nómina de producción', 'Prorrateada en la semana', '—', '—', p.nomina_prorrateada) : ''}
+      <tr><td colspan="4" class="rt" style="font-weight:600">Total</td><td class="rt amb" style="font-weight:600">${$(gastos)}</td></tr>
+    </tbody></table></div>
+    <div class="sub" style="border-bottom:none;text-transform:none;letter-spacing:0;font-size:12px;justify-content:flex-start;gap:20px;flex-wrap:wrap">
+      <span>Ingreso <b style="color:var(--text)">${$(ing)}</b></span>
+      <span>Gastos <b style="color:var(--text)">${$(gastos)}</b></span>
+      <span>Utilidad <b class="${ut>=0?'pos':'neg'}">${$(ut)}</b></span>
+      <span>Margen <b class="${ut/ing>=.35?'pos':ut/ing>=.2?'':'neg'}">${ing ? fp(ut/ing) : '—'}</b></span>
+    </div>`;
+}
+
+// ══════════════════════════════════════════
+//  REPORTE DE PRODUCCIÓN (PDF)
+// ══════════════════════════════════════════
+const H2P_URL = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+const LOGO_CAO = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAJQAAAC2CAMAAAAIhlTbAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAGzUExURQAAAAAAAAAAAAAFAAAAAAAAAAAAAAEDAhkZGQADAzAwMDExMQIDAjExLwAAAAAAAAAAAAICAgEBAQEBAQAAAAAAAGFhYWBgYF5eXl9fXwMDAwAAAF5eXgEBAQICAl9fXwAAAAIDAQAAAAAAAAYGBgMDAAYGBggIBgcHBs7RzgABAAQGBQ4ODgYGBQABAFBQUAcHBgcHBs7Qz/X19QEBAN7e3/7+/lJSUlFRUcbGxVFRUVJSUigoKCcnJ8rIycrIyCcnJyQkJCcnJzExMTExMTIyMgEBATEyMQAAAAEBAQAAAAUFBQICAggICAcHBwgICAAAAAwMDA4ODp6enp6engcHBwABAQAAAFtbW1tbW3h4eHZ2dnZ2dgAAAFtbW1paWwwMDAECAg4ODgYGBgAAAA8PDysrKysrKwMDAwMDAwsLCwwMDCIiIisrKyoqKoKCgoCAgIGBgSIiIgIEAwUFBQMEAyoqKgIEAn19fYaGhoeHhwACAQADAU5RTj09PTo6Onx8fHx8fN/f4PX29I+Qj09QTY+Qjzo6Ojo6OgADABMTEwAAAgAAAXp6egEAAHt7ewEBASquPvEAAACRdFJOUwAqNTUfdf///1Q1Kqr/VKrUqtT/SbUqNUmqyclUtf//gP9+3ypUn8nUVP////+1SbX///////8fi///c4D//37fKqpUSarJ/5/fXzWAgL7Jiyo1fv///3MqNTVU/9dU////qn5c/yo1X//JqjVU/zVU/////8mqfjVU///JXyo1VP//////1FT/VP///0n//9cXiNJDAAAACXBIWXMAACHVAAAh1QEEnLSdAAAJXklEQVR4Xu2c+XvcxBnHpYkz1E6q1WZ2MURNWpKUwhJIoIH05igsxqE0SYvBgZY7bos5eqdNgoG29IhD+yfzvKPRXBqN3pHG3u3Dfn5ZWTsaffW+77xzaZ0kCxYsWLBgwYIFCxYsiERKDhxI7ZMzZukgpXd8ZXll5ZD9zSxJyfJhSin9arYyVwZLDywPckrpIJsrWcmhbHiEsbmTlWbDebRWKSsfjOwvZkuajSmj4zkzVjKCiJ9LY1E6njNVpbHmzoXcWHPnwmQ0ny4cU8rmUtXe2erO1dXVVRIetXup6q67jx49WhQdOg/uwUHwZX5SQgj52jF6/OswMOnQmEBVntlne7H0jXuOFwV0sYLwh84gXwU/i5cTJ5UgIPyh00HUsDp14JuHNSNRSmGsFGyq0Zge73CZm1P3fus+QxJo6mCqqGF1/30T+sDpB7kaysqPTlHFw+qhKA48c/bhR759DvSAgYSlGKUFsUu2AmE16fAwNc6cffSxSoxBF0eAqbpcZ3H+O9/9ni1H0KEl8RYYwVTf13OBabIOtccx1fkf0B/+yJCi6BBVpOj2MDaPP2GLqegqqr+pnnzK1iLpUDkX1d9UP7Zyuf5HeKhDTHUyscHTMBCS2Lkh9JF56+st6tAzupLaUagDS+8FP4vFylQqEV2MJil82FaKCn0UmxVKn9V0mKZi9MhamKg4IUXYc5UGpkxVfebrYZpESNnmPXXhwgVC8ErT508cqZTUvRfqhwbv/eSFn06LaWGd9VLGpqFGqrq4ZJf2UorSvHfp8mVCkp/9/EW6scGMon5Eg7GTAT918iW7tJ8ypMB7L29uEnLllVdPs42qsl/YpT1kmogadnT4KUPq5Ikk+eVrr7/Bq5u+mSXJW3x+9LZdvJE0ozR/x9YiqYVHM1e3tn4FhmL013Dlb95dJuTy5SuXkmTpIs2HATPJpYP0xWzd7GgM2k315Pb2NiFb771fXTLOyObm5uYlVWR0MUASn4Mmybqpw8CTcvj09YMPf/s7KDf5/R/++Kc/w9O5jBvWXICDlOqzUAVMaVzJMyXXCCF/+WtZ6vqNG4OMbG1tbV3lDTlfJ6TDYoQOWCpJkroHeZgeuWnU/tHODiHk40/KjMam00FGtre3t2UhXkteFIXrWbCk2aAooO66KPrp3/7+j89uinLgqZ1//us4z7ClGiNFw1+EL39ymMfrbfDlSrZBWc418YmVkdYneQG3//d/4O/JxuToMCPk2rVrlXsGhU4uO4WN7qL4mpIrO1nnrtPrN4YZ2dnZ2flIXgw2Lh/FKCsYdnWf6D0rNCuZ9zEjlzuKZHzHyESzsasF4iAFOEx1w3JApZ9l7JxIVYarpCQoKa6SzmO+ROIlJY7gdgHj9GzgThoNTDqJSol9G81juvNKTzh8JdDL5qrGabgoSASNt7HJ11VL98BuHcuE7Zk75frhiQBPmS7a4IukounAMCGQMhHYTawnYm8my3m1wdNFockvyf8tZyI+oahcS66yTPvYwqCykwFCgwl0bzIv5Nqqu6g+rPUZCVPmF+2cjus8o6zsengGLYpiam4EcFW7YaLEgDwMQ1w+yGR65/205Sk+TO8mSqXfxhTlgumuctNBVLqmOgjzfo3nKhgFv7VIEvERGOj+xOkRxSOp/V4dF814F6P3qNWBOta7aXE4xiiqRIV5T5CKliO1wX09VgpIhzykAr2n4C3HPVKoy0P7g4cUunQDyBSB9kd372nIZFq3jg76NnFWrMsliRZNeFFx1va1fscjDCsq1i6IMFUdXSNWVBxDQRR4LCRgyBlTLEPZEy0X6HczIMxjGApMLnO6Woo1lq/R9wHvxTBUkqRDFT9uT2IjCoyOfoAWHKGuzVADRMUzlGsl1jpEPn06CPB0G65QN/2Ie/yYhnL6zwTlPxidY5spgtZeGfP8YO+Imiz/1WMLFShZXE2t/sN4bzTGacfjCnUNhPegBkSxINymCvBedOeZoa51LwKE90Z7oMnf/tpFjdgeaBKijF5YLYC2ihpRGv4KXzt2TAV1fbcpbZ04d0C0Pn19V/F5i6jblN22z8WAe09b89Dnx5T5W9/S8//dE0017ym4On8Qp3vgOkfuNIcIuOwZHW9CAPwO3BuavVex/6ayvedg/01VGaoWShr7bSrnIrZNS66KDUqTU1RaWxmORPmzF4XuQv24LopvP6OWQUPx7B0Z2b3eKYsrkcuzAUgzeUKcwSZMbaszzY7J78sNiFjCLDMZ2yHSTuLTyAniV3Tq+5w7ktNBnLZvUZlJrk6rIZQusFq9VjkhzQa5saIthQHhA6t0jV8HD+XaLpc43Fn5DyRZX5mlx1B7iL1EJwcPZdfcBheVEuU4HWGl8qu8mCK2SxS+ntdhHR14OaFpB4W/uKCsD77Ph2g3VkPxNlwlcscLG+JYtgIt66FX/7yW6oNqBdqAA6uqryiXBQGVxfQRB7ITd4tqupVGSxHt9pqpkOMdtyidlrs7Asq6u7oFY7iXROGVG1mlua4pT9cP1etCxhXqe70PKrde4TtsA3Qu5DfvtpfUNImspJKd0THy0UNtE96DtK0lw69Kh4mUXSJ2C+3eOqwTVO5zy1BnlW+MkrumU8RDIptZA5qlpDhju1geVQdafw2cM39vXM6ska2sCWxGdxdhtd9HlvXVBoBh1FOC8+4Np+vv/5ZJqZ/3GgMdRf2X4mX67uk9vPsq2O4udMS3dmueU9X19J6ePLFAAsgG7gFSaakIogIpfZM2ZB0eU/svyh/EvL6YohB+ZK5A0oksiktyrXAqbjnam0VkUQ2IX25Aos8RsyX+siJyJ76RVlEVeTFsn42L/1XSKr0FTZTWu8kj2SFiXpYSE8C+qVOKMn5xLJTwUZM4iXn4as7f4S1hCyvQDdQZjCY5QYgpykmpC6NJ2dyfyDC0iOKgNMma+ocURhROk6ypv6HKquqtTQOpqRIVwVBmSnDMYtq6FYWoKYKhPO7j+lq7FQW0vgiJE/COp/BmArI88IJGmi2FeS3YIF0LvKARI3lqa50sX2/vVyyibfNpokw39h1+9MHpPtA3H6L0DnluRFnEyDddaRIVIzF3pknULL33/yVqliElRNV6mpmGVJOlZuo9vUPWf0c7U+81WCrKAKQ7DlER36ztiCZKua/vtLsvlSj9PbcZO8/skEHWZOYBJURVCyucc//D/w+KBQsWLPgy8QWFaTklYw98OQAAAABJRU5ErkJggg==';
+const f0 = v => new Intl.NumberFormat('es-MX',{maximumFractionDigits:2}).format(N(v));   // 65 · 65.5 · 61,404
+
+function cargarScript(src) {
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = ok; s.onerror = () => err(new Error('no se pudo cargar el generador de PDF'));
+    document.head.appendChild(s);
+  });
+}
+
+// Reúne todo lo que lleva el reporte de una producción
+function datosReporte(id) {
+  const filas = (D.producciones||[]).filter(p => p.id_prod === id);
+  const p     = calcNomina(uniq(filas))[0];
+  const ins   = (D.insumos||[]).filter(r => r.id_prod === id && r.tipo_uso === 'PRODUCCION');
+  const tons  = N(p.tons_real);
+  const cem   = ins.find(r => r.insumo === 'CEMENTO ASFALTICO');
+  // Agregados teóricos: toneladas producidas menos el cemento asfáltico (1 L ≈ 1 kg)
+  const agrKg = N(p.gasto_material) > 0 ? tons*1000 - N(cem?.consumo_L) : 0;
+  const otros = (D.gastos||[]).filter(g => g.id_prod === id && N(g.monto));
+  const gastos = N(p.gastos_insumos) + N(p.gasto_material) + N(p.otros_gastos) + N(p.nomina_prorrateada);
+  const disc  = ins.map(r => ({ r, c: CONT_INFO[`${r.id_prod}|${r.insumo}|${r.uso}`] }))
+                   .filter(x => x.c && Math.abs(x.c.merma) > 2);          // mismo umbral que Anomalías
+  return { id, p, filas, ins, tons, agrKg, otros, gastos, disc };
+}
+
+function htmlReporte(d) {
+  const { p, filas, ins, tons, agrKg, otros, gastos, disc } = d;
+  const [y, m, dd] = F10(p.fecha).split('-');
+  const discKeys = new Set(disc.map(x => x.r.insumo+'|'+x.r.uso));
+  const utilidad = N(p.ingreso_total) - gastos;
+  const money = v => '$ ' + f2(v);
+  const bandas = (a, b, fill) => `<polygon points="${a},0 ${b},0 816,${.42*(816-b)} 816,${.42*(816-a)}" fill="${fill}"/>`;
+
+  const rend = ins.map(r => {
+    const mal = discKeys.has(r.insumo+'|'+r.uso);
+    return `<tr>
+      <td>${r.insumo}</td><td>${lbl(r.uso)}</td>
+      <td class="${mal?'x':''}">${f2(r.inicio_L)}</td>
+      <td>${N(r.suministro_L) ? f2(r.suministro_L) : '—'}</td>
+      <td>${f2(r.termino_L)}</td><td>${f2(r.consumo_L)}</td>
+      <td class="y">${N(r.rendimiento_L_ton) ? f2(r.rendimiento_L_ton) : '—'}</td></tr>`;
+  }).join('') + (agrKg ? `<tr><td>TEORICO: AGREGADOS<br>(GRAVA Y ARENA)</td><td>PRODUCCION</td><td></td><td></td><td></td>
+      <td>${f2(agrKg)}<br>KG</td><td class="y">${f2(agrKg/tons)}kg</td></tr>` : '');
+
+  const gas = ins.map(r => `<tr><td>${r.insumo}</td><td>${lbl(r.uso)}</td>
+      <td class="r">${f2(r.consumo_L)}</td><td>$${f2(r.costo_unit)}</td><td class="r">${money(r.costo_total)}</td></tr>`).join('')
+    + (agrKg ? `<tr><td>TEORICO: AGREGADOS<br>(GRAVA Y ARENA)</td><td>PRODUCCION</td>
+      <td class="r">${f2(agrKg)}</td><td>$${f2(N(p.gasto_material)/agrKg)}</td><td class="r">${money(p.gasto_material)}</td></tr>` : '')
+    + otros.map(g => `<tr><td>${String(g.descripcion||'OTRO GASTO').toUpperCase()}</td><td>${g.categoria||''}</td>
+      <td></td><td></td><td class="r">${money(g.monto)}</td></tr>`).join('')
+    + (N(p.nomina_prorrateada) ? `<tr><td>NÓMINA DE PRODUCCIÓN</td><td></td><td></td><td></td><td class="r">${money(p.nomina_prorrateada)}</td></tr>` : '')
+    + `<tr><td class="nb" colspan="3"></td><td class="y">TOTAL</td><td class="y r">${money(gastos)}</td></tr>`;
+
+  // Con varios clientes: una fila por cliente (gastos prorrateados por toneladas) + total
+  const varios = filas.length > 1;
+  const finFila = (pedido, precio, ing, gs, cli) => {
+    const ut = ing - gs;
+    return `<tr>${varios?`<td>${cli}</td>`:''}<td>${f0(pedido)} Tons</td><td>$${f2(precio)}</td><td>${money(ing)}</td>
+      <td class="r">${money(gs)}</td><td class="y">${money(ut)}</td><td class="y">${ing ? (ut/ing*100).toFixed(2)+'%' : '—'}</td></tr>`;
+  };
+  const fin = (varios ? filas.map(f => finFila(f.tons_pedido, f.precio_venta, N(f.ingreso_total),
+                          tons ? gastos*N(f.tons_real)/tons : 0, f.cliente)).join('') : '')
+    + (varios ? finFila(filas.reduce((s,f)=>s+N(f.tons_pedido),0), tons ? N(p.ingreso_total)/tons : 0, N(p.ingreso_total), gastos, '<b>TOTAL</b>')
+              : finFila(filas[0].tons_pedido, filas[0].precio_venta, N(p.ingreso_total), gastos));
+
+  const tablaDisc = disc.length ? `
+    <h3>DISCREPANCIAS DE INSUMOS</h3>
+    <div class="rep-nota mal">El inicio registrado no coincide con el término del registro anterior (más suministros intermedios)</div>
+    <table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th>Registro anterior</th><th>Término anterior (L)</th>
+      <th>Suministro intermedio (L)</th><th>Inicio esperado (L)</th><th>Inicio registrado (L)</th><th>Diferencia (L)</th>
+    </tr></thead><tbody>
+    ${disc.map(({r,c}) => `<tr>
+      <td>${r.insumo}</td><td>${lbl(r.uso)}</td>
+      <td style="white-space:nowrap">${c.prev.id_prod}<br>${F10(c.prev.fecha)}</td>
+      <td>${f2(c.prev.termino_L)}</td><td>${c.antes ? f2(c.antes) : '—'}</td>
+      <td>${f2(c.esperado)}</td><td>${f2(r.inicio_L)}</td>
+      <td class="x">${c.merma>0?'Faltante':'Sobrante'}<br>${f2(Math.abs(c.merma))}</td>
+    </tr>`).join('')}</tbody></table>` : '';
+
+  return `<div class="rep">
+    <svg class="rep-bands" width="816" height="300" viewBox="0 0 816 300">
+      <defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#bdbdbd"/></linearGradient></defs>
+      ${bandas(140,330,'url(#rg)')}${bandas(330,380,'#f7941d')}${bandas(380,560,'#111')}${bandas(560,640,'#f7941d')}${bandas(640,900,'#111')}
+      <line x1="470" y1="0" x2="816" y2="${.42*346}" stroke="#fff6d5" stroke-width="5" stroke-dasharray="44 40"/>
+    </svg>
+    <div class="rep-head">
+      <div class="rep-logo"><b>CAO</b><img src="${LOGO_CAO}"></div>
+      <div class="rep-razon">Constructora &amp; Asfaltos del Oriente Centauro</div>
+      <div class="rep-meta">
+        <div>REPORTE DE PRODUCCION DEL ${+dd} DE ${MESES[+m-1]} ${y}</div>
+        <div>CLIENTE: ${p.clientes.join(', ').toUpperCase()}</div>
+        <div>PRODUCCION: ${f0(tons)} TONELADAS</div>
+      </div>
+    </div>
+    <div class="rep-body">
+      <h3>RENDIMIENTOS</h3>
+      ${disc.length
+        ? `<div class="rep-nota mal">⚠ ${disc.length} insumo${disc.length!==1?'s':''} no cumple${disc.length!==1?'n':''} con el seguimiento de la producción pasada (ver Discrepancias de insumos)</div>`
+        : '<div class="rep-nota">Esta producción cumple con el seguimiento de la producción pasada (el término de la producción pasada es igual al inicio de la presente)</div>'}
+      <table><thead><tr><th>Insumo</th><th>Uso</th><th>Inicio (L)</th><th>Suministro (L)</th><th>Término (L)</th><th>Consumo (L)</th><th class="y">Rendimiento (L / ton)</th></tr></thead>
+        <tbody>${rend}</tbody></table>
+      <h3>DESGLOSE DE GASTOS</h3>
+      <table><thead><tr><th>INSUMO</th><th>USO</th><th>CONSUMO</th><th>PRECIO UNITARIO</th><th>COSTO TOTAL</th></tr></thead>
+        <tbody>${gas}</tbody></table>
+      <h3>FINANCIERO</h3>
+      <table><thead><tr>${varios?'<th>CLIENTE</th>':''}<th>PEDIDO</th><th>PRECIO/TON</th><th>INGRESO</th><th>GASTOS</th><th>UTILIDAD</th><th>MARGEN</th></tr></thead>
+        <tbody>${fin}</tbody></table>
+      ${tablaDisc}
+    </div>
+    <div class="rep-foot">
+      <svg width="816" height="136" viewBox="0 0 816 150" preserveAspectRatio="none">
+        <rect width="816" height="150" fill="#313131"/>
+        <polygon points="0,0 412,0 392,16 0,16" fill="#f7941d"/>
+        <polyline points="2,58 30,92 2,126" fill="none" stroke="#f7941d" stroke-width="13"/>
+        <polyline points="40,58 68,92 40,126" fill="none" stroke="#f7941d" stroke-width="13"/>
+        <line x1="690" y1="104" x2="816" y2="30" stroke="#000" stroke-width="2"/>
+        <polygon points="690,150 816,76 816,150" fill="#f7941d"/><polygon points="760,150 816,118 816,150" fill="#000"/>
+      </svg>
+      <h4>Información de contacto</h4>
+      <div class="rep-ct">
+        <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><path d="M0,-11a7,7 0 0 1 7,7c0,5 -7,14 -7,14s-7,-9 -7,-14a7,7 0 0 1 7,-7z" fill="#f7941d"/><circle cy="-4" r="2.8" fill="#fff"/></svg>
+          <span>Mina El Centauro, San Juan<br>Totolapan, Tepetlaoxtoc, Edo de Mex.</span></div>
+        <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><path d="M-9,-7c0,-2 2,-4 4,-4l3,6l-3,3c1,3 4,6 7,7l3,-3l6,3c0,2 -2,4 -4,4c-9,0 -16,-7 -16,-16z" fill="#f7941d"/></svg>
+          <span>Teléfonos<br>55 6685 2302<br>55 4796 5493</span></div>
+        <div><svg width="36" height="36" viewBox="-18 -18 36 36"><circle r="18" fill="#fff"/><g fill="none" stroke="#f7941d" stroke-width="2"><circle r="10"/><ellipse rx="4.5" ry="10"/><path d="M-10,0h20M-8.5,-5h17M-8.5,5h17"/></g></svg>
+          <a href="https://caocentauro.com/">https://caocentauro.com/</a></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Número de WhatsApp para enviar reportes: lada + número, solo dígitos (ej. '525566852302').
+// Vacío → WhatsApp pide elegir el contacto.
+const WA_NUM = '525566852302';
+let REP_CACHE = null;   // {id, file} último PDF generado, para compartir al segundo toque
+
+const nombreReporte = id => `Reporte_produccion_${id.replace(/^PROD-/,'').replace(/-1$/,'')}.pdf`;
+
+// Genera el PDF del reporte y lo devuelve como File
+async function pdfReporte(id) {
+  if (REP_CACHE?.id === id) return REP_CACHE.file;
+  const wrap = document.createElement('div');
+  wrap.className = 'rep-wrap';
+  wrap.innerHTML = htmlReporte(datosReporte(id));
+  document.body.appendChild(wrap);
+  try {
+    if (!window.html2pdf) await cargarScript(H2P_URL);
+    const blob = await html2pdf().set({
+      margin: 0,
+      image: { type:'jpeg', quality:.95 },
+      html2canvas: { scale:2, backgroundColor:'#ffffff' },
+      jsPDF: { unit:'in', format:'letter', orientation:'portrait' },
+      pagebreak: { mode:['css','legacy'], avoid:'tr' }
+    }).from(wrap.firstElementChild).outputPdf('blob');
+    const file = new File([blob], nombreReporte(id), { type:'application/pdf' });
+    REP_CACHE = { id, file };
+    return file;
+  } finally { wrap.remove(); }
+}
+function bajarArchivo(file) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+// Resumen en texto para el mensaje de WhatsApp
+function textoReporte(id) {
+  const { p, tons, gastos, disc } = datosReporte(id);
+  const [y, m, dd] = F10(p.fecha).split('-');
+  const ing = N(p.ingreso_total), ut = ing - gastos;
+  return [
+    `*Reporte de producción — ${+dd} de ${MESES[+m-1].toLowerCase()} ${y}*`,
+    `Cliente: ${p.clientes.join(', ')}`,
+    `Producción: ${f0(tons)} toneladas`,
+    `Ingreso: ${$(ing)}`,
+    `Gastos: ${$(gastos)}`,
+    `Utilidad: ${$(ut)}${ing ? ` (${(ut/ing*100).toFixed(2)}%)` : ''}`,
+    disc.length
+      ? `⚠️ ${disc.length} discrepancia${disc.length!==1?'s':''} de insumos:\n` + disc.map(({r,c}) =>
+          `• ${r.insumo} ${lbl(r.uso)}: ${c.merma>0?'faltante':'sobrante'} ${f2(Math.abs(c.merma))} L`).join('\n')
+      : '✅ Sin discrepancias de insumos'
+  ].join('\n');
+}
+
+// Deshabilita el botón mientras se genera el PDF
+async function accionReporte(btn, fn) {
+  const id = document.getElementById('rp-sel').value;
+  if (!id || !D) return;
+  const txt = btn.dataset.txt || (btn.dataset.txt = btn.textContent);
+  btn.disabled = true; btn.textContent = 'Generando…'; bar(true);
+  let etiqueta = txt;
+  try { etiqueta = (await fn(id)) || txt; }
+  catch(e) { if (e.name !== 'AbortError') alert('No se pudo generar el reporte: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = etiqueta; bar(false); }
+}
+
+function descargarReporte(btn) {
+  accionReporte(btn, async id => { bajarArchivo(await pdfReporte(id)); });
+}
+
+function enviarWhatsApp(btn) {
+  const prueba = new File([''], 'r.pdf', { type:'application/pdf' });
+  const compartir = !!navigator.canShare?.({ files:[prueba] });
+  // Sin menú Compartir: se abre la pestaña ya (si no, el navegador la bloquea) y se llena al terminar
+  const win = compartir ? null : window.open('', '_blank');
+  accionReporte(btn, async id => {
+    const file  = await pdfReporte(id);
+    const texto = textoReporte(id);
+    if (compartir) {
+      try { await navigator.share({ files:[file], text:texto }); }   // menú Compartir → WhatsApp
+      catch(e) {
+        // El navegador vence el permiso si el PDF tardó: el segundo toque usa el PDF ya generado
+        if (e.name === 'NotAllowedError') return '📤 Toca otra vez para enviar';
+        throw e;
+      }
+      return;
+    }
+    bajarArchivo(file);
+    const url = `https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto + '\n\n📎 Adjunto el PDF del reporte.');
+    if (win) win.location.href = url; else location.href = url;
+  });
+}
+
+// ══════════════════════════════════════════
+//  RENDIMIENTOS
+// ══════════════════════════════════════════
+function rendimientos() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
+  const insumos_u=[...new Set(ins.map(r=>r.insumo))];
+  const sel_i=document.getElementById('ri');
+  if(!sel_i.options.length)
+    sel_i.innerHTML=insumos_u.map(c=>`<option value="${c}">${c}</option>`).join('');
+  // Restaurar tab activo
+  document.querySelectorAll('.rtab').forEach(b=>b.classList.toggle('active',b.dataset.tab===REND_TAB));
+  document.getElementById('rt-serie').style.display   = REND_TAB==='serie'   ? '' : 'none';
+  document.getElementById('rt-scatter').style.display = REND_TAB==='scatter' ? '' : 'none';
+  onInsumoChange();
+}
+
+function onInsumoChange() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION'&&N(r.rendimiento_L_ton)>0);
+  const insumo=document.getElementById('ri').value;
+  const usos=[...new Set(ins.filter(r=>r.insumo===insumo).map(r=>lbl(r.uso)))];
+  const sel_u=document.getElementById('ru');
+  sel_u.innerHTML='<option value="">Todos los usos</option>'+usos.map(u=>`<option value="${u}">${u}</option>`).join('');
+  REND_TAB==='serie' ? renderRend() : renderRendScatter();
+}
+
+function onRendFiltChange() {
+  REND_TAB==='serie' ? renderRend() : renderRendScatter();
+}
+
+function renderRend() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const insumo=document.getElementById('ri').value;
+  const uso=document.getElementById('ru').value;
+  const desde=document.getElementById('rd').value;
+  const hasta=document.getElementById('rh').value;
+
+  let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
+  if(uso)   filt=filt.filter(r=>lbl(r.uso)===uso);
+  if(desde) filt=filt.filter(r=>r.fecha>=desde);
+  if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
+  filt=filt.sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+  if(!filt.length){
+    document.getElementById('r-avg').textContent='';
+    document.getElementById('r-det').innerHTML='<div class="empty">Sin datos con esos filtros</div>';
+    if(CH['cRend']){CH['cRend'].destroy();delete CH['cRend'];}
+    return;
+  }
+
+  // Mapa tons por id_prod
+  const tonsMap={};
+  uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
+
+  const cr=soloSel('rend',filt,r=>r.id_prod+'|'+r.uso);      // filas seleccionadas (o todas)
+  const avg=filt.reduce((s,r)=>s+N(r.rendimiento_L_ton),0)/filt.length;
+  const vals=cr.map(r=>N(r.rendimiento_L_ton));
+    const mismoRango=new Set(filt.map(r=>`${r.rango_bajo}|${r.rango_alto}`)).size===1;
+  const bajo=mismoRango?N(filt[0].rango_bajo):0;
+  const alto=mismoRango?N(filt[0].rango_alto):0;
+
+  // Labels con 2 líneas: ID y producción+consumo
+  const labs=cr.map(r=>{
+    const tons=tonsMap[r.id_prod]||0;
+    const suffix=uso?'':`· ${lbl(r.uso)}`;
+    return [`${F10(r.fecha)} ${suffix}`, `${f2(tons)}t · ${f2(N(r.consumo_L))}L`];
+  });
+
+  document.getElementById('r-avg').textContent=`Promedio: ${f2(avg)} L/ton`;
+
+  mkChart('cRend','line',{
+    labels:labs,
+    datasets:[
+      {label:'L/ton',data:vals,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
+       pointBackgroundColor:'#f59e0b',tension:.3,fill:true},
+      {label:'Promedio',data:labs.map(()=>avg),borderColor:'#6b7280',borderDash:[5,4],pointRadius:0},
+      bajo?{label:'Rango bajo',data:labs.map(()=>bajo),borderColor:'rgba(22,163,74,.5)',borderDash:[2,4],pointRadius:0}:null,
+      alto?{label:'Rango alto',data:labs.map(()=>alto),borderColor:'rgba(220,38,38,.5)',borderDash:[2,4],pointRadius:0}:null,
+    ].filter(Boolean)
+  }, {}, 12);
+
+  document.getElementById('r-det').innerHTML=`
+    <table class="tsel"><thead><tr>
+      <th>Producción</th><th>Fecha</th><th>Uso</th>
+      <th class="rt">Tons real</th><th class="rt">Consumo (L)</th><th class="rt">L/ton</th><th>Rango</th>
+    </tr></thead><tbody>
+    ${ordenar(filt,'rend').map(r=>`<tr class="${selCls('rend',r.id_prod+'|'+r.uso)}" onclick="selRow('rend','${r.id_prod}|${r.uso}')">
+      <td class="amb">${r.id_prod}</td><td>${r.fecha}</td><td>${lbl(r.uso)}</td>
+      <td class="rt">${f2(tonsMap[r.id_prod]||0)}</td>
+      <td class="rt">${f2(N(r.consumo_L))}</td>
+      <td class="rt">${f2(r.rendimiento_L_ton)}</td>
+      <td>${tagR(r.rango)}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+// Ajuste por mínimos cuadrados: lineal y=a+bx · log y=a+b·ln(x) · exp y=a·e^(bx)
+function fitTrend(pts, tipo) {
+  let P = pts.filter(p => isFinite(p.x) && isFinite(p.y));
+  if (tipo==='log') P = P.filter(p => p.x > 0);
+  if (tipo==='exp') P = P.filter(p => p.y > 0);
+  if (P.length < 3) return null;
+  const tx = tipo==='log' ? p => Math.log(p.x) : p => p.x;
+  const ty = tipo==='exp' ? p => Math.log(p.y) : p => p.y;
+  const n = P.length;
+  let sx=0, sy=0, sxy=0, sxx=0;
+  P.forEach(p => { const X=tx(p), Y=ty(p); sx+=X; sy+=Y; sxy+=X*Y; sxx+=X*X; });
+  const den = n*sxx - sx*sx;
+  if (!den) return null;
+  const b = (n*sxy - sx*sy)/den, a = (sy - b*sx)/n;
+  const f = tipo==='log' ? x => a + b*Math.log(x)
+          : tipo==='exp' ? x => Math.exp(a + b*x)
+          :                x => a + b*x;
+  const my    = P.reduce((s,p)=>s+p.y,0)/n;
+  const ssTot = P.reduce((s,p)=>s+(p.y-my)**2,0);
+  const ssRes = P.reduce((s,p)=>s+(p.y-f(p.x))**2,0);
+  return { f, r2: ssTot ? 1-ssRes/ssTot : 0,
+           nombre: {lin:'lineal', log:'logarítmica', exp:'exponencial'}[tipo] };
+}
+function renderRendScatter() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const insumo=document.getElementById('ri').value;
+  const uso=document.getElementById('ru').value;
+  const desde=document.getElementById('rd').value;
+  const hasta=document.getElementById('rh').value;
+
+  let filt=ins.filter(r=>r.insumo===insumo&&N(r.rendimiento_L_ton)>0);
+  if(uso)   filt=filt.filter(r=>lbl(r.uso)===uso);
+  if(desde) filt=filt.filter(r=>r.fecha>=desde);
+  if(hasta) filt=filt.filter(r=>r.fecha<=hasta);
+
+  const tonsMap={};
+  uniq(D.producciones||[]).forEach(p=>{tonsMap[p.id_prod]=N(p.tons_real);});
+
+  const points=filt.map(r=>({x:tonsMap[r.id_prod]||0, y:N(r.rendimiento_L_ton),id:r.id_prod, fecha:F10(r.fecha), uso:lbl(r.uso)}));
+
+  if(!points.length){
+    if(CH['cRendScat']){CH['cRendScat'].destroy();delete CH['cRendScat'];}
+    return;
+  }
+
+    // Línea de tendencia (lineal / logarítmica / exponencial)
+  const tipoT = document.getElementById('rt-trend')?.value || 'lin';
+  const fit   = fitTrend(points, tipoT);
+  const xs    = points.map(p=>p.x).filter(x => tipoT!=='log' || x>0);
+  const xMin  = Math.min(...xs), xMax = Math.max(...xs);
+  const trendLine = fit
+    ? Array.from({length:40}, (_,i) => { const x = xMin + (xMax-xMin)*i/39; return {x, y:fit.f(x)}; })
+    : [];
+
+  if(CH['cRendScat']) CH['cRendScat'].destroy();
+  const c=document.getElementById('cRendScat');
+  if(!c) return;
+  const tc=chartColors();
+  CH['cRendScat']=new Chart(c,{
+    type:'scatter',
+    data:{datasets:[
+      {label:'L/ton',data:points,
+       backgroundColor:'rgba(245,158,11,.75)',pointRadius:7,pointHoverRadius:9},
+            ...(trendLine.length?[{label:`Tendencia ${fit.nombre} · R² ${fit.r2.toFixed(2)}`,data:trendLine,type:'line',
+        borderColor:'#6b7280',borderDash:[4,4],pointRadius:0,fill:false}]:[])
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{
+        legend:{labels:{color:tc.leg,boxWidth:10,font:{size:11}}},
+        tooltip:{callbacks:{
+          label:ctx=>{
+            const p=ctx.raw;
+            return p.id?`${p.fecha}${p.uso?' · '+p.uso:''}: ${f2(p.x)}t → ${f2(p.y)} L/ton`
+              :`Tendencia: ${f2(p.y)} L/ton`;
+          }
+        }}
+      },
+      scales:{
+        x:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}},
+           title:{display:true,text:'Toneladas producidas',color:tc.tick,font:{size:11}}},
+        y:{grid:{color:tc.grid},ticks:{color:tc.tick,font:{size:10}},
+           title:{display:true,text:'L / tonelada',color:tc.tick,font:{size:11}}}
+      }
+    }
+  });
+}
+
+// ══════════════════════════════════════════
+//  FINANCIERO
+// ══════════════════════════════════════════
+// ── ISO week ──────────────────────────────
+function isoWeek(dateStr) {
+  if (!dateStr) return '0000-W00';
+  const d = new Date(dateStr.slice(0,10) + 'T12:00:00Z');
+  const day = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - day);
+  const ys = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return `${d.getUTCFullYear()}-W${String(Math.ceil(((d-ys)/86400000+1)/7)).padStart(2,'0')}`;
+}
+
+// ── Nómina prorrateada ────────────────────
+function calcNomina(prodList) {
+  const isProd = p => String(p.id_prod||'').startsWith('PROD-');
+
+  const nomSem = {};
+  (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA')
+    .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
+
+  // Conteo sobre TODAS las producciones de la semana (no la lista filtrada), sin MANT
+  const countSem = {};
+  uniq(D.producciones||[]).filter(isProd)
+    .forEach(p => { const w=isoWeek(p.fecha); countSem[w]=(countSem[w]||0)+1; });
+
+  return prodList.map(p => {
+    const w   = isoWeek(p.fecha);
+    const nom = (isProd(p) && countSem[w] && nomSem[w]) ? nomSem[w]/countSem[w] : 0;
+    return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
+  });
+}
+// Igual, pero por renglón de cliente: una producción con varios clientes reparte su nómina por toneladas
+function filasConNomina(rows) {
+  const nom = {}, tonsId = {};
+  calcNomina(uniq(D.producciones||[])).forEach(p => { nom[p.id_prod] = p.nomina_prorrateada; tonsId[p.id_prod] = N(p.tons_real); });
+  return rows.map(p => {
+    const n  = tonsId[p.id_prod] ? (nom[p.id_prod]||0) * N(p.tons_real)/tonsId[p.id_prod] : 0;
+    const ut = N(p.utilidad) - n;
+    return { ...p, nomina_prorrateada:n, utilidad_real:ut, margen_real: N(p.ingreso_total)>0 ? ut/N(p.ingreso_total) : null };
+  });
+}
+
+// ── Filtros de Financiero ─────────────────
+const FIN_PER_DEFAULT = 'mes';     // periodo al abrir: 'mes' | 'mesant' | '30' | 'todo'
+let FP_EXCL = new Set();           // producciones desmarcadas en el dropdown
+let FIN_INIT = false;
+
+function isoLocal(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function rangoPeriodo(p) {
+  const h = new Date(), y = h.getFullYear(), m = h.getMonth();
+  if (p==='mes')    return [isoLocal(new Date(y,m,1)),   isoLocal(new Date(y,m+1,0))];
+  if (p==='mesant') return [isoLocal(new Date(y,m-1,1)), isoLocal(new Date(y,m,0))];
+  if (p==='30')     { const d = new Date(h); d.setDate(d.getDate()-29); return [isoLocal(d), isoLocal(h)]; }
+  return ['',''];   // todo
+}
+function setFinPeriodo(p) {
+  if (p !== 'custom') {
+    const [a,b] = rangoPeriodo(p);
+    document.getElementById('fd').value = a;
+    document.getElementById('fh').value = b;
+  }
+  renderFpList(); renderFin();
+}
+function onFinFechaManual() {
+  document.getElementById('f-per').value = 'custom';
+  renderFpList(); renderFin();
+}
+function prodsEnRango() {
+  let prods = uniq(D.producciones||[]);                       // ya viene ascendente
+  const desde = document.getElementById('fd').value;
+  const hasta = document.getElementById('fh').value;
+  if (desde) prods = prods.filter(p => p.fecha >= desde);
+  if (hasta) prods = prods.filter(p => p.fecha <= hasta);
+  return prods;
+}
+function getFinProds() {
+  return calcNomina(prodsEnRango().filter(p => !FP_EXCL.has(p.id_prod)));
+}
+function updFpLbl() {
+  const n = prodsEnRango().length;
+  const k = prodsEnRango().filter(p => !FP_EXCL.has(p.id_prod)).length;
+  document.getElementById('fp-lbl').textContent =
+    k === n ? `Todas las producciones (${n})` : `${k} de ${n} producciones`;
+}
+function renderFpList() {
+  const q = document.getElementById('fp-q').value.toLowerCase().trim();
+  const lista = [...prodsEnRango()].reverse()
+    .filter(p => !q || `${p.fecha} ${p.clientes.join(' ')} ${p.id_prod}`.toLowerCase().includes(q));
+  document.getElementById('fp-list').innerHTML = lista.length
+    ? lista.map(p => `<label class="dd-item">
+        <input type="checkbox" value="${p.id_prod}" ${FP_EXCL.has(p.id_prod)?'':'checked'} onchange="fpToggle(this)">
+        <span class="dd-f">${p.fecha}</span><span>${p.clientes.join(', ')}</span>
+        <span style="margin-left:auto;color:var(--muted)">${f2(p.tons_real)} t</span>
+      </label>`).join('')
+    : '<div class="empty" style="padding:16px">Sin producciones en el periodo</div>';
+  updFpLbl();
+}
+function fpToggle(cb) {
+  cb.checked ? FP_EXCL.delete(cb.value) : FP_EXCL.add(cb.value);
+  updFpLbl(); renderFin();
+}
+function fpTodas(todas) {
+  if (todas) FP_EXCL.clear();
+  else prodsEnRango().forEach(p => FP_EXCL.add(p.id_prod));
+  renderFpList(); renderFin();
+}
+function toggleDD(e) {
+  e.stopPropagation();
+  document.getElementById('fp-dd').classList.toggle('open');
+}
+document.addEventListener('click', () => document.getElementById('fp-dd')?.classList.remove('open'));
+
+function limpiarFinFiltros() {
+  document.getElementById('f-per').value = 'todo';
+  document.getElementById('fd').value = '';
+  document.getElementById('fh').value = '';
+  document.getElementById('fp-q').value = '';
+  FP_EXCL.clear();
+  renderFpList(); renderFin();
+}
+
+// ── Toggle gráfica ────────────────────────
+function setFinMode(mode) {
+  FIN_MODE = mode;
+  document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===mode));
+  if (D) renderFinChart(soloSel('fin', getFinProds(), p=>p.id_prod));
+}
+
+// ── Financiero principal ──────────────────
+function financiero() {
+  if (!FIN_INIT) {                                   // solo la primera vez: periodo por defecto
+    FIN_INIT = true;
+    document.getElementById('f-per').value = FIN_PER_DEFAULT;
+    const [a,b] = rangoPeriodo(FIN_PER_DEFAULT);
+    document.getElementById('fd').value = a;
+    document.getElementById('fh').value = b;
+  }
+  renderFpList();
+  document.querySelectorAll('[data-fmode]').forEach(b=>b.classList.toggle('active',b.dataset.fmode===FIN_MODE));
+  renderFin();
+}
+
+function renderFin() {
+  const prods = getFinProds();
+  const ing      = prods.reduce((s,p)=>s+N(p.ingreso_total),0);
+  const gsIns    = prods.reduce((s,p)=>s+N(p.gastos_insumos)+N(p.gasto_material),0);
+  const nom      = prods.reduce((s,p)=>s+N(p.nomina_prorrateada),0);
+  const otros    = prods.reduce((s,p)=>s+N(p.otros_gastos),0);
+  const utilReal = prods.reduce((s,p)=>s+N(p.utilidad_real),0);
+  const mgReal   = ing>0?utilReal/ing:0;
+
+  // Periodo anterior equivalente (sin comparación si el periodo es "Todo")
+  const fdv = document.getElementById('fd').value, fhv = document.getElementById('fh').value;
+  const rAnt = rangoAnterior(fdv, fhv);
+  const T0   = rAnt ? totales(calcNomina(prodsEntre(rAnt))) : {};
+  const lbl  = etiquetaRango(rAnt);
+  const cmp  = (k, cur, bueno, tipo) => rAnt ? cmpLine(deltaHtml(cur, T0[k], bueno, tipo), lbl) : '';
+
+  document.getElementById('f-met').innerHTML=`
+    <div class="mc m"><div class="ml">Ingresos</div><div class="mv" style="font-size:17px">${$(ing)}</div><div class="ms">${prods.length} producciones · ${fdv||fhv?`${fdv||'inicio'} → ${fhv||'hoy'}`:'todo el histórico'}</div>${cmp('ing', ing, 'up')}</div>
+    <div class="mc r"><div class="ml">Gs. insumos</div><div class="mv" style="font-size:17px">${$(gsIns)}</div>${cmp('gsIns', gsIns, 'down')}</div>
+    <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div>${cmp('nom', nom, 'down')}</div>
+    <div class="mc r"><div class="ml">Otros gastos</div><div class="mv" style="font-size:17px">${$(otros)}</div>${cmp('otros', otros, 'down')}</div>
+    <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Utilidad</div><div class="mv" style="font-size:17px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)} · incluye nómina</div>${cmp('utilReal', utilReal, 'up')}</div>`;
+
+  renderFinChart(soloSel('fin', prods, p=>p.id_prod));
+
+  document.getElementById('f-tbl').innerHTML=`
+    <table class="tsel"><thead><tr>
+      <th>Producción</th><th>Fecha</th><th>Cliente(s)</th>
+      <th class="rt">Ingreso</th><th class="rt">Gs. insumos</th>
+      <th class="rt">Nómina</th><th class="rt">Otros gs.</th>
+      <th class="rt">Utilidad</th><th class="rt">Margen</th>
+    </tr></thead><tbody>
+        ${ordenar(prods,'fin').map(p=>{
+      const mgR = N(p.ingreso_total)>0 ? N(p.utilidad_real)/N(p.ingreso_total) : 0;
+      return `<tr class="${selCls('fin',p.id_prod)}" onclick="selRow('fin','${p.id_prod}')">
+        <td class="amb">${p.id_prod}</td><td>${p.fecha.slice(0,10)}</td><td>${p.clientes.join(', ')}</td>
+        <td class="rt">${$(p.ingreso_total)}</td>
+        <td class="rt neg">${$(N(p.gastos_insumos)+N(p.gasto_material))}</td>
+        <td class="rt neg">${N(p.nomina_prorrateada)>0?$(p.nomina_prorrateada):'—'}</td>
+        <td class="rt neg">${$(p.otros_gastos)}</td>
+        <td class="rt ${N(p.utilidad_real)>=0?'pos':'neg'}">${$(p.utilidad_real)}</td>
+        <td class="rt ${mgR>=.35?'pos':mgR>=.2?'':'neg'}">${N(p.ingreso_total)>0?fp(mgR):'—'}</td>
+      </tr>`;
+    }).join('')}
+    </tbody></table>`;
+}
+
+function renderFinChart(prods) {
+    const labs = prods.map(p=>F10(p.fecha));
+  const ds = {
+    ing:      { label:'Ingreso',       data:prods.map(p=>N(p.ingreso_total)),                        backgroundColor:'rgba(245,158,11,.5)' },
+    gs_ins:   { label:'Gs. insumos',   data:prods.map(p=>N(p.gastos_insumos)+N(p.gasto_material)),   backgroundColor:'rgba(220,38,38,.6)' },
+    gs_nom:   { label:'Nómina',        data:prods.map(p=>N(p.nomina_prorrateada)),                    backgroundColor:'rgba(251,146,60,.6)' },
+    gs_otros: { label:'Otros gastos',  data:prods.map(p=>N(p.otros_gastos)),                         backgroundColor:'rgba(220,38,38,.3)' },
+    util_real:{ label:'Utilidad',      data:prods.map(p=>N(p.utilidad_real)),                         backgroundColor:'rgba(22,163,74,.7)' },
+  };
+  const modeDs = {
+    all:       [ds.ing, ds.gs_ins, ds.gs_nom, ds.gs_otros, ds.util_real],
+    ing:       [ds.ing],
+    gas:       [ds.gs_ins, ds.gs_nom, ds.gs_otros],
+    util_real: [ds.util_real],
+  };
+  mkChart('cFin','bar',{labels:labs, datasets: modeDs[FIN_MODE]||modeDs.all}, {}, 12);
+}
+
+// ══════════════════════════════════════════
+//  CLIENTES
+// ══════════════════════════════════════════
+const CLIENTES_EXCLUIDOS = ['INTERNO'];   // no se consideran clientes de venta
+let CLI_MODE = 'tons';
+
+function clientes() {
+  document.querySelectorAll('[data-clm]').forEach(b=>b.classList.toggle('active',b.dataset.clm===CLI_MODE));
+  renderClientes();
+}
+function setCliMode(m) {
+  CLI_MODE = m;
+  document.querySelectorAll('[data-clm]').forEach(b=>b.classList.toggle('active',b.dataset.clm===m));
+  renderClientes();
+}
+function estadoCliente(c) {
+  if (c.n >= 2 && c.frec > 0) {
+    const r = c.dias / c.frec;
+    if (r > 2)   return { t:'En riesgo', cls:'ta' };
+    if (r > 1.5) return { t:'Atención',  cls:'tm' };
+    return { t:'Activo', cls:'tb' };
+  }
+  if (c.dias > 60) return { t:'Inactivo', cls:'ta' };
+  if (c.dias > 30) return { t:'Atención', cls:'tm' };
+  return { t:'Nuevo', cls:'tb' };
+}
+function renderClientes() {
+  if (!D) return;
+  const hoy = isoLocal(new Date());
+  const per = document.getElementById('cl-per').value;
+  let desde = '';
+  if (per==='mes')  desde = rangoPeriodo('mes')[0];
+  if (per==='anio') desde = `${hoy.slice(0,4)}-01-01`;
+  if (per==='90')   { const d = new Date(); d.setDate(d.getDate()-89); desde = isoLocal(d); }
+
+  // Agregado por cliente: volúmenes del periodo · recencia y frecuencia con todo el histórico
+  const m = {};
+  filasConNomina(D.producciones||[])
+    .filter(p => p.cliente && !CLIENTES_EXCLUIDOS.includes(String(p.cliente).trim().toUpperCase()))
+    .forEach(p => {
+      const k = String(p.cliente).trim();
+      const c = m[k] = m[k] || { cliente:k, fechas:new Set(), ids:new Set(), idsPer:new Set(), tons:0, ing:0, util:0 };
+      c.fechas.add(F10(p.fecha)); c.ids.add(p.id_prod);
+      if (!desde || F10(p.fecha) >= desde) {
+        c.tons += N(p.tons_real); c.ing += N(p.ingreso_total); c.util += N(p.utilidad_real); c.idsPer.add(p.id_prod);
+      }
+    });
+
+  const lista = Object.values(m).map(c => {
+    const f = [...c.fechas].sort();
+    const ult = f[f.length-1];
+    const x = { ...c, n:c.ids.size, nPer:c.idsPer.size, ult, dias:diasEntre(ult, hoy),
+                frec: f.length >= 2 ? diasEntre(f[0], ult)/(f.length-1) : 0 };
+    x.margen = x.ing > 0 ? x.util/x.ing : null;
+    x.precio = x.tons > 0 ? x.ing/x.tons : null;
+    x.est = estadoCliente(x);
+    return x;
+  }).sort((a,b) => b.tons - a.tons || a.dias - b.dias);
+
+  const totT = lista.reduce((s,c)=>s+c.tons,0);
+  const totI = lista.reduce((s,c)=>s+c.ing,0);
+  const pedidos = lista.reduce((s,c)=>s+c.nPer,0);
+  lista.forEach(c => c.share = totT > 0 ? c.tons/totT : 0);
+
+  const activos = lista.filter(c => c.dias <= 30).length;
+  const seguim  = lista.filter(c => ['En riesgo','Inactivo','Atención'].includes(c.est.t));
+  const top     = lista.find(c => c.tons > 0);
+
+  document.getElementById('cl-met').innerHTML = `
+    <div class="mc"><div class="ml">Clientes activos (30 días)</div>
+      <div class="mv">${activos}</div><div class="ms">de ${lista.length} clientes en el histórico</div></div>
+    <div class="mc ${top && top.share > .5 ? 'r' : ''}"><div class="ml">Cliente principal</div>
+      <div class="mv" style="font-size:17px">${top ? top.cliente : '—'}</div>
+      <div class="ms">${top ? fp(top.share)+' de las toneladas'+(top.share>.5?' · alta dependencia':'') : 'Sin ventas en el periodo'}</div></div>
+    <div class="mc m"><div class="ml">Pedido promedio</div>
+      <div class="mv">${pedidos ? f2(totT/pedidos) : '—'}</div><div class="ms">toneladas por pedido · ${pedidos} pedidos</div></div>
+    <div class="mc m"><div class="ml">Precio promedio</div>
+      <div class="mv" style="font-size:17px">${totT ? $(totI/totT) : '—'}</div><div class="ms">por tonelada · ponderado</div></div>
+    <div class="mc ${seguim.length ? 'r' : 'g'}"><div class="ml">Requieren seguimiento</div>
+      <div class="mv">${seguim.length}</div>
+      <div class="ms">${seguim.length ? seguim.slice(0,3).map(c=>c.cliente).join(', ')+(seguim.length>3?'…':'') : 'Todos compran a su ritmo habitual'}</div></div>`;
+
+  // Gráfica
+  const key = { tons:'tons', ing:'ing', util:'util' }[CLI_MODE];
+  const lblM = { tons:'Toneladas', ing:'Ingreso ($)', util:'Utilidad ($)' }[CLI_MODE];
+  const graf = soloSel('cli', lista.filter(c => c[key] !== 0), c => c.cliente);
+  mkChart('cCli','bar',{
+    labels: graf.map(c => c.cliente),
+    datasets:[{ label:lblM, data:graf.map(c => c[key]),
+      backgroundColor: graf.map(c => c[key] < 0 ? 'rgba(220,38,38,.6)' : 'rgba(245,158,11,.6)'),
+      borderColor:'#f59e0b', borderWidth:1 }]
+  },{ indexAxis:'y' });
+
+  // Tabla
+  const q = s => String(s).replace(/'/g, "\\'");
+  document.getElementById('cl-tbl').innerHTML = lista.length ? `
+    <table class="tsel"><thead><tr>
+      <th>Cliente</th><th>Estado</th>
+      <th class="rt">Pedidos</th><th class="rt">Toneladas</th><th class="rt">% ton</th>
+      <th class="rt">Ingreso</th><th class="rt">Utilidad</th><th class="rt">Margen</th><th class="rt">$/ton</th>
+      <th>Última compra</th><th class="rt">Días sin comprar</th><th class="rt">Compra cada</th>
+    </tr></thead><tbody>
+    ${lista.map(c => `<tr class="${selCls('cli',c.cliente)}" onclick="selRow('cli','${q(c.cliente)}')">
+      <td>${c.cliente}</td>
+      <td><span class="tag ${c.est.cls}">${c.est.t}</span></td>
+      <td class="rt">${c.nPer}</td>
+      <td class="rt amb">${f2(c.tons)}</td>
+      <td class="rt">${fp(c.share)}</td>
+      <td class="rt">${$(c.ing)}</td>
+      <td class="rt ${c.util>=0?'pos':'neg'}">${$(c.util)}</td>
+      <td class="rt ${c.margen==null?'':c.margen>=.35?'pos':c.margen>=.2?'':'neg'}">${fp(c.margen)}</td>
+      <td class="rt">${c.precio!=null ? $(c.precio) : '—'}</td>
+      <td>${c.ult}</td>
+      <td class="rt ${c.est.cls==='ta'?'neg':c.est.cls==='tm'?'amb':''}">${c.dias}</td>
+      <td class="rt" style="color:var(--muted)">${c.frec ? Math.round(c.frec)+' días' : '—'}</td>
+    </tr>`).join('')}</tbody></table>`
+    : '<div class="empty">Sin clientes registrados</div>';
+}
+
+// ══════════════════════════════════════════
+//  INSUMOS
+// ══════════════════════════════════════════
+function insumos() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+
+  // Consumo total por insumo+uso
+  const cm={};
+  ins.forEach(r=>{
+    const k=`${r.insumo} · ${lbl(r.uso)}`;
+    cm[k]=(cm[k]||0)+N(r.consumo_L);
+  });
+  const names=soloSel('ins', Object.keys(cm), k=>k.replace(' · ','|'));
+  mkChart('cIns','bar',{
+    labels:names,
+    datasets:[{label:'Litros consumidos',data:names.map(k=>cm[k]),
+      backgroundColor:'rgba(245,158,11,.6)',borderColor:'#f59e0b',borderWidth:1}]
+  },{indexAxis:'y'});
+
+  // Entradas recientes
+  const ent=(D.entradas||[]).slice(-8).reverse();
+  document.getElementById('i-ent').innerHTML=ent.length
+    ?`<table><thead><tr>
+        <th>Fecha</th><th>Insumo</th><th class="rt">Cantidad</th>
+        <th class="rt">Costo unit.</th><th>Proveedor</th>
+      </tr></thead><tbody>
+      ${ent.map(e=>`<tr>
+        <td>${e.fecha}</td><td>${e.insumo}</td>
+        <td class="rt">${f2(e.cantidad)} ${e.unidad||'L'}</td>
+        <td class="rt">${$(e.costo_unit_real)}</td>
+        <td>${e.proveedor||'—'}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Sin entradas registradas</div>';
+
+  // Tabla estadísticas de rendimiento
+  const rm={};
+  ins.filter(r=>N(r.rendimiento_L_ton)>0).forEach(r=>{
+    const k=`${r.insumo}|${lbl(r.uso)}`;
+    if(!rm[k]) rm[k]={insumo:r.insumo,uso:lbl(r.uso),v:[],rangos:{BAJO:0,MEDIO:0,ALTO:0}};
+    rm[k].v.push(N(r.rendimiento_L_ton));
+    if(r.rango && rm[k].rangos[r.rango]!==undefined) rm[k].rangos[r.rango]++;
+  });
+
+  const rrows=Object.values(rm).map(x=>{
+    const n=x.v.length;
+    const avg=x.v.reduce((s,v)=>s+v,0)/n;
+    const sigma=std(x.v);
+    const totalR=x.rangos.BAJO+x.rangos.MEDIO+x.rangos.ALTO;
+    const pctMedio=totalR>0?x.rangos.MEDIO/totalR:0;
+    return {...x,n,avg,sigma,pctMedio};
+  });
+
+  document.getElementById('i-rnd').innerHTML=`
+    <table class="tsel"><thead><tr>
+      <th>Insumo</th><th>Uso</th>
+      <th class="rt">Promedio</th><th class="rt">σ</th><th class="rt">% en rango</th>
+      <th class="rt">BAJO</th><th class="rt">MEDIO</th><th class="rt">ALTO</th><th class="rt">Total</th>
+    </tr></thead><tbody>
+    ${rrows.map(r=>`<tr class="${selCls('ins',r.insumo+'|'+r.uso)}" onclick="selRow('ins','${r.insumo}|${r.uso}')">
+      <td>${r.insumo}</td><td>${r.uso}</td>
+      <td class="rt amb">${f2(r.avg)}</td>
+      <td class="rt">${f2(r.sigma)}</td>
+      <td class="rt ${r.pctMedio>=.7?'pos':r.pctMedio>=.4?'amb':'neg'}">${fp(r.pctMedio)}</td>
+      <td class="rt ${r.rangos.BAJO>0?'neg':''}">${r.rangos.BAJO}</td>
+      <td class="rt ${r.rangos.MEDIO>0?'pos':''}">${r.rangos.MEDIO}</td>
+      <td class="rt ${r.rangos.ALTO>0?'neg':''}">${r.rangos.ALTO}</td>
+      <td class="rt">${r.n}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  CONTINUIDAD
+// ══════════════════════════════════════════
+function continuidad() {
+  const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
+  const combos=[...new Set(ins.map(r=>`${r.insumo}||${lbl(r.uso)}`))].sort();
+  const sel=document.getElementById('ci');
+  if(!sel.options.length)
+    sel.innerHTML=combos.map(c=>{
+      const [ins2,uso]=c.split('||');
+      return `<option value="${c}">${ins2} · ${uso}</option>`;
+    }).join('');
+  renderCont();
+}
+
+function renderCont() {
+  const val = document.getElementById('ci').value;
+  if (!val) return;
+  const [insumo, uso] = val.split('||');           // uso ya mapeado
+  const match = r => r.insumo===insumo && lbl(r.uso)===uso;
+
+  const desde = document.getElementById('cd').value;
+  const hasta = document.getElementById('ch').value;
+
+  const prodRows = (D.insumos||[])
+    .filter(r => r.tipo_uso==='PRODUCCION' && match(r))
+    .filter(r => (!desde || F10(r.fecha) >= desde) && (!hasta || F10(r.fecha) <= hasta))
+    .sort((a,b) => F10(a.fecha).localeCompare(F10(b.fecha)));
+
+  if (!prodRows.length) {
+    document.getElementById('c-stats').textContent = 'Sin datos';
+    document.getElementById('c-tbl').innerHTML = '<div class="empty">Sin registros</div>';
+    if (CH['cCont']) { CH['cCont'].destroy(); delete CH['cCont']; }
+    return;
+  }
+
+  const prodMap = {};
+  prodRows.forEach(r => { prodMap[F10(r.fecha)] = r; });
+
+  const sumiDia = {};
+  (D.suministros||[]).filter(match).forEach(s => {
+    const f = F10(s.fecha); sumiDia[f] = (sumiDia[f]||0) + N(s.cantidad_L);
+  });
+
+  const mantDia = {};
+  (D.insumos||[]).filter(r => r.tipo_uso==='MANTENIMIENTO' && match(r)).forEach(r => {
+    const f = F10(r.fecha); mantDia[f] = (mantDia[f]||0) + N(r.consumo_L);
+  });
+
+  const dias = [];
+  let cur = new Date(F10(prodRows[0].fecha) + 'T12:00:00Z');
+  const fin = new Date(F10(prodRows[prodRows.length-1].fecha) + 'T12:00:00Z');
+  while (cur <= fin) { dias.push(cur.toISOString().slice(0,10)); cur.setUTCDate(cur.getUTCDate() + 1); }
+
+  const dataNivel = [], dataInicio = [];
+  const cut = new Set();                           // índices de segmentos a ocultar
+  let nivel = N(prodRows[0].inicio_L), lastUso = null, lastIdx = -1;
+
+  dias.forEach((dia, i) => {
+    const prod = prodMap[dia];
+    const sumi = sumiDia[dia] || 0;
+    const mant = mantDia[dia] || 0;
+    if (prod) {
+      if (lastUso && prod.uso !== lastUso) for (let j = lastIdx + 1; j <= i; j++) cut.add(j);
+      lastUso = prod.uso; lastIdx = i;
+      dataInicio.push(N(prod.inicio_L));
+      nivel = N(prod.termino_L) - mant;
+    } else {
+      dataInicio.push(null);
+      nivel = nivel + sumi - mant;
+    }
+    dataNivel.push(nivel);
+  });
+
+  // Filas seleccionadas → recortar la gráfica a ese tramo (desde la producción anterior)
+  const selR = prodRows.filter(r => SEL.cont.has(r.id_prod));
+  if (selR.length) {
+    const iPrev = prodRows.indexOf(selR[0]) - 1;
+    const fIni  = F10((iPrev >= 0 ? prodRows[iPrev] : selR[0]).fecha);
+    const fFin  = F10(selR[selR.length-1].fecha);
+    const i0 = dias.indexOf(fIni), i1 = dias.indexOf(fFin);
+    [dias, dataNivel, dataInicio].forEach(a => { a.splice(i1+1); a.splice(0, i0); });
+    const c2 = [...cut].map(j => j - i0); cut.clear(); c2.forEach(j => cut.add(j));
+  }
+
+  const dataSumi    = dias.map(d => sumiDia[d] > 0 ? sumiDia[d] : null);
+  const dataConsumo = dias.map(dia => {
+    const prod = prodMap[dia];
+    const total = (prod ? N(prod.consumo_L) : 0) + (mantDia[dia] || 0);
+    return total > 0 ? total : null;
+  });
+
+  const cierres = prodRows.map(r => N(r.termino_L));
+  const avg = cierres.reduce((s,v)=>s+v,0) / cierres.length;
+  document.getElementById('c-stats').textContent =
+    `  Promedio cierre: ${f2(avg)} L  ·  σ: ${f2(std(cierres))} L  ·  ${prodRows.length} producciones / ${dias.length} días${cut.size?'  ·  incluye cambio de equipo':''}`;
+
+  document.querySelectorAll('[data-cv]').forEach(b => b.classList.toggle('active', CONT_VIS[b.dataset.cv]));
+
+  const hideSeg = (ctx, v) => cut.has(ctx.p1DataIndex) ? 'transparent' : v;
+
+  const allDatasets = [
+    { key:'nivel', label:'Nivel al cierre (L)', data:dataNivel,
+      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)',
+      segment:{ borderColor: ctx => hideSeg(ctx,'#f59e0b'), backgroundColor: ctx => hideSeg(ctx,'rgba(245,158,11,.08)') },
+      pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
+      pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
+      tension:0, fill:true, yAxisID:'y' },
+    { key:'inicio', label:'Inicio producción (L)', data:dataInicio,
+      showLine:false, spanGaps:false, pointBackgroundColor:'#818cf8', pointBorderColor:'#818cf8',
+      pointRadius:6, fill:false, yAxisID:'y' },
+    { key:'promedio', label:'Promedio cierre', data:dias.map(()=>avg),
+      borderColor:'#6b7280', borderDash:[5,4], pointRadius:0, fill:false, yAxisID:'y' },
+    { key:'sumi', label:'Suministro (L)', type:'bar', data:dataSumi,
+      backgroundColor:'rgba(34,211,238,.5)', borderColor:'#22d3ee', borderWidth:1, yAxisID:'yExtra', order:10 },
+    { key:'consumo', label:'Consumo (L)', type:'bar', data:dataConsumo,
+      backgroundColor:'rgba(220,38,38,.4)', borderColor:'#dc2626', borderWidth:1, yAxisID:'yExtra', order:10 }
+  ];
+
+  const showExtra = CONT_VIS.sumi || CONT_VIS.consumo;
+  const tc = chartColors();
+
+  mkChart('cCont', 'line', { labels: dias, datasets: allDatasets.filter(d => CONT_VIS[d.key]) }, {
+    scales: {
+      x: { grid:{color:tc.grid}, ticks:{color:tc.tick,font:{size:10}} },
+      y: { grid:{color:tc.grid}, ticks:{color:tc.tick,font:{size:10}} },
+      yExtra: { display: showExtra, position:'right', grid:{ drawOnChartArea:false },
+        ticks:{ color:tc.tick, font:{size:9} },
+        title:{ display:true, text:'Sumi. / Consumo (L)', color:tc.tick, font:{size:9} } }
+    }
+  }, 30);
+
+  const mapped = prodRows.some(r => lbl(r.uso) !== r.uso);
+  document.getElementById('c-tbl').innerHTML = `
+    <table class="tsel"><thead><tr>
+      <th>Producción</th><th>Fecha</th>${mapped?'<th>Equipo</th>':''}
+      <th class="rt">Inicio (L)</th><th class="rt">Suministro (L)</th>
+      <th class="rt">Término (L)</th><th class="rt">Consumo (L)</th><th class="rt">Mant. (L)</th>
+    </tr></thead><tbody>
+        ${ordenar(prodRows,'cont').map(r => {
+      const f = F10(r.fecha);
+      return `<tr class="${selCls('cont',r.id_prod)}" onclick="selRow('cont','${r.id_prod}')">
+        <td class="amb">${r.id_prod}</td><td>${f}</td>${mapped?`<td style="color:var(--muted)">${r.uso}</td>`:''}
+        <td class="rt">${f2(r.inicio_L)}</td>
+        <td class="rt">${f2(r.suministro_L)}</td>
+        <td class="rt">${f2(r.termino_L)}</td>
+        <td class="rt ${N(r.consumo_L)<0?'neg':'amb'}">${f2(r.consumo_L)}</td>
+        <td class="rt ${mantDia[f]>0?'neg':''}">${mantDia[f]>0 ? f2(mantDia[f]) : '—'}</td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  HISTORIAL
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+//  REPORTES DEL OPERADOR
+// ══════════════════════════════════════════
+// Lo escribe el operador: se escapa antes de ponerlo en la página
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const UNI = { L:'L', pct:'%', cm:'cm' };
+
+function badgeReportes() {
+  const n = (D.reportes||[]).filter(r => r.estado === 'PENDIENTE').length;
+  document.getElementById('rep-badge').textContent = n ? ` (${n})` : '';
+}
+function reportes() { renderReportes(); }
+
+// Último término conocido del tanque antes de la fecha: Insumos o un reporte anterior del operador
+function cierreAnterior(insumo, uso, fecha, idRep) {
+  let best = null;
+  (D.insumos||[]).filter(r => r.insumo===insumo && r.uso===uso && r.termino_L!=null && F10(r.fecha) < fecha)
+    .forEach(r => { if (!best || F10(r.fecha) >= best.fecha) best = { fecha:F10(r.fecha), L:N(r.termino_L), fuente:r.id_prod }; });
+  (D.reportes||[]).filter(x => x.id !== idRep && x.fecha < fecha).forEach(x => (x.reporte?.tanques||[]).forEach(t => {
+    if (t.insumo===insumo && t.uso===uso && t.termino_L!=null && (!best || x.fecha > best.fecha))
+      best = { fecha:x.fecha, L:N(t.termino_L), fuente:'Reporte del operador' };
+  }));
+  return best;
+}
+
+function renderReportes() {
+  if (!D) return;
+  const est = document.getElementById('rep-est').value;
+  const lista = (D.reportes||[]).filter(x => !est || x.estado === est)
+    .sort((a,b) => b.fecha.localeCompare(a.fecha) || String(b.recibido).localeCompare(String(a.recibido)));
+  document.getElementById('rep-list').innerHTML = lista.length ? lista.map(htmlReporteOp).join('')
+    : `<div class="pn"><div class="empty">${est==='PENDIENTE' ? '✓ No hay reportes pendientes' : 'Sin reportes'}</div></div>`;
+}
+
+function htmlReporteOp(x) {
+  const r = x.reporte || {};
+  const prods = r.producciones || [];
+  const tons = prods.reduce((s,p) => s + N(p.tons_real), 0);
+  const pend = x.estado === 'PENDIENTE';
+  const lec = (t, v, L) => v==null ? '—' : `${f2(v)} ${UNI[t.unidad]||''}${t.unidad!=='L' && L!=null ? ` <span style="color:var(--muted)">(${f2(L)} L)</span>` : ''}`;
+
+  const tanques = (r.tanques||[]).map(t => {
+    const prev = cierreAnterior(t.insumo, t.uso, x.fecha, x.id);
+    const sumiInter = prev ? (D.suministros||[]).filter(s => s.insumo===t.insumo && s.uso===t.uso && s.fecha > prev.fecha && s.fecha < x.fecha)
+                               .reduce((s,v) => s + N(v.cantidad_L), 0) : 0;
+    const esperado = prev ? prev.L + sumiInter + (t.suministro_antes ? N(t.suministro_L) : 0) : null;
+    const dif = esperado!=null && t.inicio_L!=null ? N(t.inicio_L) - esperado : null;
+    const ok = dif==null || Math.abs(dif) <= 2;
+    return `<tr>
+      <td>${esc(t.insumo)}</td><td style="color:var(--muted)">${esc(lbl(t.uso))}</td>
+      <td class="rt">${lec(t, t.inicio, t.inicio_L)}</td><td class="rt">${lec(t, t.termino, t.termino_L)}</td>
+      <td class="rt ${N(t.suministro_L)?'pos':''}">${N(t.suministro_L) ? f2(t.suministro_L)+' L'+(t.suministro_antes?' <span style="color:var(--muted)">(antes)</span>':'') : '—'}</td>
+      <td class="rt amb">${t.consumo_L!=null ? f2(t.consumo_L) : '—'}</td>
+      <td class="rt">${t.consumo_L!=null && tons ? f2(t.consumo_L/tons) : '—'}</td>
+      <td class="rt">${prev ? `${f2(esperado)} <span style="color:var(--muted)">${prev.fecha}</span>` : '<span style="color:var(--muted)">sin dato</span>'}</td>
+      <td class="rt ${ok?'':'neg'}">${dif==null ? '—' : ok ? '<span class="tag tb">Coincide</span>' : `${dif<0?'Faltan':'Sobran'} ${f2(Math.abs(dif))} L`}</td>
+    </tr>`;
+  }).join('');
+
+  const lista = (titulo, items) => items.length ? `<div class="sub" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;color:var(--text);display:block">
+      <b style="color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em">${titulo}</b><br>${items.join('<br>')}</div>` : '';
+
+  return `<div class="pn">
+    <div class="pnh">
+      <span>${x.fecha} · ${esc(x.operador) || 'Sin nombre'} <span class="tag ${pend?'tm':'tb'}">${pend?'Pendiente':'Capturado'}</span></span>
+      <button class="ftb ${pend?'active':''}" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? '✓ Marcar como capturado' : '↺ Volver a pendiente'}</button>
+    </div>
+    <div style="padding:12px 16px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
+      ${r.sin_produccion || !prods.length ? '<span style="color:var(--muted)">Sin producción</span>'
+        : prods.map(p => `<span>${esc(p.cliente)} · <b class="amb">${f2(p.tons_real)} ton</b>${p.tons_pedido ? ` <span style="color:var(--muted)">(pedido ${f2(p.tons_pedido)})</span>` : ''} · ${esc(p.mezcla)}</span>`).join('')}
+    </div>
+    ${tanques ? `<div class="tw"><table><thead><tr>
+      <th>Insumo</th><th>Uso</th><th class="rt">Inicio</th><th class="rt">Término</th><th class="rt">Cargó</th>
+      <th class="rt">Consumo (L)</th><th class="rt">L / ton</th><th class="rt">Inicio esperado (L)</th><th class="rt">Seguimiento</th>
+    </tr></thead><tbody>${tanques}</tbody></table></div>` : ''}
+    ${lista('Combustible comprado', (r.compras||[]).map(c => `${esc(c.insumo)}: ${f2(c.litros)} L${c.precio_L ? ` a ${$(c.precio_L)}` : ''}`))}
+    ${lista('Otros usos', (r.otros_usos||[]).map(o => `${f2(o.litros)} L ${esc(o.insumo)} — ${esc(o.descripcion)}`))}
+    ${lista('Material que entró', (r.agregados||[]).map(a => `${f0(a.viajes)} viajes de ${esc(a.material)}${a.procedencia ? ` — ${esc(a.procedencia)}` : ''}`))}
+    ${lista('Observaciones', r.observaciones ? [esc(r.observaciones).replace(/\n/g,'<br>')] : [])}
+  </div>`;
+}
+
+async function marcarReporte(id, estado, btn) {
+  btn.disabled = true;
+  try {
+    await api({ action:'marcar_reporte', id, estado });
+    const x = (D.reportes||[]).find(r => r.id === id);
+    if (x) x.estado = estado;
+    badgeReportes(); renderReportes();
+  } catch(e) { alert('No se pudo actualizar: ' + e.message); btn.disabled = false; }
+}
+
+function historial() {
+  const mz=[...new Set((D.producciones||[]).map(p=>p.mezcla).filter(Boolean))];
+  const sel=document.getElementById('hm');
+  if(sel.options.length<=1)
+    sel.innerHTML='<option value="">Todas las mezclas</option>'+mz.map(m=>`<option value="${m}">${m}</option>`).join('');
+  renderHist();
+}
+
+function renderHist() {
+  let p=filasConNomina(D.producciones||[]);
+  const c=document.getElementById('hc').value.toLowerCase().trim();
+  const d=document.getElementById('hd').value;
+  const h=document.getElementById('hh').value;
+  const mz=document.getElementById('hm').value;
+  if(c)  p=p.filter(x=>x.cliente.toLowerCase().includes(c));
+  if(d)  p=p.filter(x=>x.fecha>=d);
+  if(h)  p=p.filter(x=>x.fecha<=h);
+  if(mz) p=p.filter(x=>x.mezcla===mz);
+  p=p.sort((a,b)=>b.fecha.localeCompare(a.fecha));
+
+  document.getElementById('h-tbl').innerHTML=p.length
+    ?`<table><thead><tr>
+        <th>Producción</th><th>Fecha</th><th>Cliente</th><th>Mezcla</th>
+        <th class="rt">Tons ped.</th><th class="rt">Tons real</th>
+        <th class="rt">Precio/ton</th><th class="rt">Ingreso</th>
+        <th class="rt">Gastos</th><th class="rt">Nómina</th><th class="rt">Utilidad</th><th class="rt">Margen</th>
+      </tr></thead><tbody>
+      ${p.map(x=>`<tr>
+        <td class="amb">${x.id_prod}</td><td>${x.fecha}</td>
+        <td>${x.cliente}</td><td>${x.mezcla||'—'}</td>
+        <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
+        <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
+        <td class="rt neg">${$(N(x.gastos_insumos)+N(x.gasto_material)+N(x.otros_gastos))}</td>
+        <td class="rt neg">${x.nomina_prorrateada>0 ? $(x.nomina_prorrateada) : '—'}</td>
+        <td class="rt ${x.utilidad_real>=0?'pos':'neg'}">${$(x.utilidad_real)}</td>
+        <td class="rt ${N(x.margen_real)>=.35?'pos':N(x.margen_real)>=.2?'':'neg'}">${fp(x.margen_real)}</td>
+      </tr>`).join('')}</tbody></table>`
+    :'<div class="empty">Sin registros con esos filtros</div>';
+}
+
+setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
+
+// Sin sesión de administrador regresa a index.html
+Sesion.requerir('dashboard').then(s => {
+  document.getElementById('sb-user').textContent = s.nombre;
+  document.getElementById('app').style.display = 'flex';
+  loadData();
+}).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
+</script>
+</body>
+</html>

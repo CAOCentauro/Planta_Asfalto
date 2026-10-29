@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#d97706">
+<link rel="manifest" href="manifest.json">
+<title>Planta de Asfalto</title>
+<style>
+:root{--bg:#f3f3f0;--card:#fff;--bd:#d9d9d3;--text:#1a1a1a;--muted:#66665f;--amb:#d97706;--amb-bg:#fff6e5;
+  --ok:#15803d;--ok-bg:#eaf8ef;--err:#b91c1c;--err-bg:#fdeaea;--in:#fbfbf9}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0b0b;--card:#151515;--bd:#2c2c2c;--text:#e8e8e8;--muted:#8d8d86;--amb:#f59e0b;--amb-bg:#2a1f08;
+  --ok:#4ade80;--ok-bg:#0f2417;--err:#f87171;--err-bg:#2a1010;--in:#0f0f0f}}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%;background:var(--bg)}
+body{color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.4;padding:16px}
+.wrap{max-width:440px;margin:6vh auto 0}
+.marca{margin-bottom:18px}
+.marca span{display:block;font-size:11px;color:var(--amb);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.marca strong{display:block;font-size:22px;margin-top:2px}
+.card{background:var(--card);border:1px solid var(--bd);border-top:3px solid var(--amb);border-radius:10px;padding:20px}
+.card h1{font-size:17px;margin-bottom:4px}
+.card p{color:var(--muted);font-size:13px;margin-bottom:16px}
+label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.f{margin-bottom:12px;position:relative}
+input{width:100%;font:inherit;font-size:17px;padding:11px 12px;border:1px solid var(--bd);border-radius:8px;background:var(--in);color:var(--text)}
+input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb)}
+.ver{position:absolute;right:8px;bottom:8px;background:none;border:none;color:var(--muted);font:inherit;font-size:13px;cursor:pointer;padding:4px 6px}
+.btn{font:inherit;font-size:16px;font-weight:600;padding:12px 16px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--text);cursor:pointer;width:100%}
+.btn.p{background:var(--amb);border-color:var(--amb);color:#000}
+.btn:disabled{opacity:.6;cursor:default}
+.lnk{background:none;border:none;color:var(--muted);font:inherit;font-size:14px;cursor:pointer;text-decoration:underline;padding:4px 0}
+.res{margin-top:12px;padding:9px 11px;border-radius:8px;font-size:14px}
+.res:empty{display:none}
+.res.ok{background:var(--ok-bg);color:var(--ok)}
+.res.err{background:var(--err-bg);color:var(--err)}
+.req{font-size:12px;color:var(--muted);margin:-4px 0 12px}
+.req .si{color:var(--ok)}
+.hola{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:14px}
+.hola b{font-size:18px}
+.hola small{color:var(--muted);font-size:13px}
+.menu{display:flex;flex-direction:column;gap:10px}
+.tile{display:block;text-decoration:none;color:var(--text);background:var(--card);border:1px solid var(--bd);border-left:4px solid var(--amb);border-radius:10px;padding:16px}
+.tile:hover,.tile:focus{border-color:var(--amb);outline:none}
+.tile b{display:block;font-size:16px}
+.tile span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.pie{display:flex;justify-content:space-between;margin-top:16px}
+.oculto{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="marca"><span>Panel de control</span><strong>Planta de Asfalto</strong></div>
+
+  <!-- ENTRAR -->
+  <form class="card oculto" id="v-login" onsubmit="entrar(event)">
+    <h1>Entrar</h1>
+    <p>Acceso restringido — personal autorizado</p>
+    <div class="f"><label for="usuario">Usuario</label>
+      <input id="usuario" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+    <div class="f"><label for="contrasena">Contraseña</label>
+      <input id="contrasena" type="password" autocomplete="current-password">
+      <button type="button" class="ver" onclick="verClave('contrasena', this)">Ver</button></div>
+    <button class="btn p" id="b-entrar">Entrar</button>
+    <div class="res" id="r-login"></div>
+  </form>
+
+  <!-- CAMBIAR CONTRASEÑA -->
+  <form class="card oculto" id="v-cambio" onsubmit="cambiar(event)">
+    <h1 id="c-titulo">Cambiar contraseña</h1>
+    <p id="c-texto">Escríbela dos veces para confirmar.</p>
+    <div class="f" id="f-actual"><label for="actual">Contraseña actual</label>
+      <input id="actual" type="password" autocomplete="current-password"></div>
+    <div class="f"><label for="nueva">Contraseña nueva</label>
+      <input id="nueva" type="password" autocomplete="new-password" oninput="revisarNueva()">
+      <button type="button" class="ver" onclick="verClave('nueva', this)">Ver</button></div>
+    <div class="f"><label for="nueva2">Repite la contraseña nueva</label>
+      <input id="nueva2" type="password" autocomplete="new-password" oninput="revisarNueva()"></div>
+    <div class="req" id="req"></div>
+    <button class="btn p" id="b-cambiar">Guardar contraseña</button>
+    <div class="pie" id="c-pie"><button type="button" class="lnk" onclick="mostrarMenu()">← Volver</button></div>
+    <div class="res" id="r-cambio"></div>
+  </form>
+
+  <!-- MENÚ -->
+  <div class="oculto" id="v-menu">
+    <div class="hola"><b id="m-nombre">—</b><small id="m-perfil"></small></div>
+    <div class="menu" id="menu"></div>
+    <div class="pie">
+      <button class="lnk" onclick="abrirCambio(false)">Cambiar mi contraseña</button>
+      <button class="lnk" onclick="Sesion.salir()">Salir</button>
+    </div>
+    <div class="res" id="r-menu"></div>
+  </div>
+</div>
+
+<script src="sesion.js"></script>
+<script>
+// Pantallas del sitio; cada perfil ve solo las que el servidor le permite
+const PANTALLAS = {
+  dashboard: { t:'Panel de control',   d:'Producción, finanzas, reportes del operador',    href:'dashboard.html' },
+  registro:  { t:'Registro de planta', d:'Captura diaria de producción y tanques',          href:'registro.html'  },
+  compras:   { t:'Compras',            d:'Facturas de asfalto, alterno, diésel y gasolina', href:'compras.html'   },
+};
+const PERFIL_TXT = { desarrollador:'Desarrollador', admin:'Administrador', captura:'Captura', operador:'Operador' };
+const MIN = 8;
+
+const $ = s => document.querySelector(s);
+let CLAVE_INICIAL = '';      // la que se acaba de escribir, para el cambio obligatorio
+
+function vista(id) {
+  ['v-login','v-cambio','v-menu'].forEach(v => $('#'+v).classList.toggle('oculto', v !== id));
+}
+function res(id, txt, tipo = 'err') { const el = $('#'+id); el.className = 'res ' + (txt ? tipo : ''); el.textContent = txt || ''; }
+function verClave(id, b) { const i = $('#'+id); i.type = i.type === 'password' ? 'text' : 'password'; b.textContent = i.type === 'password' ? 'Ver' : 'Ocultar'; }
+
+// ── Entrar ─────────────────────────────────
+async function entrar(ev) {
+  ev.preventDefault();
+  const usuario = $('#usuario').value.trim(), contrasena = $('#contrasena').value;
+  if (!usuario || !contrasena) return res('r-login', 'Escribe tu usuario y contraseña');
+  const b = $('#b-entrar'); b.disabled = true; b.textContent = 'Entrando…'; res('r-login', '');
+  try {
+    const j = await Sesion.api({ action:'login', usuario, contrasena });
+    Sesion.guardar(j);
+    $('#contrasena').value = '';
+    if (j.debe_cambiar) { CLAVE_INICIAL = contrasena; abrirCambio(true); }
+    else if (j.pantallas.length === 1) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
+    else mostrarMenu();
+  } catch(e) {
+    res('r-login', e.servidor ? e.message : 'Sin conexión. Revisa el internet e intenta de nuevo.');
+  } finally { b.disabled = false; b.textContent = 'Entrar'; }
+}
+
+// ── Menú ───────────────────────────────────
+function mostrarMenu() {
+  const s = Sesion.leer();
+  if (!s?.token) return vista('v-login');
+  if (s.debe_cambiar) return abrirCambio(true);
+  $('#m-nombre').textContent = s.nombre;
+  $('#m-perfil').textContent = PERFIL_TXT[s.perfil] || s.perfil;
+  $('#menu').innerHTML = (s.pantallas || []).filter(p => PANTALLAS[p]).map(p =>
+    `<a class="tile" href="${PANTALLAS[p].href}"><b>${PANTALLAS[p].t}</b><span>${PANTALLAS[p].d}</span></a>`).join('');
+  vista('v-menu');
+}
+
+// ── Cambiar contraseña ─────────────────────
+// obligatorio: primera vez con la contraseña que se le dio (ya la escribió al entrar)
+function abrirCambio(obligatorio) {
+  ['actual','nueva','nueva2'].forEach(k => $('#'+k).value = '');
+  $('#f-actual').classList.toggle('oculto', obligatorio);
+  $('#c-pie').classList.toggle('oculto', obligatorio);
+  $('#c-titulo').textContent = obligatorio ? 'Crea tu contraseña' : 'Cambiar contraseña';
+  $('#c-texto').textContent = obligatorio
+    ? 'Es tu primera vez: cambia la contraseña que te dieron por una tuya. Escríbela dos veces para confirmar.'
+    : 'Escribe la actual y la nueva dos veces para confirmar.';
+  $('#v-cambio').dataset.obligatorio = obligatorio ? '1' : '';
+  res('r-cambio', ''); revisarNueva();
+  vista('v-cambio');
+  $(obligatorio ? '#nueva' : '#actual').focus();
+}
+function revisarNueva() {
+  const n = $('#nueva').value, n2 = $('#nueva2').value;
+  const largo = n.length >= MIN, iguales = n && n === n2;
+  $('#req').innerHTML = `<span class="${largo ? 'si' : ''}">${largo ? '✓' : '•'} Al menos ${MIN} caracteres</span> &nbsp;
+    <span class="${iguales ? 'si' : ''}">${iguales ? '✓' : '•'} Las dos coinciden</span>`;
+  return largo && iguales;
+}
+async function cambiar(ev) {
+  ev.preventDefault();
+  const oblig = !!$('#v-cambio').dataset.obligatorio;
+  const actual = oblig ? CLAVE_INICIAL : $('#actual').value;
+  if (!actual) return res('r-cambio', 'Escribe tu contraseña actual');
+  if (!revisarNueva()) return res('r-cambio', $('#nueva').value.length < MIN
+    ? `La contraseña nueva debe tener al menos ${MIN} caracteres` : 'Las dos contraseñas nuevas no coinciden');
+  const b = $('#b-cambiar'); b.disabled = true; b.textContent = 'Guardando…'; res('r-cambio', '');
+  try {
+    const j = await Sesion.api({ action:'cambiar_contrasena', actual, nueva:$('#nueva').value });
+    Sesion.guardar(j);
+    CLAVE_INICIAL = '';
+    mostrarMenu();
+    res('r-menu', '✓ Contraseña guardada', 'ok');
+  } catch(e) {
+    res('r-cambio', e.servidor ? e.message : 'Sin conexión. Intenta de nuevo.');
+  } finally { b.disabled = false; b.textContent = 'Guardar contraseña'; }
+}
+
+// ── Inicio ─────────────────────────────────
+(async () => {
+  const m = new URLSearchParams(location.search).get('m');
+  const s = Sesion.leer();
+  if (!s?.token) {
+    vista('v-login');
+    if (m === 'vencida') res('r-login', 'Tu sesión terminó. Vuelve a entrar.');
+    return $('#usuario').focus();
+  }
+  if (s.debe_cambiar) { Sesion.borrar(); vista('v-login'); return; }   // volver a escribir la inicial
+  mostrarMenu();
+  try {                                                                // refresca perfil y pantallas
+    const j = await Sesion.api({ action:'yo' });
+    Sesion.guardar({ ...s, ...j, token:s.token });
+    mostrarMenu();
+  } catch(e) {}
+})();
+</script>
+</body>
+</html>
