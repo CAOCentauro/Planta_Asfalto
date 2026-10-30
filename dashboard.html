@@ -5,15 +5,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planta de Asfalto — Panel</title>
 <script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <style>
-:root{--bg:#0b0b0b;--s1:#141414;--s2:#1c1c1c;--bd:#2a2a2a;--amb:#f59e0b;--green:#16a34a;--red:#dc2626;--text:#e4e4e4;--muted:#6b6b6b;--sw:210px;
-  --pos:#4ade80;--neg:#f87171;--warn:#fbbf24;--grid:#1c1c1c;--tick:#6b6b6b;--leg:#9ca3af;--shadow:rgba(0,0,0,.5);color-scheme:dark}
-:root[data-theme="light"]{--bg:#f5f5f4;--s1:#ffffff;--s2:#f0efed;--bd:#e2e0dc;--amb:#d97706;--text:#1c1917;--muted:#78716c;
-  --pos:#15803d;--neg:#b91c1c;--warn:#b45309;--grid:#ebe9e6;--tick:#78716c;--leg:#57534e;--shadow:rgba(0,0,0,.12);color-scheme:light}
+:root{--bg:#0b1116;--s1:#141d24;--s2:#1b2731;--bd:#26333d;--amb:#F7931E;--green:#16a34a;--red:#dc2626;--text:#e8eef2;--muted:#8796a1;--sw:210px;
+  --pos:#5fd18e;--neg:#f28b82;--warn:#f2b45c;--grid:#1b2731;--tick:#8796a1;--leg:#a9b6bf;--shadow:rgba(0,0,0,.5);--btn:#4b6d82;color-scheme:dark;
+  --f-tit:'Outfit',system-ui,sans-serif}
+:root[data-theme="light"]{--bg:#F3F7FA;--s1:#ffffff;--s2:#eef3f6;--bd:#dce3e9;--amb:#E07F0F;--text:#0d141a;--muted:#5d6d78;
+  --pos:#1b7a43;--neg:#b42318;--warn:#a65300;--grid:#e6ecf0;--tick:#5d6d78;--leg:#3d4b55;--shadow:rgba(13,20,26,.12);--btn:#3D5A6C;color-scheme:light}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
 
@@ -37,7 +38,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 nav{padding:10px 0;flex:1}
 nav a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:color .12s,border-color .12s}
 nav a:hover{color:var(--text)}
-nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(245,158,11,.05)}
+nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(247,147,30,.05)}
 .sb-foot{padding:12px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--muted)}
 .sb-foot span{display:block;margin-top:3px;color:var(--text)}
 .btn-r{margin-top:10px;padding:6px 10px;background:transparent;border:1px solid var(--bd);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;width:100%}
@@ -81,13 +82,13 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th{text-align:left;padding:8px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--bd);white-space:nowrap}
 td{padding:8px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(245,158,11,.03)}
+tr:hover td{background:rgba(247,147,30,.03)}
 .tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600}
 .ta{background:rgba(220,38,38,.15);color:var(--neg)}
-.tm{background:rgba(245,158,11,.15);color:var(--warn)}
+.tm{background:rgba(247,147,30,.15);color:var(--warn)}
 .tb{background:rgba(22,163,74,.15);color:var(--pos)}
 .tsel tbody tr{cursor:pointer}
-.tsel tbody tr.sel td{background:rgba(245,158,11,.12)}
+.tsel tbody tr.sel td{background:rgba(247,147,30,.12)}
 .tsel tbody tr.sel td:first-child{box-shadow:inset 3px 0 0 var(--amb)}
 
 /* FILTERS */
@@ -98,7 +99,7 @@ select:focus,input:focus{border-color:var(--amb)}
 /* FINANCIERO TOGGLE */
 .ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
 .ftb:hover{border-color:var(--amb);color:var(--amb)}
-.ftb.active{background:rgba(245,158,11,.12);border-color:var(--amb);color:var(--amb)}
+.ftb.active{background:rgba(247,147,30,.12);border-color:var(--amb);color:var(--amb)}
   /* DROPDOWN PRODUCCIONES */
 .dd{position:relative}
 .dd-btn{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;cursor:pointer;min-width:210px;display:flex;justify-content:space-between;gap:10px}
@@ -108,7 +109,7 @@ select:focus,input:focus{border-color:var(--amb)}
 .dd-acts{display:flex;gap:6px;margin-bottom:6px}
 .dd-panel input[type=text]{width:100%;margin-bottom:6px}
 .dd-item{display:flex;gap:10px;align-items:center;padding:6px 4px;font-size:12px;cursor:pointer}
-.dd-item:hover{background:rgba(245,158,11,.06)}
+.dd-item:hover{background:rgba(247,147,30,.06)}
 .dd-item input{accent-color:var(--amb)}
 .dd-f{color:var(--muted);min-width:80px}
 
@@ -164,6 +165,11 @@ select:focus,input:focus{border-color:var(--amb)}
 .rep-ct{position:absolute;left:92px;right:40px;top:62px;display:flex;gap:28px;font-size:11.5px;line-height:1.55}
 .rep-ct div{display:flex;align-items:center;gap:10px}
 .rep-ct a{color:#4ea3ff}
+/* Estilo caocentauro.com: Outfit en títulos y números grandes; puntitos en lugar de íconos */
+.ph h2,.mv,.sb-logo strong,.lbox h1{font-family:var(--f-tit);font-weight:600;letter-spacing:-.01em}
+.ph h2{font-size:17px}.mv{font-size:26px}
+#menu-btn{font-size:14px;font-weight:600;font-family:inherit}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
 </style>
 </head>
 <body>
@@ -171,7 +177,7 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <!-- APP (se muestra cuando la sesión es válida; el acceso está en index.html) -->
 <div id="app">
-<button id="menu-btn" onclick="toggleMenu()">☰</button>
+<button id="menu-btn" onclick="toggleMenu()">Menú</button>
 <div id="overlay" onclick="closeMenu()"></div>
 <div id="sidebar">
   <div class="sb-logo">
@@ -194,9 +200,9 @@ select:focus,input:focus{border-color:var(--amb)}
     <span id="sb-user" style="margin:0 0 8px;font-weight:600">—</span>
     Última actualización
     <span id="lu">—</span>
-    <button class="btn-r" onclick="reload()">↺ Actualizar</button>
-    <button class="btn-r theme-btn" onclick="toggleTheme()">☀ Modo claro</button>
-    <button class="btn-r" onclick="location.href='index.html'">⌂ Inicio</button>
+    <button class="btn-r" onclick="reload()">Actualizar</button>
+    <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
+    <button class="btn-r" onclick="location.href='index.html'">Inicio</button>
     <button class="btn-r" onclick="Sesion.salir()">Salir</button>
   </div>
 </div>
@@ -227,9 +233,9 @@ select:focus,input:focus{border-color:var(--amb)}
     <span>Detalle de producción</span>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
       <select id="rp-sel" onchange="renderResumenProd()" style="max-width:260px"></select>
-      <button class="ftb active" onclick="resumenProdUltima()">↑ Última</button>
-      <button class="ftb" onclick="descargarReporte(this)">⬇ Descargar reporte</button>
-      <button class="ftb" onclick="enviarWhatsApp(this)">💬 Enviar por WhatsApp</button>
+      <button class="ftb active" onclick="resumenProdUltima()">Última</button>
+      <button class="ftb" onclick="descargarReporte(this)">Descargar reporte</button>
+      <button class="ftb" onclick="enviarWhatsApp(this)">Enviar por WhatsApp</button>
     </div>
   </div>
   <div id="rp-body"></div>
@@ -261,7 +267,7 @@ select:focus,input:focus{border-color:var(--amb)}
       <div class="pn">
         <div class="pnh">
           <span>Detalle por producción</span>
-          <div style="display:flex;gap:6px"><span id="sel-rend"></span><button class="ftb" id="sort-rend" onclick="toggleSort('rend')">↓ Más reciente primero</button></div>
+          <div style="display:flex;gap:6px"><span id="sel-rend"></span><button class="ftb" id="sort-rend" onclick="toggleSort('rend')">Más reciente primero</button></div>
         </div>
         <div class="tw" id="r-det"></div>
       </div>
@@ -307,7 +313,7 @@ select:focus,input:focus{border-color:var(--amb)}
           <div id="fp-list"></div>
         </div>
       </div>
-      <button class="ftb" onclick="limpiarFinFiltros()" title="Limpiar filtros">✕</button>
+      <button class="ftb" onclick="limpiarFinFiltros()" title="Limpiar filtros">Limpiar</button>
     </div>
   </div>
   <div class="sb">
@@ -327,7 +333,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <div class="pn">
             <div class="pnh">
         <span>Desglose por producción</span>
-        <div style="display:flex;gap:6px"><span id="sel-fin"></span><button class="ftb" id="sort-fin" onclick="toggleSort('fin')">↓ Más reciente primero</button></div>
+        <div style="display:flex;gap:6px"><span id="sel-fin"></span><button class="ftb" id="sort-fin" onclick="toggleSort('fin')">Más reciente primero</button></div>
       </div>
       <div class="tw" id="f-tbl"></div>
     </div>
@@ -394,7 +400,7 @@ select:focus,input:focus{border-color:var(--amb)}
         <div class="tw" id="pg-tbl"></div>
       </div>
       <div class="pn" id="pg-edo-pn" style="display:none">
-        <div class="pnh"><span id="pg-edo-tit">Estado de cuenta</span><button class="ftb" onclick="cerrarEdo()">✕ Cerrar</button></div>
+        <div class="pnh"><span id="pg-edo-tit">Estado de cuenta</span><button class="ftb" onclick="cerrarEdo()">Cerrar</button></div>
         <div id="pg-edo"></div>
       </div>
       <div class="pn">
@@ -458,7 +464,7 @@ select:focus,input:focus{border-color:var(--amb)}
       <div class="pn">
                 <div class="pnh">
           <span>Detalle de registros</span>
-          <div style="display:flex;gap:6px"><span id="sel-cont"></span><button class="ftb" id="sort-cont" onclick="toggleSort('cont')">↓ Más reciente primero</button></div>
+          <div style="display:flex;gap:6px"><span id="sel-cont"></span><button class="ftb" id="sort-cont" onclick="toggleSort('cont')">Más reciente primero</button></div>
         </div>
         <div class="tw" id="c-tbl"></div>
       </div>
@@ -537,7 +543,7 @@ const ordenar = (arr, k) => SORT[k]==='desc' ? [...arr].reverse() : arr;   // ar
 function toggleSort(k) {
   SORT[k] = SORT[k]==='desc' ? 'asc' : 'desc';
   const b = document.getElementById('sort-'+k);
-  if (b) b.textContent = SORT[k]==='desc' ? '↓ Más reciente primero' : '↑ Más antiguo primero';
+  if (b) b.textContent = SORT[k]==='desc' ? 'Más reciente primero' : 'Más antiguo primero';
   ({cont:renderCont, fin:renderFin, rend:renderRend})[k]();
 }
 
@@ -552,7 +558,7 @@ function setTheme(t) {
   else delete document.documentElement.dataset.theme;
   try { localStorage.setItem('theme', t); } catch(e) {}
   document.querySelectorAll('.theme-btn').forEach(b =>
-    b.textContent = t==='light' ? '☾ Modo oscuro' : '☀ Modo claro');
+    b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
   // Repinta las gráficas existentes sin volver a calcularlas
   const c = chartColors();
   Object.values(CH).forEach(ch => {
@@ -578,7 +584,7 @@ const soloSel = (k, arr, key) => { const s = arr.filter(x => SEL[k].has(key(x)))
 function updSel(k) {
   const el = document.getElementById('sel-'+k);
   if (el) el.innerHTML = SEL[k].size
-    ? `<button class="ftb active" onclick="clrSel('${k}')">✕ ${SEL[k].size} en gráfica</button>` : '';
+    ? `<button class="ftb active" onclick="clrSel('${k}')">Quitar ${SEL[k].size} de la gráfica</button>` : '';
 }
 function selRow(k, id) { SEL[k].has(id) ? SEL[k].delete(id) : SEL[k].add(id); RENDER_SEL[k](); updSel(k); }
 function clrSel(k)     { SEL[k].clear(); RENDER_SEL[k](); updSel(k); }
@@ -655,7 +661,7 @@ function renderAnom() {
         <td><span class="tag ${a.lv==='error'?'ta':a.lv==='warn'?'tm':'tb'}">${a.tipo}</span></td>
         <td>${a.det}</td>
       </tr>`).join('')}</tbody></table>`
-    : '<div class="empty">✓ Todo en orden</div>';
+    : '<div class="empty"><span class="dot pos"></span>Todo en orden</div>';
 }
 function toggleContVis(key) {
   CONT_VIS[key] = !CONT_VIS[key];
@@ -1048,8 +1054,8 @@ function seguimientoHtml(id) {
   return `
     <div class="sub"><span>Seguimiento con la producción pasada</span>
       ${disc.length
-        ? `<span class="neg">⚠ ${disc.length} insumo${disc.length!==1?'s':''} no coincide${disc.length!==1?'n':''}</span>`
-        : '<span class="pos">✓ Término anterior = inicio actual</span>'}</div>
+        ? `<span class="neg"><span class="dot"></span>${disc.length} insumo${disc.length!==1?'s':''} no coincide${disc.length!==1?'n':''}</span>`
+        : '<span class="pos"><span class="dot"></span>Término anterior = inicio actual</span>'}</div>
     <div class="tw"><table><thead><tr>
       <th>Insumo</th><th>Uso</th><th>Registro anterior</th>
       <th class="rt">Término anterior (L)</th><th class="rt">Sumi. intermedio (L)</th>
@@ -1319,7 +1325,7 @@ function enviarWhatsApp(btn) {
       try { await navigator.share({ files:[file], text:texto }); }   // menú Compartir → WhatsApp
       catch(e) {
         // El navegador vence el permiso si el PDF tardó: el segundo toque usa el PDF ya generado
-        if (e.name === 'NotAllowedError') return '📤 Toca otra vez para enviar';
+        if (e.name === 'NotAllowedError') return 'Toca otra vez para enviar';
         throw e;
       }
       return;
@@ -1402,8 +1408,8 @@ function renderRend() {
   mkChart('cRend','line',{
     labels:labs,
     datasets:[
-      {label:'L/ton',data:vals,borderColor:'#f59e0b',backgroundColor:'rgba(245,158,11,.08)',
-       pointBackgroundColor:'#f59e0b',tension:.3,fill:true},
+      {label:'L/ton',data:vals,borderColor:'#F7931E',backgroundColor:'rgba(247,147,30,.08)',
+       pointBackgroundColor:'#F7931E',tension:.3,fill:true},
       {label:'Promedio',data:labs.map(()=>avg),borderColor:'#6b7280',borderDash:[5,4],pointRadius:0},
       bajo?{label:'Rango bajo',data:labs.map(()=>bajo),borderColor:'rgba(22,163,74,.5)',borderDash:[2,4],pointRadius:0}:null,
       alto?{label:'Rango alto',data:labs.map(()=>alto),borderColor:'rgba(220,38,38,.5)',borderDash:[2,4],pointRadius:0}:null,
@@ -1485,7 +1491,7 @@ function renderRendScatter() {
     type:'scatter',
     data:{datasets:[
       {label:'L/ton',data:points,
-       backgroundColor:'rgba(245,158,11,.75)',pointRadius:7,pointHoverRadius:9},
+       backgroundColor:'rgba(247,147,30,.75)',pointRadius:7,pointHoverRadius:9},
             ...(trendLine.length?[{label:`Tendencia ${fit.nombre} · R² ${fit.r2.toFixed(2)}`,data:trendLine,type:'line',
         borderColor:'#6b7280',borderDash:[4,4],pointRadius:0,fill:false}]:[])
     ]},
@@ -1706,7 +1712,7 @@ function renderFin() {
 function renderFinChart(prods) {
     const labs = prods.map(p=>F10(p.fecha));
   const ds = {
-    ing:      { label:'Ingreso',       data:prods.map(p=>N(p.ingreso_total)),                        backgroundColor:'rgba(245,158,11,.5)' },
+    ing:      { label:'Ingreso',       data:prods.map(p=>N(p.ingreso_total)),                        backgroundColor:'rgba(247,147,30,.5)' },
     gs_ins:   { label:'Gs. insumos',   data:prods.map(p=>N(p.gastos_insumos)+N(p.gasto_material)),   backgroundColor:'rgba(220,38,38,.6)' },
     gs_nom:   { label:'Nómina',        data:prods.map(p=>N(p.nomina_prorrateada)),                    backgroundColor:'rgba(251,146,60,.6)' },
     gs_otros: { label:'Otros gastos',  data:prods.map(p=>N(p.otros_gastos)),                         backgroundColor:'rgba(220,38,38,.3)' },
@@ -1810,8 +1816,8 @@ function renderClientes() {
   mkChart('cCli','bar',{
     labels: graf.map(c => c.cliente),
     datasets:[{ label:lblM, data:graf.map(c => c[key]),
-      backgroundColor: graf.map(c => c[key] < 0 ? 'rgba(220,38,38,.6)' : 'rgba(245,158,11,.6)'),
-      borderColor:'#f59e0b', borderWidth:1 }]
+      backgroundColor: graf.map(c => c[key] < 0 ? 'rgba(220,38,38,.6)' : 'rgba(247,147,30,.6)'),
+      borderColor:'#F7931E', borderWidth:1 }]
   },{ indexAxis:'y' });
 
   // Tabla
@@ -1856,7 +1862,7 @@ function insumos() {
   mkChart('cIns','bar',{
     labels:names,
     datasets:[{label:'Litros consumidos',data:names.map(k=>cm[k]),
-      backgroundColor:'rgba(245,158,11,.6)',borderColor:'#f59e0b',borderWidth:1}]
+      backgroundColor:'rgba(247,147,30,.6)',borderColor:'#F7931E',borderWidth:1}]
   },{indexAxis:'y'});
 
   // Entradas recientes
@@ -2013,9 +2019,9 @@ function renderCont() {
 
   const allDatasets = [
     { key:'nivel', label:'Nivel al cierre (L)', data:dataNivel,
-      borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.08)',
-      segment:{ borderColor: ctx => hideSeg(ctx,'#f59e0b'), backgroundColor: ctx => hideSeg(ctx,'rgba(245,158,11,.08)') },
-      pointBackgroundColor: dias.map(d => prodMap[d] ? '#f59e0b' : 'rgba(245,158,11,.25)'),
+      borderColor:'#F7931E', backgroundColor:'rgba(247,147,30,.08)',
+      segment:{ borderColor: ctx => hideSeg(ctx,'#F7931E'), backgroundColor: ctx => hideSeg(ctx,'rgba(247,147,30,.08)') },
+      pointBackgroundColor: dias.map(d => prodMap[d] ? '#F7931E' : 'rgba(247,147,30,.25)'),
       pointRadius: dias.map(d => prodMap[d] ? 5 : 2),
       tension:0, fill:true, yAxisID:'y' },
     { key:'inicio', label:'Inicio producción (L)', data:dataInicio,
@@ -2122,7 +2128,7 @@ function renderPagos() {
       <td class="rt ${c.masViejo > 60 ? 'neg' : c.masViejo > 30 ? 'amb' : ''}">${c.pendientes.length ? c.masViejo + ' días' : '—'}</td>
       <td class="rt">${c.pendientes.length || '—'}</td>
     </tr>`).join('')}</tbody></table>`
-    : `<div class="empty">${ver ? '✓ Ningún cliente tiene saldo pendiente' : 'Sin clientes'}</div>`;
+    : `<div class="empty">${ver ? '<span class="dot pos"></span>Ningún cliente tiene saldo pendiente' : 'Sin clientes'}</div>`;
 
   // Ventas vs cobranza por mes (últimos 12 meses con movimiento)
   const ym = s => F10(s).slice(0,7);
@@ -2133,7 +2139,7 @@ function renderPagos() {
   const meses = [...new Set([...Object.keys(ventas), ...Object.keys(cobros)])].filter(Boolean).sort().slice(-12);
   const nomMes = m => new Date(m + '-15T12:00:00Z').toLocaleDateString('es-MX', { month:'short', year:'numeric', timeZone:'UTC' }).replace('.', '');
   mkChart('cPag', 'bar', { labels:meses.map(nomMes), datasets:[
-    { label:'Producido (ventas)', data:meses.map(m => ventas[m]||0), backgroundColor:'rgba(245,158,11,.55)' },
+    { label:'Producido (ventas)', data:meses.map(m => ventas[m]||0), backgroundColor:'rgba(247,147,30,.55)' },
     { label:'Cobrado',            data:meses.map(m => cobros[m]||0), backgroundColor:'rgba(22,163,74,.65)' },
   ]});
 
@@ -2225,7 +2231,7 @@ function renderReportes() {
   const lista = (D.reportes||[]).filter(x => !est || x.estado === est)
     .sort((a,b) => b.fecha.localeCompare(a.fecha) || String(b.recibido).localeCompare(String(a.recibido)));
   document.getElementById('rep-list').innerHTML = lista.length ? lista.map(htmlReporteOp).join('')
-    : `<div class="pn"><div class="empty">${est==='PENDIENTE' ? '✓ No hay reportes pendientes' : 'Sin reportes'}</div></div>`;
+    : `<div class="pn"><div class="empty">${est==='PENDIENTE' ? '<span class="dot pos"></span>No hay reportes pendientes' : 'Sin reportes'}</div></div>`;
 }
 
 function htmlReporteOp(x) {
@@ -2259,7 +2265,7 @@ function htmlReporteOp(x) {
   return `<div class="pn">
     <div class="pnh">
       <span>${x.fecha} · ${esc(x.operador) || 'Sin nombre'} <span class="tag ${pend?'tm':'tb'}">${pend?'Pendiente':'Capturado'}</span></span>
-      <button class="ftb ${pend?'active':''}" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? '✓ Marcar como capturado' : '↺ Volver a pendiente'}</button>
+      <button class="ftb ${pend?'active':''}" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? 'Marcar como capturado' : 'Volver a pendiente'}</button>
     </div>
     <div style="padding:12px 16px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
       ${r.sin_produccion || !prods.length ? '<span style="color:var(--muted)">Sin producción</span>'
