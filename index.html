@@ -44,6 +44,10 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 .tile:hover,.tile:focus{border-color:var(--amb);outline:none}
 .tile b{display:block;font-size:16px}
 .tile span{display:block;color:var(--muted);font-size:13px;margin-top:2px}
+.tile{display:flex;align-items:center;gap:14px}
+.tile .ico{flex:none;width:46px;height:46px;border-radius:3px;background:var(--amb-bg);color:var(--amb);display:flex;align-items:center;justify-content:center}
+.tile .ico svg{width:26px;height:26px}
+.tile .tx{min-width:0}
 .pie{display:flex;justify-content:space-between;margin-top:16px}
 .oculto{display:none}
 </style>
@@ -107,15 +111,28 @@ const PANTALLAS = {
 };
 const MIN = 8;
 
+// Íconos del menú (Tabler Icons, licencia MIT: tabler.io/icons), dibujados aquí para que carguen sin internet
+const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONOS = {
+  dashboard: svg('<path d="M4 19l16 0"/><path d="M4 15l4 -6l4 2l4 -5l4 4"/>'),                                  // chart-line
+  registro:  svg('<path d="M3 21h18"/><path d="M5 21v-12l5 4v-4l5 4h4"/><path d="M19 21v-8l-1.436 -9.574a.5 .5 0 0 0 -.495 -.426h-1.145a.5 .5 0 0 0 -.494 .418l-1.43 8.582"/><path d="M9 17h1"/><path d="M14 17h1"/>'),   // building-factory-2
+  compras:   svg('<path d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17h-11v-14h-2"/><path d="M6 5l14 1l-1 7h-13"/>'),   // shopping-cart
+  pagos:     svg('<path d="M15 11v.01"/><path d="M5.173 8.378a3 3 0 1 1 4.656 -1.377"/><path d="M16 4v3.803a6.019 6.019 0 0 1 2.658 3.197h1.341a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-1.342c-.336 .95 -.907 1.8 -1.658 2.473v2.027a1.5 1.5 0 0 1 -3 0v-.583a6.04 6.04 0 0 1 -1 .083h-4a6.04 6.04 0 0 1 -1 -.083v.583a1.5 1.5 0 0 1 -3 0v-2l0 -.027a6 6 0 0 1 4 -10.473h2.5l4.5 -3h0z"/>'),   // pig-money
+  // users-group un poco más chico, con un billete encima en la esquina
+  nomina:    svg('<g transform="translate(-.6 -.8) scale(.86)"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"/><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M17 10h2a2 2 0 0 1 2 2v1"/><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M3 13v-1a2 2 0 0 1 2 -2h2"/></g>'
+             + '<rect x="13.2" y="15.2" width="9.6" height="6.6" rx="1.2" style="fill:var(--amb-bg)" stroke-width="1.7"/><circle cx="18" cy="18.5" r="1.3" stroke-width="1.5"/>'),
+  usuarios:  svg('<path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/><path d="M15 9h.01"/>'),   // key
+};
+
 // Registro incluye Compras: el título cambia según lo que el perfil pueda hacer ahí
 function tile(p, s) {
-  let { t, d, href } = PANTALLAS[p];
+  let { t, d, href } = PANTALLAS[p], ico = ICONOS[p] || '';
   if (p === 'registro') {
     const per = s.permisos || ['registro'], r = per.includes('registro'), c = per.includes('compras');
     if (r && c) d = 'Captura diaria de producción y tanques · Compras';
-    else if (c) { t = 'Compras'; d = 'Facturas de asfalto, alterno, diésel y gasolina'; }
+    else if (c) { t = 'Compras'; d = 'Facturas de asfalto, alterno, diésel y gasolina'; ico = ICONOS.compras; }
   }
-  return `<a class="tile" href="${href}"><b>${t}</b><span>${d}</span></a>`;
+  return `<a class="tile" href="${href}"><div class="ico">${ico}</div><div class="tx"><b>${t}</b><span>${d}</span></div></a>`;
 }
 
 const $ = s => document.querySelector(s);
