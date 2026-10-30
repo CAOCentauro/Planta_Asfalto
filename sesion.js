@@ -40,7 +40,7 @@ const Sesion = (() => {
     if (!s?.token) return alInicio();
     try {
       const j = await api({ action:'yo' });
-      s = { ...s, nombre:j.nombre, perfil:j.perfil, pantallas:j.pantallas };
+      s = { ...s, nombre:j.nombre, perfil:j.perfil, perfil_nombre:j.perfil_nombre, pantallas:j.pantallas, permisos:j.permisos };
       guardar(s);
     } catch(e) {
       if (e.servidor) throw e;

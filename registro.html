@@ -63,20 +63,41 @@ details[open].card summary{margin-bottom:10px}
 .msg{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));max-width:536px;margin:0 auto;padding:12px 14px;border-radius:10px;font-size:15px;box-shadow:0 6px 24px rgba(0,0,0,.25);z-index:20;display:none}
 .msg.on{display:block}
 @media (max-width:360px){.g3{grid-template-columns:1fr 1fr}.g3>div:last-child{grid-column:1/-1}}
+.oculto{display:none !important}
+/* PESTAÑAS Registro / Compras */
+.tabs{max-width:560px;margin:10px auto 0;padding:0 12px;display:flex;gap:6px}
+.tabs button{flex:1;font:inherit;font-size:15px;font-weight:600;padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--card);color:var(--muted);cursor:pointer}
+.tabs button.on{border-color:var(--amb);background:var(--amb-bg);color:var(--amb);box-shadow:inset 0 0 0 1px var(--amb)}
+/* COMPRAS */
+.ops{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.op{font:inherit;font-size:15px;font-weight:600;padding:12px 8px;border-radius:8px;border:1px solid var(--bd);background:var(--in);color:var(--text);cursor:pointer}
+.op.on{border-color:var(--amb);background:var(--amb-bg);color:var(--amb);box-shadow:inset 0 0 0 1px var(--amb)}
+.calc{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:15px}
+.calc span:nth-child(even){text-align:right;font-variant-numeric:tabular-nums}
+.calc .big{font-size:18px;font-weight:700;padding-top:6px;border-top:1px solid var(--bd);margin-top:4px}
+.hist div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--bd);font-size:14px}
+.hist div:first-child{border-top:none}
+.hist b{color:var(--amb)}
 </style>
 </head>
 <body>
 
 <header><div class="in">
-  <div><h1>Registro de planta</h1><small id="h-op">—</small></div>
+  <div><h1 id="h-tit">Registro de planta</h1><small id="h-op">—</small></div>
   <div style="display:flex;gap:6px">
-    <button class="btn sm" onclick="nuevoReporte(true)" title="Borrar todo y empezar de nuevo">Nuevo</button>
+    <button class="btn sm" onclick="nuevoActual()" title="Borrar todo y empezar de nuevo">Nuevo</button>
     <a class="btn sm" href="index.html" title="Menú de inicio" style="text-decoration:none">Inicio</a>
     <button class="btn sm" onclick="Sesion.salir()">Salir</button>
   </div>
 </div></header>
 
-<main>
+<!-- Pestañas: se muestran solo si el perfil tiene los dos permisos -->
+<nav class="tabs oculto" id="tabs">
+  <button data-t="registro" onclick="verTab('registro')">Registro diario</button>
+  <button data-t="compras" onclick="verTab('compras')">Compras</button>
+</nav>
+
+<main id="t-registro" class="oculto">
   <div class="banner" id="pend"></div>
 
   <!-- FECHA -->
@@ -123,11 +144,59 @@ details[open].card summary{margin-bottom:10px}
   </div>
 </main>
 
+<!-- COMPRAS: facturas que se agregan a Entradas_Material -->
+<main id="t-compras" class="oculto">
+  <div class="card">
+    <h2>¿Qué se compró?</h2>
+    <div class="ops" id="c-insumos"></div>
+  </div>
+  <div class="card">
+    <h2>Datos de la factura</h2>
+    <div class="g2 f">
+      <div><label>Fecha de la factura o entrega</label><input type="date" id="c-fecha"></div>
+      <div><label>Litros</label><input id="c-cantidad" inputmode="decimal" placeholder="Ej. 31130"></div>
+    </div>
+    <div class="g2 f">
+      <div><label>Proveedor</label><input id="c-proveedor" list="dl-prov" placeholder="Escribe o elige"></div>
+      <div><label>Folio de factura</label><input id="c-factura" placeholder="opcional"></div>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Precio <span class="u">como viene en la factura</span></h2>
+    <div class="g2 f">
+      <div><label>Precio por litro ($)</label><input id="c-precio" inputmode="decimal" placeholder="Ej. 13.95"></div>
+      <div><label>IVA</label>
+        <select id="c-iva">
+          <option value="sin">No lleva IVA</option>
+          <option value="mas">Precio sin IVA (+16%)</option>
+          <option value="incl">El precio ya incluye IVA</option>
+        </select></div>
+    </div>
+    <div class="g2 f">
+      <div><label>Flete total ($)</label><input id="c-flete" inputmode="decimal" placeholder="0 si no hubo"></div>
+      <div><label>Total de la factura ($)</label><input id="c-total_fac" inputmode="decimal" placeholder="para comprobar"></div>
+    </div>
+    <div class="f"><label>Notas</label><textarea id="c-notas" placeholder="Ej. llegó en 2 pipas, faltó firma, etc."></textarea></div>
+  </div>
+  <div class="card">
+    <h2>Así se va a guardar</h2>
+    <div class="calc" id="c-calc"></div>
+    <div class="res" id="c-cmp"></div>
+  </div>
+  <div class="card oculto" id="c-hist-card">
+    <h2>Guardadas en este equipo</h2>
+    <div class="hist" id="c-hist"></div>
+  </div>
+</main>
+
 <div class="msg" id="msg"></div>
 
-<div class="bar"><div class="in">
+<div class="bar oculto" id="bar-registro"><div class="in">
   <button class="btn" onclick="copiarTexto()">Copiar texto</button>
   <button class="btn p" id="btn-send" onclick="enviar()">Enviar registro</button>
+</div></div>
+<div class="bar oculto" id="bar-compras"><div class="in">
+  <button class="btn p" id="c-send" onclick="Compras.enviar()">Guardar compra</button>
 </div></div>
 
 <datalist id="dl-clientes">
@@ -138,6 +207,9 @@ details[open].card summary{margin-bottom:10px}
 </datalist>
 <datalist id="dl-mezclas">
   <option value="Concreto Asfáltico">
+</datalist>
+<datalist id="dl-prov">
+  <option value="Ekbe">
 </datalist>
 
 <script src="sesion.js"></script>
@@ -225,8 +297,8 @@ function construir() {
       <div class="res" data-k="res"></div>
     </div>`).join('');
 
-  document.querySelector('main').addEventListener('input', alCambiar);
-  document.querySelector('main').addEventListener('change', alCambiar);
+  $('#t-registro').addEventListener('input', alCambiar);
+  $('#t-registro').addEventListener('change', alCambiar);
 }
 
 function addCliente(p = {}) {
@@ -539,16 +611,171 @@ function siguienteDia(fecha) {
 }
 
 // ══════════════════════════════════════════
+//  COMPRAS (facturas → Entradas_Material; solo agrega, no lee el Sheets)
+// ══════════════════════════════════════════
+const Compras = (() => {
+  const INSUMOS = [
+    { v:'CEMENTO ASFALTICO',   n:'Asfalto' },
+    { v:'COMBUSTIBLE ALTERNO', n:'Combustible alterno' },
+    { v:'DIESEL',              n:'Diésel' },
+    { v:'GASOLINA',            n:'Gasolina' },
+  ];
+  const IVA = 0.16;
+  const LSc = {
+    get(k, d) { try { const v = localStorage.getItem('cmp_'+k); return v ? JSON.parse(v) : d; } catch(e) { return d; } },
+    set(k, v) { try { localStorage.setItem('cmp_'+k, JSON.stringify(v)); } catch(e) {} },
+  };
+  let INSUMO = '', ID = null;
+
+  const q = id => document.getElementById('c-' + id);
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const numP  = s => num(String(s ?? '').replace(/\$/g, ''));         // como num(), aceptando "$"
+  const money = (v, d=2) => v==null ? '—' : '$' + new Intl.NumberFormat('es-MX', { minimumFractionDigits:d, maximumFractionDigits:d }).format(v);
+  const fLarga = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' }) : '';
+  const nuevoId = () => 'C-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+  const nombreInsumo = v => INSUMOS.find(i => i.v === v)?.n || v;
+
+  function init() {
+    q('insumos').innerHTML = INSUMOS.map(i => `<button type="button" class="op" data-v="${i.v}">${i.n}</button>`).join('');
+    q('insumos').addEventListener('click', e => {
+      const b = e.target.closest('.op'); if (!b) return;
+      INSUMO = b.dataset.v; pintarInsumo(); calcular();
+    });
+    $('#t-compras').addEventListener('input', calcular);
+    $('#t-compras').addEventListener('change', calcular);
+    limpiar(false);
+    pintarHist();
+  }
+  function pintarInsumo() {
+    q('insumos').querySelectorAll('.op').forEach(b => b.classList.toggle('on', b.dataset.v === INSUMO));
+  }
+
+  // En el formato de Entradas_Material
+  function recolectar() {
+    const precio = numP(q('precio').value), modo = q('iva').value;
+    return {
+      id: ID, fecha: q('fecha').value, insumo: INSUMO,
+      cantidad: numP(q('cantidad').value),
+      proveedor: q('proveedor').value.trim(), factura: q('factura').value.trim(),
+      precio_unit_base: precio == null ? null : modo === 'incl' ? precio / (1 + IVA) : precio,
+      iva: modo === 'sin' ? 0 : IVA,
+      flete: numP(q('flete').value) || 0,
+      notas: q('notas').value.trim(),
+    };
+  }
+  function costos(c) {
+    if (c.precio_unit_base == null || !c.cantidad) return null;
+    const ivaL = c.precio_unit_base * c.iva, fleteL = c.flete / c.cantidad;
+    const unit = c.precio_unit_base + ivaL + fleteL;
+    return { ivaL, fleteL, unit, total: unit * c.cantidad };
+  }
+  function errores(c) {
+    const e = [];
+    if (!c.insumo) e.push('Elige qué se compró');
+    if (!c.fecha) e.push('Falta la fecha');
+    else if (c.fecha > hoy()) e.push('La fecha es de un día que todavía no pasa');
+    if (!c.cantidad || c.cantidad <= 0) e.push('Faltan los litros');
+    if (c.precio_unit_base == null) e.push('Falta el precio por litro');
+    if (!c.proveedor) e.push('Falta el proveedor');
+    return e;
+  }
+
+  function calcular() {
+    const c = recolectar(), k = costos(c);
+    q('calc').innerHTML = `
+      <span>Precio por litro sin IVA</span><span>${money(c.precio_unit_base, 4)}</span>
+      <span>IVA por litro</span><span>${k ? money(k.ivaL, 4) : '—'}</span>
+      <span>Flete por litro</span><span>${k ? money(k.fleteL, 4) : '—'}</span>
+      <span class="big">Costo real por litro</span><span class="big">${k ? money(k.unit, 4) : '—'}</span>
+      <span class="big">Total</span><span class="big">${k ? money(k.total) : '—'}</span>`;
+    // Comparación con el total que viene en la factura
+    const fac = numP(q('total_fac').value), el = q('cmp');
+    if (k && fac != null) {
+      const d = k.total - fac;
+      el.className = 'res ' + (Math.abs(d) <= 1 ? 'ok' : 'warn');
+      el.innerHTML = Math.abs(d) <= 1 ? '✓ Coincide con el total de la factura'
+        : `No coincide con la factura: hay ${money(Math.abs(d))} de ${d > 0 ? 'más' : 'menos'}. Revisa el precio, el IVA o el flete.`;
+    } else { el.className = 'res'; el.innerHTML = ''; }
+  }
+
+  function limpiar(preguntar) {
+    if (preguntar && !confirm('¿Borrar lo capturado y empezar una compra nueva?')) return;
+    ID = nuevoId(); INSUMO = ''; pintarInsumo();
+    ['cantidad','proveedor','factura','precio','flete','total_fac','notas'].forEach(k => q(k).value = '');
+    q('iva').value = 'sin';
+    q('fecha').value = hoy();
+    calcular();
+    window.scrollTo(0, 0);
+  }
+
+  async function enviar() {
+    const c = recolectar(), k = costos(c), e = errores(c);
+    if (e.length) return aviso('Falta completar:<br>• ' + e.join('<br>• '), 'err', 7000);
+    if (!confirm(`¿Guardar esta compra?\n\n${nombreInsumo(c.insumo)} · ${fmt(c.cantidad, 2)} L · ${c.proveedor}\n${fLarga(c.fecha)}\nCosto real: ${money(k.unit, 4)} por litro\nTotal: ${money(k.total)}`)) return;
+    const btn = q('send');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const j = await api({ action:'compra', compra:c });
+      const hist = LSc.get('hist', []);
+      hist.unshift({ id:j.id_entrada, fecha:c.fecha, insumo:c.insumo, cantidad:c.cantidad, total:k.total, proveedor:c.proveedor });
+      LSc.set('hist', hist.slice(0, 15));
+      pintarHist();
+      aviso(`✓ Guardada como <b>${esc(j.id_entrada)}</b>`, 'ok', 5000);
+      limpiar(false);
+    } catch(err) {
+      aviso('No se pudo guardar: ' + esc(err.message) + '<br>No se borró nada; vuelve a intentar.', 'err', 8000);
+    } finally {
+      btn.disabled = false; btn.textContent = 'Guardar compra';
+    }
+  }
+
+  function pintarHist() {
+    const h = LSc.get('hist', []);
+    q('hist-card').classList.toggle('oculto', !h.length);
+    q('hist').innerHTML = h.map(x => `<div><span><b>${esc(x.id)}</b> · ${esc(nombreInsumo(x.insumo))} ${fmt(x.cantidad, 2)} L<br>
+      <span style="color:var(--muted)">${esc(x.proveedor)} · ${fLarga(x.fecha)}</span></span><span>${money(x.total)}</span></div>`).join('');
+  }
+
+  return { init, enviar, limpiar, calcular, costos, recolectar };
+})();
+
+// ══════════════════════════════════════════
+//  PESTAÑAS
+// ══════════════════════════════════════════
+let TAB = '';
+function verTab(t) {
+  TAB = t;
+  ['registro', 'compras'].forEach(k => {
+    $('#t-' + k).classList.toggle('oculto', k !== t);
+    $('#bar-' + k).classList.toggle('oculto', k !== t);
+  });
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
+  $('#h-tit').textContent = document.title = t === 'compras' ? 'Compras' : 'Registro de planta';
+  try { history.replaceState(null, '', t === 'compras' ? '?tab=compras' : location.pathname); } catch(e) {}
+  window.scrollTo(0, 0);
+}
+function nuevoActual() { TAB === 'compras' ? Compras.limpiar(true) : nuevoReporte(true); }
+
+// ══════════════════════════════════════════
 //  INICIO
 // ══════════════════════════════════════════
+// Cada pestaña según los permisos del perfil (Usuarios → Permisos por perfil)
 Sesion.requerir('registro').then(s => {
   SES = s;
   $('#h-op').textContent = s.nombre;
-  construir();
-  llenar(LS.get('borrador', null) || { fecha: hoy() });
-  pintarPendientes();
-  reintentarPendientes();
-  window.addEventListener('online', reintentarPendientes);
+  const per = s.permisos || ['registro'];
+  const puedeR = per.includes('registro'), puedeC = per.includes('compras');
+  if (puedeR) {
+    construir();
+    llenar(LS.get('borrador', null) || { fecha: hoy() });
+    pintarPendientes();
+    reintentarPendientes();
+    window.addEventListener('online', reintentarPendientes);
+  }
+  if (puedeC) Compras.init();
+  $('#tabs').classList.toggle('oculto', !(puedeR && puedeC));
+  const pedida = new URLSearchParams(location.search).get('tab');
+  verTab(puedeC && (!puedeR || pedida === 'compras') ? 'compras' : 'registro');
 }).catch(e => aviso('No se pudo revisar la sesión: ' + e.message, 'err', 10000));
 </script>
 </body>

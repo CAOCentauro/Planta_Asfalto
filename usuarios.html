@@ -52,6 +52,19 @@ input:focus,select:focus{outline:2px solid var(--amb);outline-offset:0;border-co
 .chk{display:flex;gap:8px;align-items:center;font-size:14px;margin-top:8px;color:var(--text)}
 .chk input{width:20px;height:20px;accent-color:var(--amb)}
 .oculto{display:none}
+.mx{overflow-x:auto;margin:0 -4px}
+.mx table{border-collapse:collapse;width:100%;font-size:13px}
+.mx th,.mx td{padding:7px 6px;border-bottom:1px solid var(--bd);text-align:center;white-space:nowrap}
+.mx th{font-size:11px;color:var(--muted);font-weight:600;white-space:normal;line-height:1.2;vertical-align:bottom}
+.mx th:first-child,.mx td:first-child{text-align:left}
+.mx td input[type=checkbox]{width:20px;height:20px;accent-color:var(--amb)}
+.mx td input[type=text],.mx td input[type=number]{font-size:14px;padding:6px 7px}
+.mx td input[type=number]{width:62px}
+.mx td input[type=text]{min-width:120px}
+.mx .fijo td{color:var(--muted)}
+.mx .quitar{background:none;border:none;color:var(--err);cursor:pointer;font-size:16px}
+.nuevo-pf{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:12px}
+.nuevo-pf>div{flex:1;min-width:140px}
 </style>
 </head>
 <body>
@@ -84,20 +97,29 @@ input:focus,select:focus{outline:2px solid var(--amb);outline-offset:0;border-co
     <h2>Personas con acceso</h2>
     <div id="lista"><div class="hint">Cargando…</div></div>
   </div>
+
+  <!-- PERMISOS POR PERFIL -->
+  <div class="card">
+    <h2>Permisos por perfil <span class="u" id="pm-sub">qué puede ver y hacer cada perfil</span></h2>
+    <div id="pm"><div class="hint">Cargando…</div></div>
+  </div>
 </main>
 
 <script src="sesion.js"></script>
 <script>
-const PERFIL_TXT = { desarrollador:'Desarrollador', admin:'Administrador', captura:'Captura', operador:'Operador' };
-const PERFIL_DESC = {
-  desarrollador: 'Ve todo y puede administrar a cualquier usuario.',
-  admin:         'Ve todo: panel de control, registro, compras y usuarios.',
-  captura:       'Registro de planta y compras.',
-  operador:      'Solo el registro de planta.',
-};
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let LISTA = [], PERFILES = [], EDITANDO = null;
+let PM = { permisos:[], perfiles:[], editable:false };      // permisos por perfil (servidor)
+let PM_EDIT = [];                                           // copia que se está editando (sin el desarrollador)
+
+// "Incluye: Panel de control, Registro de planta…" según los permisos del perfil
+function descPerfil(clave) {
+  const p = PM.perfiles.find(x => x.clave === clave);
+  if (!p) return '';
+  const n = PM.permisos.filter(x => p.permisos.includes(x.clave)).map(x => x.nombre);
+  return n.length ? 'Incluye: ' + n.join(', ') + '.' : 'Este perfil no tiene ningún permiso.';
+}
 
 function res(id, txt, tipo = 'err') { const el = $('#'+id); el.className = 'res ' + (txt ? tipo : ''); el.textContent = txt || ''; }
 const fAcceso = iso => iso ? new Date(iso).toLocaleString('es-MX', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' }) : 'nunca ha entrado';
@@ -118,29 +140,33 @@ function tarjetaClave(usuario, clave) {
 // Los botones leen el usuario de su bloque (data-u), no de texto dentro del onclick
 const idDe = el => el.closest('[data-u]').dataset.u;
 async function copiar(b) {
-  const t = `Planta de Asfalto\nhttps://planta.caocentauro.com\nUsuario: ${b.dataset.u}\nContraseña: ${b.dataset.c}`;
+  const t = `Planta de Asfalto\n${location.origin}\nUsuario: ${b.dataset.u}\nContraseña: ${b.dataset.c}`;
   try { await navigator.clipboard.writeText(t); b.textContent = '✓ Copiado'; } catch(e) { prompt('Copia este texto:', t); }
 }
 
 // ── Cargar y pintar ────────────────────────
 async function cargar() {
   try {
-    const j = await Sesion.api({ action:'usuarios_listar' });
-    LISTA = j.usuarios; PERFILES = j.perfiles;
-    $('#n-perfil').innerHTML = PERFILES.map(p => `<option value="${p}" ${p==='operador'?'selected':''}>${PERFIL_TXT[p]||p}</option>`).join('');
-    $('#n-desc').textContent = PERFIL_DESC[$('#n-perfil').value] || '';
+    const [j, p] = await Promise.all([Sesion.api({ action:'usuarios_listar' }), Sesion.api({ action:'perfiles_listar' })]);
+    LISTA = j.usuarios; PERFILES = j.perfiles; PM = p;
+    const prev = $('#n-perfil').value;
+    $('#n-perfil').innerHTML = PERFILES.map(x => `<option value="${esc(x.clave)}">${esc(x.nombre)}</option>`).join('');
+    $('#n-perfil').value = PERFILES.some(x => x.clave === prev) ? prev : (PERFILES.find(x => x.clave === 'operador') || PERFILES[PERFILES.length - 1] || {}).clave;
+    $('#n-desc').textContent = descPerfil($('#n-perfil').value);
     pintar();
+    PM_EDIT = PM.perfiles.filter(x => x.clave !== 'desarrollador').map(x => ({ ...x, permisos:[...x.permisos] }));
+    pintarPermisos();
   } catch(e) { $('#lista').innerHTML = `<div class="res err">${esc(e.message)}</div>`; }
 }
 
 function pintar() {
-  const orden = { desarrollador:0, admin:1, captura:2, operador:3 };
-  const l = [...LISTA].sort((a,b) => (b.activo - a.activo) || (orden[a.perfil] - orden[b.perfil]) || a.nombre.localeCompare(b.nombre));
+  const orden = c => { const i = PM.perfiles.findIndex(x => x.clave === c); return i < 0 ? 99 : i; };
+  const l = [...LISTA].sort((a,b) => (b.activo - a.activo) || (orden(a.perfil) - orden(b.perfil)) || a.nombre.localeCompare(b.nombre));
   $('#lista').innerHTML = l.length ? l.map(u => `
     <div class="u-item" data-u="${esc(u.usuario)}">
       <div class="u-top">
         <div><b>${esc(u.nombre)}</b> <span class="id">${esc(u.usuario)}</span>
-          <div class="meta">${PERFIL_TXT[u.perfil] || esc(u.perfil)} · ${u.con_contrasena ? 'último acceso: ' + fAcceso(u.ultimo_acceso) : 'sin contraseña todavía'}</div></div>
+          <div class="meta">${esc(u.perfil_nombre || u.perfil)} · ${u.con_contrasena ? 'último acceso: ' + fAcceso(u.ultimo_acceso) : 'sin contraseña todavía'}</div></div>
         <div>${u.soy_yo ? '<span class="tag yo">Tú</span> ' : ''}${u.activo ? '' : '<span class="tag off">Sin acceso</span>'}</div>
       </div>
       ${u.editable ? `<div class="fila-btn">
@@ -158,7 +184,7 @@ function formEditar(u) {
       <div><label>Nombre</label><input data-k="nombre" value="${esc(u.nombre)}"></div>
       <div><label>Usuario</label><input value="${esc(u.usuario)}" disabled></div>
       <div><label>Perfil</label><select data-k="perfil" ${u.soy_yo ? 'disabled' : ''}>
-        ${PERFILES.map(p => `<option value="${p}" ${p===u.perfil?'selected':''}>${PERFIL_TXT[p]||p}</option>`).join('')}</select></div>
+        ${PERFILES.map(p => `<option value="${esc(p.clave)}" ${p.clave===u.perfil?'selected':''}>${esc(p.nombre)}</option>`).join('')}</select></div>
     </div>
     <label class="chk"><input type="checkbox" data-k="activo" ${u.activo ? 'checked' : ''} ${u.soy_yo ? 'disabled' : ''}> Tiene acceso</label>
     ${u.soy_yo ? '<div class="hint">No puedes cambiar tu propio perfil ni quitarte el acceso.</div>' : ''}
@@ -214,11 +240,92 @@ function mostrarEn(id, html) {
   if (el) el.innerHTML = html;
 }
 
+// ── Permisos por perfil ────────────────────
+// Tabla perfiles × permisos. Solo el desarrollador la edita; el perfil desarrollador siempre tiene todo.
+function pintarPermisos() {
+  const ed = PM.editable, dis = ed ? '' : 'disabled';
+  const dev = PM.perfiles.find(x => x.clave === 'desarrollador');
+  const cab = PM.permisos.map(x => `<th title="${esc(x.desc)}">${esc(x.nombre)}</th>`).join('');
+  const filaDev = dev ? `<tr class="fijo"><td><b>${esc(dev.nombre)}</b><br><small>siempre tiene todo</small></td>
+      ${PM.permisos.map(() => '<td><input type="checkbox" checked disabled></td>').join('')}
+      <td>${dev.dias}</td><td>${dev.usuarios}</td><td></td></tr>` : '';
+  const filas = PM_EDIT.map((p, i) => `<tr data-i="${i}">
+      <td>${ed ? `<input type="text" data-k="nombre" value="${esc(p.nombre)}">` : `<b>${esc(p.nombre)}</b>`}<br><small style="color:var(--muted)">${esc(p.clave)}</small></td>
+      ${PM.permisos.map(x => `<td><input type="checkbox" data-p="${esc(x.clave)}" ${p.permisos.includes(x.clave) ? 'checked' : ''} ${dis}></td>`).join('')}
+      <td>${ed ? `<input type="number" data-k="dias" min="1" max="90" value="${p.dias}">` : p.dias}</td>
+      <td>${p.usuarios || 0}</td>
+      <td>${ed && !p.usuarios ? `<button class="quitar" title="Quitar perfil" onclick="quitarPerfil(${i})">✕</button>` : ''}</td>
+    </tr>`).join('');
+
+  $('#pm-sub').textContent = ed ? 'qué puede ver y hacer cada perfil · los cambios aplican en menos de un minuto'
+                                : 'qué puede ver y hacer cada perfil · solo el desarrollador puede cambiarlos';
+  $('#pm').innerHTML = `
+    <div class="mx"><table>
+      <thead><tr><th>Perfil</th>${cab}<th>Sesión (días)</th><th>Personas</th><th></th></tr></thead>
+      <tbody>${filaDev}${filas}</tbody>
+    </table></div>
+    <div class="hint">Pasa el mouse sobre cada permiso para ver qué incluye. "Compras" aparece dentro de Registro de planta.
+      Un perfil que tiene personas asignadas no se puede quitar.</div>
+    ${ed ? `
+    <div class="nuevo-pf">
+      <div><label>Perfil nuevo: nombre</label><input id="pf-nombre" placeholder="Ej. Contador" oninput="sugerirClave()"></div>
+      <div><label>Clave</label><input id="pf-clave" placeholder="ej. contador" autocapitalize="none" spellcheck="false"></div>
+      <button class="btn sm" onclick="agregarPerfil()">+ Agregar perfil</button>
+    </div>
+    <div class="fila-btn"><button class="btn p" id="b-permisos" onclick="guardarPermisos()">Guardar permisos</button></div>` : ''}
+    <div class="res" id="r-permisos"></div>`;
+  if (ed) $('#pf-clave').addEventListener('input', e => e.target.dataset.tocado = '1');
+}
+
+// Lo escrito en la tabla → PM_EDIT (para no perder cambios al agregar o quitar filas)
+function leerTabla() {
+  if (!PM.editable) return;
+  document.querySelectorAll('#pm tr[data-i]').forEach(tr => {
+    const p = PM_EDIT[Number(tr.dataset.i)];
+    p.nombre = tr.querySelector('[data-k=nombre]').value.trim();
+    p.dias = Number(tr.querySelector('[data-k=dias]').value);
+    p.permisos = [...tr.querySelectorAll('[data-p]')].filter(c => c.checked).map(c => c.dataset.p);
+  });
+}
+function sugerirClave() {
+  const c = $('#pf-clave');
+  if (c.dataset.tocado) return;
+  c.value = $('#pf-nombre').value.trim().normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_-]/g, '').slice(0, 20);
+}
+function agregarPerfil() {
+  leerTabla();
+  const nombre = $('#pf-nombre').value.trim(), clave = $('#pf-clave').value.trim().toLowerCase();
+  if (!nombre || !clave) return res('r-permisos', 'Escribe el nombre y la clave del perfil nuevo');
+  if (!/^[a-z0-9_-]{3,20}$/.test(clave)) return res('r-permisos', 'La clave debe tener de 3 a 20 letras minúsculas o números, sin espacios');
+  if (clave === 'desarrollador' || PM_EDIT.some(p => p.clave === clave)) return res('r-permisos', 'Ya existe un perfil con esa clave');
+  PM_EDIT.push({ clave, nombre, dias:7, permisos:[], usuarios:0 });
+  pintarPermisos();
+  res('r-permisos', 'Palomea sus permisos y dale "Guardar permisos".', 'ok');
+}
+function quitarPerfil(i) {
+  leerTabla();
+  if (!confirm(`¿Quitar el perfil "${PM_EDIT[i].nombre}"?`)) return;
+  PM_EDIT.splice(i, 1);
+  pintarPermisos();
+  res('r-permisos', 'Se quitará al guardar.', 'ok');
+}
+async function guardarPermisos() {
+  leerTabla();
+  const sinNada = PM_EDIT.filter(p => !p.permisos.length && p.usuarios).map(p => p.nombre);
+  if (sinNada.length && !confirm(`${sinNada.join(', ')} quedaría sin ningún permiso: esas personas no podrán ver nada. ¿Guardar de todos modos?`)) return;
+  const b = $('#b-permisos'); b.disabled = true; res('r-permisos', '');
+  try {
+    await Sesion.api({ action:'perfiles_guardar', perfiles:PM_EDIT.map(({ clave, nombre, dias, permisos }) => ({ clave, nombre, dias, permisos })) });
+    await cargar();
+    res('r-permisos', '✓ Permisos guardados. Aplican en menos de un minuto (cada quien los ve al recargar).', 'ok');
+  } catch(e) { b.disabled = false; res('r-permisos', e.message); }
+}
+
 // ── Inicio ─────────────────────────────────
 Sesion.requerir('usuarios').then(s => {
   $('#h-op').textContent = s.nombre;
   $('#n-usuario').addEventListener('input', e => e.target.dataset.tocado = '1');
-  $('#n-perfil').addEventListener('change', e => $('#n-desc').textContent = PERFIL_DESC[e.target.value] || '');
+  $('#n-perfil').addEventListener('change', e => $('#n-desc').textContent = descPerfil(e.target.value));
   cargar();
 }).catch(e => { $('#lista').innerHTML = `<div class="res err">${esc(e.message)}</div>`; });
 </script>
