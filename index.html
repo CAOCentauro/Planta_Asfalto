@@ -100,12 +100,22 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 const PANTALLAS = {
   dashboard: { t:'Panel de control',   d:'Producción, finanzas, reportes del operador',    href:'dashboard.html' },
   registro:  { t:'Registro de planta', d:'Captura diaria de producción y tanques',          href:'registro.html'  },
-  compras:   { t:'Compras',            d:'Facturas de asfalto, alterno, diésel y gasolina', href:'compras.html'   },
   pagos:     { t:'Pagos de clientes',  d:'Registrar lo que pagan los clientes y ver cuánto deben', href:'pagos.html' },
-  usuarios:  { t:'Usuarios',          d:'Quién tiene acceso, perfiles y contraseñas',       href:'usuarios.html'  },
+  nomina:    { t:'Nómina',            d:'Préstamos, faltas y pago de los sábados al personal', href:'nomina.html' },
+  usuarios:  { t:'Usuarios',          d:'Quién tiene acceso, perfiles, permisos y contraseñas', href:'usuarios.html' },
 };
-const PERFIL_TXT = { desarrollador:'Desarrollador', admin:'Administrador', captura:'Captura', operador:'Operador' };
 const MIN = 8;
+
+// Registro incluye Compras: el título cambia según lo que el perfil pueda hacer ahí
+function tile(p, s) {
+  let { t, d, href } = PANTALLAS[p];
+  if (p === 'registro') {
+    const per = s.permisos || ['registro'], r = per.includes('registro'), c = per.includes('compras');
+    if (r && c) d = 'Captura diaria de producción y tanques · Compras';
+    else if (c) { t = 'Compras'; d = 'Facturas de asfalto, alterno, diésel y gasolina'; }
+  }
+  return `<a class="tile" href="${href}"><b>${t}</b><span>${d}</span></a>`;
+}
 
 const $ = s => document.querySelector(s);
 
@@ -125,7 +135,7 @@ async function entrar(ev) {
     const j = await Sesion.api({ action:'login', usuario, contrasena });
     Sesion.guardar(j);
     $('#contrasena').value = '';
-    if (j.pantallas.length === 1) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
+    if (j.pantallas.length === 1 && PANTALLAS[j.pantallas[0]]) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
     else mostrarMenu();
   } catch(e) {
     res('r-login', e.servidor ? e.message : 'Sin conexión. Revisa el internet e intenta de nuevo.');
@@ -137,9 +147,10 @@ function mostrarMenu() {
   const s = Sesion.leer();
   if (!s?.token) return vista('v-login');
   $('#m-nombre').textContent = s.nombre;
-  $('#m-perfil').textContent = PERFIL_TXT[s.perfil] || s.perfil;
-  $('#menu').innerHTML = (s.pantallas || []).filter(p => PANTALLAS[p]).map(p =>
-    `<a class="tile" href="${PANTALLAS[p].href}"><b>${PANTALLAS[p].t}</b><span>${PANTALLAS[p].d}</span></a>`).join('');
+  $('#m-perfil').textContent = s.perfil_nombre || s.perfil;
+  const ps = (s.pantallas || []).filter(p => PANTALLAS[p]);
+  $('#menu').innerHTML = ps.length ? ps.map(p => tile(p, s)).join('')
+    : '<div class="res err">Tu perfil todavía no tiene pantallas asignadas. Pide que te den permisos.</div>';
   vista('v-menu');
 }
 
