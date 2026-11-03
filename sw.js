@@ -4,7 +4,7 @@
  * Lo que va al Apps Script (POST) no pasa por aquí.
  */
 
-const CACHE_NAME = 'planta-v12';
+const CACHE_NAME = 'planta-v13';
 const APP_SHELL  = ['/', '/index.html', '/registro.html', '/compras.html', '/pagos.html', '/nomina.html', '/dashboard.html',
                     '/usuarios.html', '/sesion.js', '/cobranza.js', '/estilo.css', '/manifest.json'];
 

@@ -2248,15 +2248,19 @@ function htmlReporteOp(x) {
     const esperado = prev ? prev.L + sumiInter + (t.suministro_antes ? N(t.suministro_L) : 0) : null;
     const dif = esperado!=null && t.inicio_L!=null ? N(t.inicio_L) - esperado : null;
     const ok = dif==null || Math.abs(dif) <= 2;
+    // Bidones (almacén): no es consumo; se muestra cuánto se guardó o se sacó
+    const consumo = t.almacen ? (t.cambio_L==null ? '—' : Math.abs(t.cambio_L) <= 0.5 ? 'igual'
+                      : `<span style="color:var(--muted)">${t.cambio_L > 0 ? 'guardó' : 'sacó'}</span> ${f2(Math.abs(t.cambio_L))}`)
+                  : t.consumo_L!=null ? f2(t.consumo_L) : '—';
     return `<tr>
       <td>${esc(t.insumo)}</td><td style="color:var(--muted)">${esc(lbl(t.uso))}</td>
       <td class="rt">${lec(t, t.inicio, t.inicio_L)}</td><td class="rt">${lec(t, t.termino, t.termino_L)}</td>
       <td class="rt ${N(t.suministro_L)?'pos':''}">${N(t.suministro_L) ? f2(t.suministro_L)+' L'+(t.suministro_antes?' <span style="color:var(--muted)">(antes)</span>':'') : '—'}</td>
-      <td class="rt amb">${t.consumo_L!=null ? f2(t.consumo_L) : '—'}</td>
-      <td class="rt">${t.consumo_L!=null && tons ? f2(t.consumo_L/tons) : '—'}</td>
+      <td class="rt amb">${consumo}</td>
+      <td class="rt">${!t.almacen && t.consumo_L!=null && tons ? f2(t.consumo_L/tons) : '—'}</td>
       <td class="rt">${prev ? `${f2(esperado)} <span style="color:var(--muted)">${prev.fecha}</span>` : '<span style="color:var(--muted)">sin dato</span>'}</td>
       <td class="rt ${ok?'':'neg'}">${dif==null ? '—' : ok ? '<span class="tag tb">Coincide</span>' : `${dif<0?'Faltan':'Sobran'} ${f2(Math.abs(dif))} L`}</td>
-    </tr>`;
+    </tr>${t.nota ? `<tr><td colspan="9" style="color:var(--muted);padding-top:0">Nota: ${esc(t.nota)}</td></tr>` : ''}`;
   }).join('');
 
   const lista = (titulo, items) => items.length ? `<div class="sub" style="text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;color:var(--text);display:block">
@@ -2269,7 +2273,7 @@ function htmlReporteOp(x) {
     </div>
     <div style="padding:12px 16px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
       ${r.sin_produccion || !prods.length ? '<span style="color:var(--muted)">Sin producción</span>'
-        : prods.map(p => `<span>${esc(p.cliente)} · <b class="amb">${f2(p.tons_real)} ton</b>${p.tons_pedido ? ` <span style="color:var(--muted)">(pedido ${f2(p.tons_pedido)})</span>` : ''} · ${esc(p.mezcla)}</span>`).join('')}
+        : prods.map(p => `<span>${esc(p.cliente)} · <b class="amb">≈ ${f2(p.tons_real)} ton</b> <span style="color:var(--muted)">aprox.</span>${p.tons_pedido ? ` <span style="color:var(--muted)">(pedido ${f2(p.tons_pedido)})</span>` : ''} · ${esc(p.mezcla)}</span>`).join('')}
     </div>
     ${tanques ? `<div class="tw"><table><thead><tr>
       <th>Insumo</th><th>Uso</th><th class="rt">Inicio</th><th class="rt">Término</th><th class="rt">Cargó</th>
