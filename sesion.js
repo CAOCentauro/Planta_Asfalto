@@ -17,7 +17,8 @@ const Sesion = (() => {
   const borrar  = () => { try { localStorage.removeItem(K); } catch(e) {} };
   const alInicio = (motivo) => { location.replace('index.html' + (motivo ? '?m=' + motivo : '')); return new Promise(() => {}); };
 
-  // POST al Apps Script con el token. Errores del servidor traen .servidor = true (y .code)
+  // POST al Apps Script con el token. Errores del servidor traen .servidor = true (y .code);
+  // si no se pudo llegar al servidor (sin señal, tardó demasiado) traen .red = true
   async function api(body, ms = 25000, reintento = false) {
     const s = leer();
     const ctl = new AbortController();
@@ -26,7 +27,9 @@ const Sesion = (() => {
     try {
       // Sin headers → text/plain: Apps Script lo acepta sin preflight CORS
       const r = await fetch(URL_API, { method:'POST', signal:ctl.signal,
-        body: JSON.stringify({ ...body, token: s?.token, llave: llaveVigente() || undefined }) });
+        body: JSON.stringify({ ...body, token: s?.token, llave: llaveVigente() || undefined }) })
+        .catch(e => { throw Object.assign(new Error(e.name === 'AbortError' ? 'El servidor tardó demasiado en contestar. Intenta de nuevo.'
+          : navigator.onLine ? 'No se pudo conectar con el servidor. Intenta de nuevo en un momento.' : 'Sin conexión. Revisa el internet e intenta de nuevo.'), { red:true }); });
       try { j = await r.json(); }
       catch(e) { throw Object.assign(new Error('El servidor no respondió como se esperaba (¿ya se publicó la nueva versión del Apps Script?)'), { servidor:true }); }
     } finally { clearTimeout(to); }
@@ -145,7 +148,7 @@ const Sesion = (() => {
           } catch(e) {
             if (e.code === 'SIN_PIN') { crear = true; return pintar('Todavía no tienes PIN: créalo.'); }
             b.disabled = false; b.textContent = crear ? 'Guardar PIN' : 'Abrir';
-            err(e.servidor ? e.message : 'Sin conexión. Intenta de nuevo.');
+            err(e.servidor || e.red ? e.message : 'Error en la página: ' + e.message);
             const p = f.querySelector('[name=p]'); p.value = ''; p.focus();
           }
         };

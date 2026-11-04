@@ -146,6 +146,9 @@ const $ = s => document.querySelector(s);
 function vista(id) {
   ['v-login','v-cambio','v-menu'].forEach(v => $('#'+v).classList.toggle('oculto', v !== id));
 }
+// Del servidor o de la red: su mensaje tal cual. Otro error es de la página (p. ej. archivos viejos guardados)
+const errorTxt = e => e.servidor || e.red ? e.message
+  : `Error en la página: ${e.message}. Recarga con Ctrl+F5 (en el celular, cierra y vuelve a abrir).`;
 function res(id, txt, tipo = 'err') { const el = $('#'+id); el.className = 'res ' + (txt ? tipo : ''); el.textContent = txt || ''; }
 function verClave(id, b) { const i = $('#'+id); i.type = i.type === 'password' ? 'text' : 'password'; b.textContent = i.type === 'password' ? 'Ver' : 'Ocultar'; }
 
@@ -162,7 +165,7 @@ async function entrar(ev) {
     if (j.pantallas.length === 1 && PANTALLAS[j.pantallas[0]]) location.href = PANTALLAS[j.pantallas[0]].href;   // operador: directo a su pantalla
     else mostrarMenu();
   } catch(e) {
-    res('r-login', e.servidor ? e.message : 'Sin conexión. Revisa el internet e intenta de nuevo.');
+    res('r-login', errorTxt(e));
   } finally { b.disabled = false; b.textContent = 'Entrar'; }
 }
 
@@ -215,7 +218,7 @@ async function cambiar(ev) {
     mostrarMenu();
     res('r-menu', '✓ Contraseña guardada', 'ok');
   } catch(e) {
-    res('r-cambio', e.servidor ? e.message : 'Sin conexión. Intenta de nuevo.');
+    res('r-cambio', errorTxt(e));
   } finally { b.disabled = false; b.textContent = 'Guardar contraseña'; }
 }
 
