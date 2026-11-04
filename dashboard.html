@@ -157,6 +157,7 @@ select:focus,input:focus{border-color:var(--amb)}
 .rep td.r{text-align:right}
 .rep td.y,.rep th.y{background:#ffff00;font-weight:700}
 .rep td.x{background:#fde2e2;color:#b91c1c;font-weight:700}
+.rep td.ok{background:#dcfce7;color:#166534;font-weight:700}
 .rep tr:last-child td.nb{border:none;border-top:1px solid #000}
 .rep-foot{margin-top:auto;position:relative;height:136px;color:#fff}
 .rep-foot > svg{position:absolute;inset:0}
@@ -1175,11 +1176,35 @@ function datosReporte(id) {
   const gastos = N(p.gastos_insumos) + N(p.gasto_material) + N(p.otros_gastos) + N(p.nomina_prorrateada);
   const disc  = ins.map(r => ({ r, c: CONT_INFO[`${r.id_prod}|${r.insumo}|${r.uso}`] }))
                    .filter(x => x.c && Math.abs(x.c.merma) > 2);          // mismo umbral que Anomalías
-  return { id, p, filas, ins, tons, agrKg, otros, gastos, disc };
+  return { id, p, filas, ins, tons, agrKg, otros, gastos, disc, pago: pagoReporte(id, filas) };
+}
+
+// Estado de pago de cada cliente de la producción: { nombre, c (su cuenta), g (el cargo de esta producción) }.
+// null si no se pudieron ver los pagos (candado sin PIN o sin permiso): el PDF sale sin esa sección
+function pagoReporte(id, filas) {
+  if (!D.pagos) return null;
+  const cs = cuentas();
+  return [...new Set(filas.map(f => String(f.cliente||'').trim().toUpperCase()))]
+    .filter(n => n && !Cobranza.EXCLUIDOS.includes(n))
+    .map(nombre => {
+      const c = cs.find(x => x.cliente === nombre);
+      return { nombre, c, g: c?.cargos.find(x => x.id_prod === id) };
+    }).filter(x => x.g);
+}
+const ESTADO_PAGO = { Pagada:'PAGADA', Parcial:'PAGO PARCIAL', Pendiente:'PENDIENTE' };
+
+// El PDF lleva el estado de pago: si los pagos tienen candado se pide el PIN antes de generarlo
+async function pagosParaReporte() {
+  if (!D.pagos_cerrados) return;
+  try {
+    const j = await api({ action:'pagos_panel' });
+    D.pagos = j.pagos || []; D.pagos_cerrados = false;
+    verCandadoPagos(false);
+  } catch(e) { if (e.code !== 'CANDADO' && e.code !== 'PERMISO') throw e; }
 }
 
 function htmlReporte(d) {
-  const { p, filas, ins, tons, agrKg, otros, gastos, disc } = d;
+  const { p, filas, ins, tons, agrKg, otros, gastos, disc, pago } = d;
   const [y, m, dd] = F10(p.fecha).split('-');
   const discKeys = new Set(disc.map(x => x.r.insumo+'|'+x.r.uso));
   const utilidad = N(p.ingreso_total) - gastos;
@@ -1233,6 +1258,20 @@ function htmlReporte(d) {
       <td class="x">${c.merma>0?'Faltante':'Sobrante'}<br>${f2(Math.abs(c.merma))}</td>
     </tr>`).join('')}</tbody></table>` : '';
 
+  const TOL = Cobranza.TOL;
+  const saldoTotal = c => c.saldo > TOL
+    ? `<td class="x">${money(c.saldo)}<br><span style="font-weight:400">${c.pendientes.length} producci${c.pendientes.length!==1?'ones':'ón'} sin liquidar</span></td>`
+    : c.saldo < -TOL ? `<td class="ok">A FAVOR ${money(-c.saldo)}</td>` : '<td class="ok">AL CORRIENTE</td>';
+  const tablaPago = pago?.length ? `
+    <h3>ESTADO DE PAGO</h3>
+    <table><thead><tr><th>CLIENTE</th><th>IMPORTE</th><th>PAGADO</th><th>POR PAGAR</th><th>ESTA PRODUCCIÓN</th><th>SALDO TOTAL DEL CLIENTE</th></tr></thead>
+      <tbody>${pago.map(({ nombre, c, g }) => `<tr>
+        <td>${esc(nombre)}</td><td class="r">${money(g.importe)}</td><td class="r">${money(g.pagado)}</td>
+        <td class="r">${money(g.pendiente)}</td>
+        <td class="${g.estado==='Pagada'?'ok':'x'}">${ESTADO_PAGO[g.estado]}${g.dias ? `<br><span style="font-weight:400">${g.dias} día${g.dias!==1?'s':''}</span>` : ''}</td>
+        ${saldoTotal(c)}</tr>`).join('')}</tbody></table>
+    <div class="rep-nota">Saldo total: todo lo producido menos todo lo pagado por el cliente, al ${isoLocal(new Date()).split('-').reverse().join('/')}</div>` : '';
+
   return `<div class="rep">
     <svg class="rep-bands" width="816" height="300" viewBox="0 0 816 300">
       <defs><linearGradient id="rg" x1="0" x2="1"><stop offset="0" stop-color="#fff"/><stop offset="1" stop-color="#bdbdbd"/></linearGradient></defs>
@@ -1261,6 +1300,7 @@ function htmlReporte(d) {
       <h3>FINANCIERO</h3>
       <table><thead><tr>${varios?'<th>CLIENTE</th>':''}<th>PEDIDO</th><th>PRECIO/TON</th><th>INGRESO</th><th>GASTOS</th><th>UTILIDAD</th><th>MARGEN</th></tr></thead>
         <tbody>${fin}</tbody></table>
+      ${tablaPago}
       ${tablaDisc}
     </div>
     <div class="rep-foot">
@@ -1294,7 +1334,8 @@ const nombreReporte = id => `Reporte_produccion_${id.replace(/^PROD-/,'').replac
 
 // Genera el PDF del reporte y lo devuelve como File
 async function pdfReporte(id) {
-  if (REP_CACHE?.id === id) return REP_CACHE.file;
+  // Si se abrieron o se cerraron los pagos (candado), se vuelve a generar
+  if (REP_CACHE?.id === id && REP_CACHE.pagos === !!D.pagos) return REP_CACHE.file;
   const wrap = document.createElement('div');
   wrap.className = 'rep-wrap';
   wrap.innerHTML = htmlReporte(datosReporte(id));
@@ -1309,7 +1350,7 @@ async function pdfReporte(id) {
       pagebreak: { mode:['css','legacy'], avoid:'tr' }
     }).from(wrap.firstElementChild).outputPdf('blob');
     const file = new File([blob], nombreReporte(id), { type:'application/pdf' });
-    REP_CACHE = { id, file };
+    REP_CACHE = { id, file, pagos: !!D.pagos };
     return file;
   } finally { wrap.remove(); }
 }
@@ -1321,9 +1362,13 @@ function bajarArchivo(file) {
 
 // Resumen en texto para el mensaje de WhatsApp
 function textoReporte(id) {
-  const { p, tons, gastos, disc } = datosReporte(id);
+  const { p, tons, gastos, disc, pago } = datosReporte(id);
   const [y, m, dd] = F10(p.fecha).split('-');
   const ing = N(p.ingreso_total), ut = ing - gastos;
+  const TOL = Cobranza.TOL;
+  const lineaPago = ({ nombre, c, g }) => `${(pago.length > 1 ? nombre + ': ' : '')}${g.estado === 'Pagada' ? '✅' : '🔴'} ${ESTADO_PAGO[g.estado].toLowerCase()}` +
+    (g.pendiente > TOL ? ` (por pagar ${$(g.pendiente)})` : '') +
+    ` · saldo total ${c.saldo > TOL ? $(c.saldo) : c.saldo < -TOL ? 'a favor ' + $(-c.saldo) : 'al corriente'}`;
   return [
     `*Reporte de producción — ${+dd} de ${MESES[+m-1].toLowerCase()} ${y}*`,
     `Cliente: ${p.clientes.join(', ')}`,
@@ -1331,6 +1376,7 @@ function textoReporte(id) {
     `Ingreso: ${$(ing)}`,
     `Gastos: ${$(gastos)}`,
     `Utilidad: ${$(ut)}${ing ? ` (${(ut/ing*100).toFixed(2)}%)` : ''}`,
+    ...(pago?.length ? ['Pago: ' + (pago.length > 1 ? '\n' : '') + pago.map(lineaPago).join('\n')] : []),
     disc.length
       ? `⚠️ ${disc.length} discrepancia${disc.length!==1?'s':''} de insumos:\n` + disc.map(({r,c}) =>
           `• ${r.insumo} ${lbl(r.uso)}: ${c.merma>0?'faltante':'sobrante'} ${f2(Math.abs(c.merma))} L`).join('\n')
@@ -1345,7 +1391,7 @@ async function accionReporte(btn, fn) {
   const txt = btn.dataset.txt || (btn.dataset.txt = btn.textContent);
   btn.disabled = true; btn.textContent = 'Generando…'; bar(true);
   let etiqueta = txt;
-  try { etiqueta = (await fn(id)) || txt; }
+  try { await pagosParaReporte(); etiqueta = (await fn(id)) || txt; }
   catch(e) { if (e.name !== 'AbortError') alert('No se pudo generar el reporte: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = etiqueta; bar(false); }
 }
