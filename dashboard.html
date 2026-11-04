@@ -193,7 +193,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <a href="#" data-s="rendimientos">Rendimientos</a>
     <a href="#" data-s="financiero">Financiero</a>
     <a href="#" data-s="clientes">Clientes</a>
-    <a href="#" data-s="pagos">Pagos</a>
+    <a href="#" data-s="pagos">Pagos <span id="pg-cdo-ico" title="Pide tu PIN"></span></a>
     <a href="#" data-s="insumos">Insumos</a>
     <a href="#" data-s="continuidad">Continuidad</a>
     <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
@@ -393,7 +393,12 @@ select:focus,input:focus{border-color:var(--amb)}
         <a class="ftb" href="pagos.html" style="text-decoration:none;padding:6px 10px">+ Registrar pago</a>
       </div>
     </div>
-    <div class="sb">
+    <!-- Candado (Candados.gs): sin el PIN, el servidor no manda los pagos -->
+    <div class="sb" id="pg-cdo" style="display:none">
+      <div class="pn"><div class="empty"><span class="dot" style="color:var(--amb)"></span>Esta sección tiene candado.<br>
+        <button class="ftb active" style="margin-top:12px;padding:7px 14px;font-size:12px" onclick="abrirPagos()">Abrir con mi PIN</button></div></div>
+    </div>
+    <div class="sb" id="pg-sb">
       <div class="mg" id="pg-met"></div>
       <div class="pn">
         <div class="pnh">Antigüedad de lo que se debe</div>
@@ -729,6 +734,8 @@ async function loadData() {
     ['insumos','suministros','recipientes'].forEach(k => { D[k] = (D[k]||[]).filter(visible); });
     anomalias();
     badgeReportes();
+    verCandadoPagos(!!D.pagos_cerrados);
+    document.getElementById('pg-cdo-ico').innerHTML = Sesion.zonaActiva('pagos') ? CANDADO_ICO : '';
     document.getElementById('lu').textContent =
       new Date().toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
     renderSec('resumen');
@@ -2236,8 +2243,30 @@ function renderCont() {
 //  PAGOS DE CLIENTES (cálculo en cobranza.js)
 // ══════════════════════════════════════════
 let PG_CLI = '';                                  // cliente abierto en el estado de cuenta
+const CANDADO_ICO = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-1px;opacity:.7" aria-hidden="true"><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>';
 const cuentas = () => Cobranza.calcular(D.producciones||[], D.pagos||[], isoLocal(new Date()));
-function pagos() { renderPagos(); }
+function pagos() { D.pagos_cerrados ? abrirPagos() : renderPagos(); }
+
+// Candado: los pagos se piden aparte con la llave del PIN (Sesion.api pide el PIN si hace falta)
+function verCandadoPagos(cerrado) {
+  document.getElementById('pg-cdo').style.display = cerrado ? '' : 'none';
+  document.getElementById('pg-sb').style.display  = cerrado ? 'none' : '';
+}
+async function abrirPagos() {
+  verCandadoPagos(true);
+  try {
+    const j = await api({ action:'pagos_panel' });
+    D.pagos = j.pagos || []; D.pagos_cerrados = false;
+    verCandadoPagos(false);
+    renderPagos();
+  } catch(e) { if (e.code !== 'CANDADO') alert('No se pudieron cargar los pagos: ' + e.message); }
+}
+// Se cerró por falta de uso: se quitan los pagos de la memoria y se tapa la sección
+window.addEventListener('candado-cerrado', () => {
+  if (!D || !Sesion.zonaActiva('pagos')) return;
+  D.pagos = null; D.pagos_cerrados = true; PG_CLI = '';
+  verCandadoPagos(true);
+});
 
 function renderPagos() {
   if (!D) return;
@@ -2355,6 +2384,7 @@ async function anularPago(id, btn) {
   btn.disabled = true;
   try {
     await api({ action:'pago_anular', id, motivo:motivo.trim() });
+    if (D.pagos_cerrados) return abrirPagos();     // se había cerrado el candado: se vuelven a traer
     const p = (D.pagos||[]).find(x => x.id_pago === id);
     if (p) Object.assign(p, { estado:'ANULADO', anulado_por:Sesion.leer()?.nombre || '', motivo_anulacion:motivo.trim() });
     renderPagos();

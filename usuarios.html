@@ -99,6 +99,12 @@ input:focus,select:focus{outline:2px solid var(--amb);outline-offset:0;border-co
     <div id="lista"><div class="hint">Cargando…</div></div>
   </div>
 
+  <!-- CANDADOS (Candados.gs) -->
+  <div class="card">
+    <h2>Candados <span class="u" id="cd-sub">qué partes piden el PIN de cada quien al abrirlas</span></h2>
+    <div id="cd"><div class="hint">Cargando…</div></div>
+  </div>
+
   <!-- PERMISOS POR PERFIL -->
   <div class="card">
     <h2>Permisos por perfil <span class="u" id="pm-sub">qué puede ver y hacer cada perfil</span></h2>
@@ -157,6 +163,7 @@ async function cargar() {
     pintar();
     PM_EDIT = PM.perfiles.filter(x => x.clave !== 'desarrollador').map(x => ({ ...x, permisos:[...x.permisos] }));
     pintarPermisos();
+    pintarCandados();
   } catch(e) { $('#lista').innerHTML = `<div class="res err">${esc(e.message)}</div>`; }
 }
 
@@ -167,12 +174,13 @@ function pintar() {
     <div class="u-item" data-u="${esc(u.usuario)}">
       <div class="u-top">
         <div><b>${esc(u.nombre)}</b> <span class="id">${esc(u.usuario)}</span>
-          <div class="meta">${esc(u.perfil_nombre || u.perfil)} · ${u.con_contrasena ? 'último acceso: ' + fAcceso(u.ultimo_acceso) : 'sin contraseña todavía'}</div></div>
+          <div class="meta">${esc(u.perfil_nombre || u.perfil)} · ${u.con_contrasena ? 'último acceso: ' + fAcceso(u.ultimo_acceso) : 'sin contraseña todavía'}${u.con_pin ? ' · tiene PIN' : ''}</div></div>
         <div>${u.soy_yo ? '<span class="tag yo">Tú</span> ' : ''}${u.activo ? '' : '<span class="tag off">Sin acceso</span>'}</div>
       </div>
       ${u.editable ? `<div class="fila-btn">
         <button class="btn sm" onclick="editar(idDe(this))">Editar</button>
         ${u.soy_yo ? '' : `<button class="btn sm" onclick="restablecer(idDe(this), this)">${u.con_contrasena ? 'Restablecer contraseña' : 'Crear contraseña'}</button>`}
+        ${u.soy_yo || !u.con_pin ? '' : `<button class="btn sm" onclick="quitarPin(idDe(this), this)">Quitar PIN</button>`}
       </div>` : '<div class="meta">Solo un desarrollador puede modificarlo.</div>'}
       ${EDITANDO === u.usuario ? formEditar(u) : ''}
       <div data-k="out"></div>
@@ -234,6 +242,17 @@ async function restablecer(id, b) {
     const j = await Sesion.api({ action:'usuario_restablecer', usuario:id });
     await cargar();
     mostrarEn(id, tarjetaClave(j.usuario, j.contrasena));
+  } catch(e) { b.disabled = false; mostrarEn(id, `<div class="res err">${esc(e.message)}</div>`); }
+}
+// Olvidó su PIN: se le quita y lo vuelve a crear con su contraseña la próxima vez que abra algo con candado
+async function quitarPin(id, b) {
+  const u = LISTA.find(x => x.usuario === id);
+  if (!confirm(`¿Quitarle el PIN a ${u.nombre}? Lo vuelve a crear con su contraseña la próxima vez que abra algo con candado.`)) return;
+  b.disabled = true;
+  try {
+    await Sesion.api({ action:'pin_quitar', usuario:id });
+    await cargar();
+    mostrarEn(id, '<div class="res ok">✓ PIN quitado</div>');
   } catch(e) { b.disabled = false; mostrarEn(id, `<div class="res err">${esc(e.message)}</div>`); }
 }
 function mostrarEn(id, html) {
@@ -320,6 +339,36 @@ async function guardarPermisos() {
     await cargar();
     res('r-permisos', '✓ Permisos guardados. Aplican en menos de un minuto (cada quien los ve al recargar).', 'ok');
   } catch(e) { b.disabled = false; res('r-permisos', e.message); }
+}
+
+// ── Candados ───────────────────────────────
+// Qué zonas piden el PIN y cuántos minutos sin uso aguanta abierto. Solo el desarrollador lo cambia.
+function pintarCandados() {
+  const c = PM.candados, ed = PM.editable, dis = ed ? '' : 'disabled';
+  if (!c) { $('#cd').innerHTML = '<div class="hint">Falta publicar la nueva versión del Apps Script (Candados.gs).</div>'; return; }
+  $('#cd-sub').textContent = ed ? 'qué partes piden el PIN de cada quien al abrirlas'
+                                : 'qué partes piden el PIN de cada quien al abrirlas · solo el desarrollador puede cambiarlo';
+  $('#cd').innerHTML = `
+    ${c.zonas.map(z => `<label class="chk"><input type="checkbox" data-z="${esc(z.clave)}" ${z.activo ? 'checked' : ''} ${dis}>
+      <span><b>${esc(z.nombre)}</b><br><small style="color:var(--muted)">${esc(z.desc)}</small></span></label>`).join('')}
+    <div style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:14px">
+      Se cierra solo tras <input type="number" id="cd-min" min="1" max="120" value="${c.minutos}" style="width:70px" ${dis}> minutos sin usarlo
+    </div>
+    <div class="hint">Cada quien crea su PIN (de 4 a 6 números) la primera vez, con su contraseña. Si alguien lo olvida, aquí arriba: "Quitar PIN".</div>
+    ${ed ? '<div class="fila-btn"><button class="btn p" id="b-cd" onclick="guardarCandados()">Guardar candados</button></div>' : ''}
+    <div class="res" id="r-cd"></div>`;
+}
+async function guardarCandados() {
+  const zonas = [...document.querySelectorAll('#cd [data-z]')].filter(x => x.checked).map(x => x.dataset.z);
+  const minutos = Number($('#cd-min').value);
+  if (!(minutos >= 1 && minutos <= 120)) return res('r-cd', 'Los minutos deben ser de 1 a 120');
+  const b = $('#b-cd'); b.disabled = true; res('r-cd', '');
+  try {
+    const j = await Sesion.api({ action:'candados_guardar', candados:{ zonas, minutos } });
+    const s = Sesion.leer(); if (s) { s.candados = { zonas:j.zonas, minutos:j.minutos }; Sesion.guardar(s); }
+    await cargar();
+    res('r-cd', '✓ Candados guardados. Cada quien los ve al volver al menú.', 'ok');
+  } catch(e) { b.disabled = false; res('r-cd', e.message); }
 }
 
 // ── Inicio ─────────────────────────────────
