@@ -81,6 +81,10 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
 .hist div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--bd);font-size:14px}
 .hist div:first-child{border-top:none}
 .hist b{color:var(--amb)}
+/* VIAJES DE MATERIAL */
+.vrow{display:grid;grid-template-columns:1fr 80px 44px;gap:8px;align-items:end}
+.vrow2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.vrango{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
 </style>
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -90,7 +94,7 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
   <div><h1 id="h-tit">Registro de planta</h1><small id="h-op">—</small></div>
   <div style="display:flex;gap:6px">
     <button class="btn sm" onclick="nuevoActual()" title="Borrar todo y empezar de nuevo">Nuevo</button>
-    <a class="btn sm" href="index.html" title="Menú de inicio" style="text-decoration:none">Inicio</a>
+    <a class="btn sm casa" href="index.html" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></a>
     <button class="btn sm" onclick="Sesion.salir()">Salir</button>
   </div>
 </div></header>
@@ -141,6 +145,12 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
     <div id="cuadre"></div>
   </div>
 
+  <!-- MATERIAL QUE ENTRÓ -->
+  <div class="card">
+    <h2>Material que entró <span class="u">viajes de arena y grava que llegaron ese día (la oficina captura los folios)</span></h2>
+    <div id="agregados"></div>
+  </div>
+
   <!-- OBSERVACIONES -->
   <div class="card">
     <h2>Observaciones</h2>
@@ -154,7 +164,25 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
     <h2>¿Qué se compró?</h2>
     <div class="ops" id="c-insumos"></div>
   </div>
-  <div class="card">
+  <!-- Viajes de arena / grava (uno por folio) → Agregados_Movimientos -->
+  <div class="card oculto" id="c-viajes-card">
+    <h2>Viajes <span class="u">uno por folio del ticket · si todos son de 14 m³ no hay que cambiar nada</span></h2>
+    <div class="g2 f">
+      <div><label>Fecha en que llegaron</label><input type="date" id="c-vfecha"></div>
+      <div><label>Procedencia / proveedor</label><input id="c-vproc" placeholder="opcional"></div>
+    </div>
+    <label>Folios seguidos (opcional)</label>
+    <div class="vrango f">
+      <input id="c-vdel" inputmode="numeric" placeholder="Del folio">
+      <input id="c-val" inputmode="numeric" placeholder="Al folio">
+      <button class="btn sm" type="button" onclick="Compras.rangoViajes()">Agregar</button>
+    </div>
+    <div id="c-vlista"></div>
+    <button class="btn add" type="button" onclick="Compras.addViaje()">+ Agregar viaje</button>
+    <div class="f" style="margin-top:10px"><label>Notas</label><textarea id="c-vnota" placeholder="opcional"></textarea></div>
+    <div class="res" id="c-vtot"></div>
+  </div>
+  <div class="card c-fac">
     <h2>Datos de la factura</h2>
     <div class="g2 f">
       <div><label>Fecha de la factura o entrega</label><input type="date" id="c-fecha"></div>
@@ -165,7 +193,7 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
       <div><label>Folio de factura</label><input id="c-factura" placeholder="opcional"></div>
     </div>
   </div>
-  <div class="card">
+  <div class="card c-fac">
     <h2>Precio <span class="u">como viene en la factura</span></h2>
     <div class="g2 f">
       <div><label>Precio por litro ($)</label><input id="c-precio" inputmode="decimal" placeholder="Ej. 13.95"></div>
@@ -182,7 +210,7 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
     </div>
     <div class="f"><label>Notas</label><textarea id="c-notas" placeholder="Ej. llegó en 2 pipas, faltó firma, etc."></textarea></div>
   </div>
-  <div class="card">
+  <div class="card c-fac">
     <h2>Así se va a guardar</h2>
     <div class="calc" id="c-calc"></div>
     <div class="res" id="c-cmp"></div>
@@ -242,6 +270,9 @@ const COMPRAS = [
   { key:'gasolina', nombre:'Gasolina', insumo:'GASOLINA' },
 ];
 const INSUMOS_OTROS = ['DIESEL', 'GASOLINA', 'COMBUSTIBLE ALTERNO'];
+// Agregados: la lista sale de Agregados_Materiales (solo nombre y m³ por viaje); sin señal se usa la última guardada
+const AGR_DEF = [{ material:'ARENA', m3_por_viaje:14 }, { material:'GRAVA 3/4', m3_por_viaje:14 }];
+let AGR_CAT = AGR_DEF;
 const UNI_TXT = { L:'litros', pct:'% del tanque', cm:'cm en varilla' };
 const UNI_CORTA = { L:' L', pct:'%', cm:' cm' };
 
@@ -274,6 +305,7 @@ const hoy  = () => iso(new Date());
 const diaSig = f => { const d = new Date(f+'T12:00:00'); d.setDate(d.getDate()+1); return iso(d); };
 const fCorta = f => { if (!f) return ''; const d = new Date(f+'T12:00:00'); return d.toLocaleDateString('es-MX', { weekday:'long', day:'numeric', month:'long' }); };
 const nuevoId = () => 'R-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 
 function toL(t, v) {
   if (v == null) return null;
@@ -311,6 +343,13 @@ function construir() {
       <textarea class="nota oculto" data-k="nota" placeholder="Ej. se usó para pruebas del mantenimiento, incluye la descarga de la pipa…"></textarea>
       <div class="res" data-k="res"></div>
     </div>`).join('');
+
+  // Una fila por material: si no llegó, se deja vacío
+  $('#agregados').innerHTML = AGR_CAT.map((m, i) => `
+    <div class="g2t" data-agr="${esc(m.material)}" style="${i ? 'margin-top:10px' : ''}">
+      <div><label>${esc(m.material)} · viajes</label><input data-k="viajes" inputmode="numeric"></div>
+      <div><label>m³ por viaje</label><input data-k="m3" inputmode="decimal" value="${m.m3_por_viaje}"></div>
+    </div>`).join('') + '<div class="res" id="agr-res"></div>';
 
   // "+ Nota" abre el cuadro solo cuando hay algo que explicar
   $('#tanques').addEventListener('click', e => {
@@ -406,9 +445,14 @@ function recolectar() {
       descripcion: el.querySelector('[data-k=desc]').value.trim(),
       litros:      num(el.querySelector('[data-k=litros]').value),
     })).filter(o => o.descripcion || o.litros),
+    agregados: $$('#agregados [data-agr]').map(el => ({
+      material: el.dataset.agr,
+      viajes:   num(el.querySelector('[data-k=viajes]').value),
+      m3_viaje: num(el.querySelector('[data-k=m3]').value),
+    })).filter(a => a.viajes),
     observaciones: $('#obs').value.trim(),
     creado: new Date().toISOString(),
-    version: 3,
+    version: 4,
   };
 }
 
@@ -441,6 +485,12 @@ function llenar(r) {
   });
   $('#otros').innerHTML = '';
   (r.otros_usos || []).forEach(addOtro);
+  $$('#agregados [data-agr]').forEach(el => {
+    const a = (r.agregados || []).find(x => x.material === el.dataset.agr);
+    const m = AGR_CAT.find(x => x.material === el.dataset.agr);
+    el.querySelector('[data-k=viajes]').value = a?.viajes ?? '';
+    el.querySelector('[data-k=m3]').value     = a?.m3_viaje ?? m?.m3_por_viaje ?? 14;
+  });
   $('#obs').value = r.observaciones || '';
   alCambiar();
 }
@@ -483,6 +533,10 @@ function revisar(r) {
   });
 
   r.otros_usos.forEach(o => { if (!o.litros) errores.push(`Faltan los litros de "${o.descripcion || 'otro uso'}"`); });
+  r.agregados.forEach(a => {
+    if (!(a.viajes > 0 && a.viajes <= 200 && Number.isInteger(a.viajes))) errores.push(`${a.material}: los viajes deben ser un número entero`);
+    if (!(a.m3_viaje > 0 && a.m3_viaje <= 60)) errores.push(`${a.material}: revisa los m³ por viaje`);
+  });
 
   // Cuadre: lo comprado contra lo repartido en tanques y otros usos, más lo que se guardó (o se sacó) de bidones
   const cuadre = COMPRAS.map(c => {
@@ -528,6 +582,10 @@ function alCambiar() {
     res.innerHTML = [linea, ...p.msg].filter(Boolean).join('<br>');
   });
 
+  const ar = $('#agr-res');
+  ar.className = r.agregados.length ? 'res ok' : 'res';
+  ar.innerHTML = r.agregados.map(a => `${esc(a.material)}: <b>${fmt(a.viajes, 0)} viaje${a.viajes === 1 ? '' : 's'}</b> · ${fmt(a.viajes * (a.m3_viaje || 0))} m³`).join('<br>');
+
   $('#cuadre-card').style.display = rv.cuadre.length ? '' : 'none';
   $('#cuadre').innerHTML = rv.cuadre.map(c => {
     const ok = Math.abs(c.dif) <= 0.5;
@@ -559,6 +617,7 @@ function textoReporte(r) {
     if (x.nota) L.push(`Nota: ${x.nota}`);
   });
   if (r.otros_usos.length) { L.push('', 'Otros usos'); r.otros_usos.forEach(o => L.push(`${fmt(o.litros)} L ${o.insumo.toLowerCase()} — ${o.descripcion}`)); }
+  if (r.agregados.length) { L.push('', 'Material que entró'); r.agregados.forEach(a => L.push(`${fmt(a.viajes, 0)} viajes de ${a.material} (${fmt(a.m3_viaje)} m³ c/u)`)); }
   if (r.observaciones) L.push('', 'Observaciones', r.observaciones);
   return L.join('\n');
 }
@@ -676,21 +735,123 @@ const Compras = (() => {
   const money = (v, d=2) => v==null ? '—' : '$' + new Intl.NumberFormat('es-MX', { minimumFractionDigits:d, maximumFractionDigits:d }).format(v);
   const fLarga = f => f ? new Date(f+'T12:00:00').toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' }) : '';
   const nuevoId = () => 'C-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
-  const nombreInsumo = v => INSUMOS.find(i => i.v === v)?.n || v;
+  const nombreInsumo = v => INSUMOS.find(i => i.v === v)?.n || AGR_CAT.find(m => m.material === v)?.material || v;
+  const esAgr = v => AGR_CAT.some(m => m.material === v);
 
   function init() {
-    q('insumos').innerHTML = INSUMOS.map(i => `<button type="button" class="op" data-v="${i.v}">${i.n}</button>`).join('');
+    // Arena, grava…: no llevan factura aquí; se capturan los viajes (uno por folio)
+    const agr = AGR_CAT.map(m => ({ v:m.material, n:m.material[0] + m.material.slice(1).toLowerCase() }));
+    q('insumos').innerHTML = [...INSUMOS, ...agr].map(i => `<button type="button" class="op" data-v="${esc(i.v)}">${esc(i.n)}</button>`).join('');
     q('insumos').addEventListener('click', e => {
       const b = e.target.closest('.op'); if (!b) return;
       INSUMO = b.dataset.v; pintarInsumo(); calcular();
     });
     $('#t-compras').addEventListener('input', calcular);
     $('#t-compras').addEventListener('change', calcular);
+    q('vlista').addEventListener('click', e => {
+      const b = e.target.closest('.btn.x'); if (!b) return;
+      b.closest('.item').remove(); calcular();
+    });
     limpiar(false);
     pintarHist();
   }
   function pintarInsumo() {
     q('insumos').querySelectorAll('.op').forEach(b => b.classList.toggle('on', b.dataset.v === INSUMO));
+    const agr = esAgr(INSUMO);
+    $$('#t-compras .c-fac').forEach(el => el.classList.toggle('oculto', agr));
+    q('viajes-card').classList.toggle('oculto', !agr);
+    q('send').textContent = agr ? 'Guardar viajes' : 'Guardar compra';
+    if (agr) {
+      const m3 = AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje || 14;
+      $$('#c-vlista [data-k=m3]').forEach(i => { if (!i.dataset.tocado) i.value = m3; });
+      if (!$$('#c-vlista .item').length) addViaje();
+    }
+  }
+
+  // ── Viajes de material ──
+  function addViaje(v = {}) {
+    const ant = $$('#c-vlista .item').pop();                     // placa y chofer se repiten casi siempre
+    const el = document.createElement('div');
+    el.className = 'item';
+    el.innerHTML = `
+      <div class="vrow">
+        <div><label>Folio</label><input data-k="folio" inputmode="numeric"></div>
+        <div><label>m³</label><input data-k="m3" inputmode="decimal"></div>
+        <button class="btn x" type="button" title="Quitar">✕</button>
+      </div>
+      <div class="vrow2">
+        <div><label>Placa</label><input data-k="placa" autocapitalize="characters" placeholder="opcional"></div>
+        <div><label>Chofer</label><input data-k="chofer" autocapitalize="characters" placeholder="opcional"></div>
+      </div>`;
+    const m3 = el.querySelector('[data-k=m3]');
+    el.querySelector('[data-k=folio]').value  = v.folio ?? '';
+    m3.value = v.m3 ?? AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje ?? 14;
+    m3.addEventListener('input', () => m3.dataset.tocado = '1');
+    el.querySelector('[data-k=placa]').value  = v.placa ?? ant?.querySelector('[data-k=placa]').value ?? '';
+    el.querySelector('[data-k=chofer]').value = v.chofer ?? ant?.querySelector('[data-k=chofer]').value ?? '';
+    q('vlista').appendChild(el);
+    calcular();
+    return el;
+  }
+  // "Del folio 14863 al 14894" → 32 renglones (los vacíos de arriba se reutilizan)
+  function rangoViajes() {
+    const a = parseInt(q('vdel').value, 10), b = parseInt(q('val').value, 10);
+    if (!(a > 0 && b >= a)) return aviso('Escribe el primer y el último folio (el último debe ser mayor o igual).', 'err');
+    if (b - a + 1 > 200) return aviso('Son demasiados folios para una sola captura (máximo 200).', 'err');
+    $$('#c-vlista .item').forEach(el => { if (!el.querySelector('[data-k=folio]').value.trim()) el.remove(); });
+    for (let f = a; f <= b; f++) addViaje({ folio:String(f) });
+    q('vdel').value = q('val').value = '';
+  }
+  function recolectarViajes() {
+    return {
+      id: ID, fecha: q('vfecha').value, material: INSUMO,
+      procedencia: q('vproc').value.trim(), nota: q('vnota').value.trim(),
+      viajes: $$('#c-vlista .item').map(el => ({
+        folio:  el.querySelector('[data-k=folio]').value.trim(),
+        m3:     num(el.querySelector('[data-k=m3]').value),
+        placa:  el.querySelector('[data-k=placa]').value.trim().toUpperCase(),
+        chofer: el.querySelector('[data-k=chofer]').value.trim().toUpperCase(),
+      })).filter(v => v.folio || v.placa || v.chofer || v.m3 !== (AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje ?? 14)),
+    };
+  }
+  function erroresViajes(c) {
+    const e = [];
+    if (!c.fecha) e.push('Falta la fecha');
+    else if (c.fecha > hoy()) e.push('La fecha es de un día que todavía no pasa');
+    if (!c.viajes.length) e.push('Agrega al menos un viaje con su folio');
+    c.viajes.forEach((v, i) => {
+      if (!v.folio) e.push(`Viaje ${i + 1}: falta el folio`);
+      if (!(v.m3 > 0 && v.m3 <= 60)) e.push(`Viaje ${i + 1}: revisa los m³`);
+    });
+    const fol = c.viajes.map(v => v.folio).filter(Boolean), rep = [...new Set(fol.filter((f, i) => fol.indexOf(f) !== i))];
+    if (rep.length) e.push('Folio repetido: ' + rep.join(', '));
+    return e;
+  }
+  function calcViajes() {
+    const c = recolectarViajes(), m3 = c.viajes.reduce((s, v) => s + (v.m3 || 0), 0), el = q('vtot');
+    el.className = c.viajes.length ? 'res ok' : 'res';
+    el.innerHTML = c.viajes.length ? `<b>${c.viajes.length} viaje${c.viajes.length === 1 ? '' : 's'}</b> de ${esc(c.material)} · <b>${fmt(m3)} m³</b>` : '';
+  }
+  async function enviarViajes() {
+    const c = recolectarViajes(), e = erroresViajes(c);
+    if (e.length) return aviso('Falta completar:<br>• ' + e.slice(0, 8).join('<br>• ') + (e.length > 8 ? `<br>…y ${e.length - 8} más` : ''), 'err', 8000);
+    const m3 = c.viajes.reduce((s, v) => s + v.m3, 0);
+    if (!confirm(`¿Guardar estos viajes?\n\n${c.viajes.length} viaje(s) de ${c.material} · ${fmt(m3)} m³\n${fLarga(c.fecha)}${c.procedencia ? '\n' + c.procedencia : ''}`)) return;
+    const btn = q('send');
+    btn.disabled = true; btn.textContent = 'Guardando…';
+    try {
+      const j = await api({ action:'agregados_viajes', captura:c });
+      const hist = LSc.get('hist', []);
+      hist.unshift({ id:`${j.viajes} viaje${j.viajes === 1 ? '' : 's'}`, fecha:c.fecha, insumo:c.material, m3:j.m3, proveedor:c.procedencia, agr:true });
+      LSc.set('hist', hist.slice(0, 15));
+      pintarHist();
+      aviso(`✓ Guardados ${j.viajes} viaje(s) de ${esc(c.material)}`, 'ok', 5000);
+      limpiar(false);
+    } catch(err) {
+      aviso('No se pudo guardar: ' + esc(err.message) + '<br>No se borró nada; vuelve a intentar.', 'err', 8000);
+    } finally {
+      btn.disabled = false; pintarInsumo();
+    }
   }
 
   // En el formato de Entradas_Material
@@ -724,6 +885,7 @@ const Compras = (() => {
   }
 
   function calcular() {
+    if (esAgr(INSUMO)) return calcViajes();
     const c = recolectar(), k = costos(c);
     q('calc').innerHTML = `
       <span>Precio por litro sin IVA</span><span>${money(c.precio_unit_base, 4)}</span>
@@ -743,15 +905,18 @@ const Compras = (() => {
 
   function limpiar(preguntar) {
     if (preguntar && !confirm('¿Borrar lo capturado y empezar una compra nueva?')) return;
-    ID = nuevoId(); INSUMO = ''; pintarInsumo();
-    ['cantidad','proveedor','factura','precio','flete','total_fac','notas'].forEach(k => q(k).value = '');
+    ID = nuevoId(); INSUMO = '';
+    ['cantidad','proveedor','factura','precio','flete','total_fac','notas','vproc','vnota','vdel','val'].forEach(k => q(k).value = '');
+    q('vlista').innerHTML = '';
+    pintarInsumo();
     q('iva').value = 'sin';
-    q('fecha').value = hoy();
+    q('fecha').value = q('vfecha').value = hoy();
     calcular();
     window.scrollTo(0, 0);
   }
 
   async function enviar() {
+    if (esAgr(INSUMO)) return enviarViajes();
     const c = recolectar(), k = costos(c), e = errores(c);
     if (e.length) return aviso('Falta completar:<br>• ' + e.join('<br>• '), 'err', 7000);
     if (!confirm(`¿Guardar esta compra?\n\n${nombreInsumo(c.insumo)} · ${fmt(c.cantidad, 2)} L · ${c.proveedor}\n${fLarga(c.fecha)}\nCosto real: ${money(k.unit, 4)} por litro\nTotal: ${money(k.total)}`)) return;
@@ -775,11 +940,14 @@ const Compras = (() => {
   function pintarHist() {
     const h = LSc.get('hist', []);
     q('hist-card').classList.toggle('oculto', !h.length);
-    q('hist').innerHTML = h.map(x => `<div><span><b>${esc(x.id)}</b> · ${esc(nombreInsumo(x.insumo))} ${fmt(x.cantidad, 2)} L<br>
-      <span style="color:var(--muted)">${esc(x.proveedor)} · ${fLarga(x.fecha)}</span></span><span>${money(x.total)}</span></div>`).join('');
+    q('hist').innerHTML = h.map(x => x.agr
+      ? `<div><span><b>${esc(x.id)}</b> · ${esc(x.insumo)}<br>
+          <span style="color:var(--muted)">${x.proveedor ? esc(x.proveedor) + ' · ' : ''}${fLarga(x.fecha)}</span></span><span>${fmt(x.m3)} m³</span></div>`
+      : `<div><span><b>${esc(x.id)}</b> · ${esc(nombreInsumo(x.insumo))} ${fmt(x.cantidad, 2)} L<br>
+          <span style="color:var(--muted)">${esc(x.proveedor)} · ${fLarga(x.fecha)}</span></span><span>${money(x.total)}</span></div>`).join('');
   }
 
-  return { init, enviar, limpiar, calcular, costos, recolectar };
+  return { init, enviar, limpiar, calcular, costos, recolectar, addViaje, rangoViajes };
 })();
 
 // ══════════════════════════════════════════
@@ -803,11 +971,21 @@ function nuevoActual() { TAB === 'compras' ? Compras.limpiar(true) : nuevoReport
 //  INICIO
 // ══════════════════════════════════════════
 // Cada pestaña según los permisos del perfil (Usuarios → Permisos por perfil)
-Sesion.requerir('registro').then(s => {
+// Lista de materiales (arena, grava…). Sin señal se usa la última que se bajó
+async function cargarCatalogoAgr() {
+  AGR_CAT = LS.get('agr_cat', AGR_DEF);
+  try {
+    const j = await Sesion.api({ action:'agregados_catalogo' }, 8000);
+    if (Array.isArray(j.materiales) && j.materiales.length) { AGR_CAT = j.materiales; LS.set('agr_cat', AGR_CAT); }
+  } catch(e) {}
+}
+
+Sesion.requerir('registro').then(async s => {
   SES = s;
   $('#h-op').textContent = s.nombre;
   const per = s.permisos || ['registro'];
   const puedeR = per.includes('registro'), puedeC = per.includes('compras');
+  await cargarCatalogoAgr();
   if (puedeR) {
     construir();
     llenar(LS.get('borrador', null) || { fecha: hoy() });

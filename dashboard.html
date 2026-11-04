@@ -170,6 +170,10 @@ select:focus,input:focus{border-color:var(--amb)}
 .ph h2{font-size:17px}.mv{font-size:26px}
 #menu-btn{font-size:14px;font-weight:600;font-family:inherit}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.agr-form{margin-top:12px;padding:12px;border:1px solid var(--amb);background:rgba(247,147,30,.06)}
+.agr-av{margin-top:10px;padding:8px 12px;font-size:12px;border-left:3px solid var(--amb);background:var(--s2)}
+.btn-r.casa{display:flex;align-items:center;justify-content:center;padding:5px 10px}
+.btn-r.casa svg{width:18px;height:18px}
 </style>
 </head>
 <body>
@@ -202,7 +206,7 @@ select:focus,input:focus{border-color:var(--amb)}
     <span id="lu">—</span>
     <button class="btn-r" onclick="reload()">Actualizar</button>
     <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
-    <button class="btn-r" onclick="location.href='index.html'">Inicio</button>
+    <button class="btn-r casa" onclick="location.href='index.html'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
     <button class="btn-r" onclick="Sesion.salir()">Salir</button>
   </div>
 </div>
@@ -418,6 +422,35 @@ select:focus,input:focus{border-color:var(--amb)}
   <section class="sec" id="sec-insumos">
     <div class="ph"><h2>Insumos</h2></div>
     <div class="sb">
+      <!-- AGREGADOS (teórico): agregados.js -->
+      <div class="pn">
+        <div class="pnh"><span>Agregados · saldo teórico</span><button class="ftb" id="agr-btn" onclick="agrForm(true)">Ajustar saldo</button></div>
+        <div class="pnb">
+          <div id="agr-alc" style="margin-bottom:12px"></div>
+          <div class="mg" id="agr-met"></div>
+          <div id="agr-form" class="agr-form" style="display:none">
+            <div style="font-weight:600;margin-bottom:8px">¿Cuánto calculas que hay en el montón?</div>
+            <div class="flt">
+              <select id="agr-f-mat"></select>
+              <input type="text" id="agr-f-cant" inputmode="decimal" placeholder="Cantidad" style="width:100px">
+              <select id="agr-f-uni"><option value="viajes">viajes</option><option value="m3">m³</option><option value="ton">toneladas</option></select>
+              <input type="date" id="agr-f-fecha">
+              <input type="text" id="agr-f-nota" placeholder="Nota (opcional)" style="flex:1;min-width:160px">
+              <button class="ftb active" onclick="agrGuardarConteo(this)">Guardar</button>
+              <button class="ftb" onclick="agrForm(false)">Cancelar</button>
+            </div>
+            <div style="font-size:11px;color:var(--muted);margin-top:6px">
+              Es lo que hay al terminar ese día: desde ahí vuelve a contar el saldo. Si lo calculaste antes de producir, pon la fecha de ayer.
+            </div>
+          </div>
+          <div id="agr-av"></div>
+        </div>
+        <div class="sub">Movimientos <select id="agr-mov-ver" onchange="renderAgregados()" style="font-size:11px;text-transform:none;letter-spacing:0">
+          <option value="30">Últimos 30</option><option value="">Todos</option></select></div>
+        <div class="tw" id="agr-mov"></div>
+        <div class="sub">Consumo por producción <span style="font-weight:400;text-transform:none;letter-spacing:0">toneladas − cemento asfáltico (1 L ≈ 1 kg) · al saldo solo le restan las de después del inventario o del último conteo</span></div>
+        <div class="tw" id="agr-con"></div>
+      </div>
       <div class="two">
         <div class="pn">
           <div class="pnh">Consumo total acumulado (L)</div>
@@ -530,6 +563,7 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <script src="sesion.js"></script>
 <script src="cobranza.js"></script>
+<script src="agregados.js"></script>
 <script>
 if (window.ChartZoom) Chart.register(ChartZoom);
 
@@ -1850,6 +1884,7 @@ function renderClientes() {
 //  INSUMOS
 // ══════════════════════════════════════════
 function insumos() {
+  renderAgregados();
   const ins=(D.insumos||[]).filter(r=>r.tipo_uso==='PRODUCCION');
 
   // Consumo total por insumo+uso
@@ -1914,6 +1949,132 @@ function insumos() {
       <td class="rt ${r.rangos.ALTO>0?'neg':''}">${r.rangos.ALTO}</td>
       <td class="rt">${r.n}</td>
     </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════
+//  AGREGADOS (teórico) — cálculo en agregados.js
+// ══════════════════════════════════════════
+const AGR_ORIGEN = { OPERADOR:'Operador', OFICINA:'Oficina (folio)', PANEL:'Conteo' };
+function renderAgregados() {
+  const A = Agregados.calcular(D, isoLocal(new Date()));
+  const el = id => document.getElementById(id);
+  if (!A.materiales.length) {
+    el('agr-alc').innerHTML = '<div class="empty" style="padding:12px">Todavía no hay materiales. En el Apps Script ejecuta <b>agregadosConfigurar</b> (crea la hoja Agregados_Materiales).</div>';
+    ['agr-met','agr-av','agr-mov','agr-con'].forEach(k => el(k).innerHTML = '');
+    el('agr-btn').style.display = 'none';
+    return;
+  }
+  el('agr-btn').style.display = '';
+  const lim = A.surtir;
+  const base = A.L_ton != null ? `con ${f2(A.L_ton)} L/ton de cemento asfáltico (promedio de las últimas ${A.n_prom} producciones)`
+                               : 'con el % de cemento de respaldo (aún no hay producciones con cemento medido)';
+  el('agr-alc').innerHTML = A.alcance_t == null ? '' : `
+    <div style="font-size:13px;color:var(--muted)">Te alcanza para aproximadamente</div>
+    <div class="mv" style="margin:4px 0">${f0(Math.round(A.alcance_t))} ton de producto</div>
+    <div class="ms">${lim ? `Lo que se acaba primero: <b>${esc(lim.material)}</b> · ` : ''}${A.dias != null ? `≈ ${f0(Math.floor(A.dias))} días de producción al ritmo reciente (${f0(Math.round(A.tonsDia))} ton por día) · ` : ''}${base}</div>`;
+
+  el('agr-met').innerHTML = A.materiales.map(m => {
+    const cls = m.saldo_t < 0 || m.bajo ? 'r' : lim && lim.material === m.material ? '' : 'g';
+    const tag = lim && lim.material === m.material ? '<span class="tag ta" style="margin-left:6px">Surtir primero</span>'
+              : m.bajo ? '<span class="tag tm" style="margin-left:6px">Bajo</span>' : '';
+    return `<div class="mc ${cls}">
+      <div class="ml">${esc(m.material)}${tag}</div>
+      <div class="mv">${f0(Math.round(m.saldo_t * 10) / 10)} ton</div>
+      <div class="ms">≈ ${f0(Math.round(m.saldo_m3))} m³ · ≈ ${f0(Math.round(m.saldo_viajes * 10) / 10)} viajes</div>
+      <div class="ms">Alcanza para ≈ ${f0(Math.round(m.alcance_t || 0))} ton de producto</div>
+      <div class="ms">Desde ${esc(m.base.fuente)} (${m.base.fecha || '—'}: ${f0(Math.round(m.base.ton))} ton): +${f0(Math.round(m.entradas_t))} entró · −${f0(Math.round(m.consumo_t))} se usó${m.preliminar_t > 0.05 ? ` (${f0(Math.round(m.preliminar_t))} preliminar)` : ''}</div>
+    </div>`;
+  }).join('');
+
+  el('agr-av').innerHTML = A.avisos.map(a => `<div class="agr-av">${esc(a)}</div>`).join('');
+
+  // Movimientos (más reciente primero)
+  const ver = el('agr-mov-ver').value;
+  const movs = [...A.movimientos].sort((a, b) => b.fecha.localeCompare(a.fecha) || String(b.registrado).localeCompare(String(a.registrado)));
+  const lista = ver ? movs.slice(0, Number(ver)) : movs;
+  el('agr-mov').innerHTML = lista.length ? `<table><thead><tr>
+      <th>Fecha</th><th>Material</th><th>Qué</th><th class="rt">Viajes</th><th class="rt">m³</th><th class="rt">Ton</th>
+      <th>Detalle</th><th>Capturó</th><th></th></tr></thead><tbody>
+    ${lista.map(m => {
+      const conteo = m.tipo === 'CONTEO';
+      const det = conteo ? `Calculó ${f0(m.cantidad)} ${m.unidad === 'm3' ? 'm³' : m.unidad === 'ton' ? 'ton' : 'viajes'}${m.nota ? ' — ' + esc(m.nota) : ''}`
+        : [m.folio ? 'Folio ' + esc(m.folio) : '', esc(m.placa), esc(m.chofer), esc(m.procedencia), esc(m.nota)].filter(Boolean).join(' · ');
+      const est = m.estado === 'ANULADO' ? `<span class="tag ta">Anulado</span> <span style="color:var(--muted)">${esc(m.motivo_anulacion||'')}</span>`
+                : !m.cuenta ? `<span class="tag tm">No cuenta</span> <span style="color:var(--muted)">${esc(m.motivo)}</span>` : '';
+      return `<tr style="${m.cuenta ? '' : 'opacity:.6'}">
+        <td>${m.fecha}</td><td>${esc(m.material)}</td>
+        <td>${conteo ? '<span class="tag tb">Conteo</span>' : 'Entrada · ' + (AGR_ORIGEN[m.origen] || esc(m.origen))}</td>
+        <td class="rt">${conteo ? '—' : f0(m.viajes)}</td>
+        <td class="rt">${conteo ? '—' : f0(m.m3)}</td>
+        <td class="rt amb">${m.ton == null ? '—' : f2(m.ton)}</td>
+        <td>${det}${est ? '<br>' + est : ''}</td>
+        <td style="color:var(--muted)">${esc(m.capturo||'')}</td>
+        <td>${m.estado === 'ANULADO' ? '' : `<button class="ftb" data-id="${esc(m.id_mov)}" onclick="agrAnular(this.dataset.id, this)">Anular</button>`}</td>
+      </tr>`;
+    }).join('')}</tbody></table>` : '<div class="empty">Sin movimientos. Las entradas llegan con el reporte del operador o desde Compras (viajes con folio).</div>';
+
+  // Consumo por producción (las últimas 15)
+  const cons = A.consumos.slice(-15).reverse();
+  const mats = A.materiales;
+  el('agr-con').innerHTML = cons.length ? `<table><thead><tr>
+      <th>Fecha</th><th>Producción</th><th class="rt">Ton producto</th><th class="rt">Cemento</th><th class="rt">L / ton</th>
+      <th class="rt">Agregados (ton)</th>${mats.map(m => `<th class="rt">${esc(m.material)}</th>`).join('')}</tr></thead><tbody>
+    ${cons.map(c => `<tr>
+      <td>${c.fecha}</td>
+      <td>${esc(c.id)}${c.preliminar ? ' <span class="tag tm">Preliminar</span>' : ''}</td>
+      <td class="rt">${f2(c.tons)}</td>
+      <td class="rt">${c.medido ? f0(Math.round(c.cemento_L)) + ' L' : '<span style="color:var(--muted)">estimado</span>'}</td>
+      <td class="rt">${c.L_ton != null ? f2(c.L_ton) : '—'}</td>
+      <td class="rt amb">${f2(c.agregados_t)}</td>
+      ${mats.map(m => `<td class="rt">${f2(c.agregados_t * m.prop)}</td>`).join('')}
+    </tr>`).join('')}</tbody></table>` : '<div class="empty">Sin producciones</div>';
+
+  const sel = el('agr-f-mat');
+  if (!sel.options.length || sel.dataset.mats !== mats.map(m => m.material).join('|')) {
+    sel.innerHTML = mats.map(m => `<option value="${esc(m.material)}">${esc(m.material)}</option>`).join('');
+    sel.dataset.mats = mats.map(m => m.material).join('|');
+  }
+}
+
+function agrForm(abrir) {
+  const f = document.getElementById('agr-form');
+  f.style.display = abrir ? '' : 'none';
+  if (abrir) {
+    document.getElementById('agr-f-fecha').value = isoLocal(new Date());
+    ['agr-f-cant','agr-f-nota'].forEach(k => document.getElementById(k).value = '');
+    document.getElementById('agr-f-cant').focus();
+  }
+}
+async function agrGuardarConteo(btn) {
+  const v = id => document.getElementById(id).value;
+  const cantidad = parseFloat(String(v('agr-f-cant')).replace(',', '.'));
+  if (!(cantidad >= 0)) return alert('Escribe cuánto calculas que hay');
+  if (!v('agr-f-fecha')) return alert('Falta la fecha');
+  const conteo = { id:'AC-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7),
+                   fecha:v('agr-f-fecha'), material:v('agr-f-mat'), cantidad, unidad:v('agr-f-uni'), nota:v('agr-f-nota').trim() };
+  const uni = { viajes:'viajes', m3:'m³', ton:'toneladas' }[conteo.unidad];
+  if (!confirm(`¿Guardar el conteo?\n\n${conteo.material}: ${f0(cantidad)} ${uni} al terminar el ${conteo.fecha}.\nEl saldo vuelve a contar desde aquí.`)) return;
+  btn.disabled = true;
+  try {
+    const j = await api({ action:'agregados_conteo', conteo });
+    D.agregados = D.agregados || {};
+    (D.agregados.movimientos = D.agregados.movimientos || []).push({ id_mov:j.id_mov, ...conteo, tipo:'CONTEO', origen:'PANEL',
+      capturo:j.capturo, registrado:j.registrado, estado:'VIGENTE' });
+    agrForm(false);
+    renderAgregados();
+  } catch(e) { alert('No se pudo guardar: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+async function agrAnular(id, btn) {
+  const motivo = prompt(`¿Por qué se anula el movimiento ${id}? (queda registrado)`);
+  if (!motivo || !motivo.trim()) return;
+  btn.disabled = true;
+  try {
+    const j = await api({ action:'agregados_anular', id, motivo:motivo.trim() });
+    const m = (D.agregados?.movimientos||[]).find(x => x.id_mov === id);
+    if (m) Object.assign(m, { estado:'ANULADO', anulado_por:j.anulado_por, motivo_anulacion:j.motivo_anulacion });
+    renderAgregados();
+  } catch(e) { alert('No se pudo anular: ' + e.message); btn.disabled = false; }
 }
 
 // ══════════════════════════════════════════
@@ -2281,7 +2442,7 @@ function htmlReporteOp(x) {
     </tr></thead><tbody>${tanques}</tbody></table></div>` : ''}
     ${lista('Combustible comprado', (r.compras||[]).map(c => `${esc(c.insumo)}: ${f2(c.litros)} L${c.precio_L ? ` a ${$(c.precio_L)}` : ''}`))}
     ${lista('Otros usos', (r.otros_usos||[]).map(o => `${f2(o.litros)} L ${esc(o.insumo)} — ${esc(o.descripcion)}`))}
-    ${lista('Material que entró', (r.agregados||[]).map(a => `${f0(a.viajes)} viajes de ${esc(a.material)}${a.procedencia ? ` — ${esc(a.procedencia)}` : ''}`))}
+    ${lista('Material que entró', (r.agregados||[]).map(a => `${f0(a.viajes)} viajes de ${esc(a.material)}${a.m3_viaje ? ` · ${f0(a.m3_viaje)} m³ c/u` : ''}${a.procedencia ? ` — ${esc(a.procedencia)}` : ''}`))}
     ${lista('Observaciones', r.observaciones ? [esc(r.observaciones).replace(/\n/g,'<br>')] : [])}
   </div>`;
 }

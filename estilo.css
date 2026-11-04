@@ -36,6 +36,10 @@ header .btn.sm{font-size:13.5px;padding:7px 11px}
 input:focus,select:focus,textarea:focus{outline-color:var(--btn);border-color:var(--btn)}
 .chk input,.mx td input[type=checkbox]{accent-color:var(--btn)}
 
+/* Botón de inicio: casita (Tabler "home") */
+.btn.casa{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.casa svg{width:19px;height:19px;display:block}
+
 /* Opciones y pestañas */
 .op.on{border-color:var(--btn);background:var(--sel);color:var(--text);box-shadow:inset 0 0 0 1px var(--btn)}
 .tabs{border-bottom:1px solid var(--bd);gap:0}

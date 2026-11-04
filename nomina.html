@@ -166,6 +166,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
 .sheet h3 small{display:block;font-family:var(--f-txt);font-size:13px;font-weight:400;letter-spacing:0;color:var(--muted)}
 .row2{display:flex;gap:8px}
 .row2 .btn{flex:1}
+.btn.casa{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.casa svg{width:19px;height:19px;display:block}
 </style>
 </head>
 <body>
@@ -174,7 +176,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
   <div><h1>Nómina</h1><small id="h-op">—</small></div>
   <div style="display:flex;gap:6px">
     <button class="btn sm" data-act="recargar" title="Traer lo último que registraron los demás">Actualizar</button>
-    <a class="btn sm" href="index.html" title="Menú de inicio">Inicio</a>
+    <a class="btn sm casa" href="index.html" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></a>
     <button class="btn sm" onclick="Sesion.salir()">Salir</button>
   </div>
 </div></header>
