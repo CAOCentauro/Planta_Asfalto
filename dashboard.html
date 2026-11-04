@@ -2476,7 +2476,9 @@ function htmlReporteOp(x) {
   const prods = r.producciones || [];
   const tons = prods.reduce((s,p) => s + N(p.tons_real), 0);
   const pend = x.estado === 'PENDIENTE';
-  const lec = (t, v, L) => v==null ? '—' : `${f2(v)} ${UNI[t.unidad]||''}${t.unidad!=='L' && L!=null ? ` <span style="color:var(--muted)">(${f2(L)} L)</span>` : ''}`;
+  // Ya está en el Sheets si hay producción o insumos de esa fecha (lo mismo que revisa el servidor)
+  const enSheets = (D.producciones||[]).some(p => F10(p.fecha) === x.fecha) || (D.insumos||[]).some(i => F10(i.fecha) === x.fecha);
+  const lec =(t, v, L) => v==null ? '—' : `${f2(v)} ${UNI[t.unidad]||''}${t.unidad!=='L' && L!=null ? ` <span style="color:var(--muted)">(${f2(L)} L)</span>` : ''}`;
 
   const tanques = (r.tanques||[]).map(t => {
     const prev = cierreAnterior(t.insumo, t.uso, x.fecha, x.id);
@@ -2505,8 +2507,12 @@ function htmlReporteOp(x) {
 
   return `<div class="pn">
     <div class="pnh">
-      <span>${x.fecha} · ${esc(x.operador) || 'Sin nombre'} <span class="tag ${pend?'tm':'tb'}">${pend?'Pendiente':'Capturado'}</span></span>
-      <button class="ftb ${pend?'active':''}" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? 'Marcar como capturado' : 'Volver a pendiente'}</button>
+      <span>${x.fecha} · ${esc(x.operador) || 'Sin nombre'} <span class="tag ${pend?'tm':'tb'}">${pend?'Pendiente':'Capturado'}</span>
+        ${enSheets ? '<span class="tag tb">En el Sheets</span>' : '<span class="tag ta">Falta pasar al Sheets</span>'}</span>
+      <span style="display:flex;gap:6px;flex-wrap:wrap">
+        ${enSheets ? '' : `<button class="ftb active" data-id="${esc(x.id)}" onclick="pasarReporte(this.dataset.id, this)">Pasar al Sheets</button>`}
+        <button class="ftb" data-id="${esc(x.id)}" onclick="marcarReporte(this.dataset.id,'${pend?'CAPTURADO':'PENDIENTE'}', this)">${pend ? 'Marcar como capturado' : 'Volver a pendiente'}</button>
+      </span>
     </div>
     <div style="padding:12px 16px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
       ${r.sin_produccion || !prods.length ? '<span style="color:var(--muted)">Sin producción</span>'
@@ -2531,6 +2537,24 @@ async function marcarReporte(id, estado, btn) {
     if (x) x.estado = estado;
     badgeReportes(); renderReportes();
   } catch(e) { alert('No se pudo actualizar: ' + e.message); btn.disabled = false; }
+}
+
+// Escribe el reporte en Producciones, Insumos, Suministros y Entradas (Captura.gs › pasarReporte_) y recarga el panel
+async function pasarReporte(id, btn) {
+  const x = (D.reportes||[]).find(r => r.id === id);
+  if (!x || !confirm(`Se va a escribir el reporte del ${x.fecha} en Producciones, Insumos, Suministros y Entradas del Sheets, y quedará como capturado.\n\n¿Continuar?`)) return;
+  const txt = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Pasando…'; bar(true);
+  try {
+    const j = await api({ action:'reporte_pasar', id });
+    alert(`Listo: el reporte del ${x.fecha} quedó en el Sheets${j.id_prod ? ` como ${j.id_prod}` : ''}.` +
+      (j.notas?.length ? '\n\nRevisa:\n• ' + j.notas.join('\n• ') : ''));
+    await loadData();
+    renderSec('reportes');
+  } catch(e) {
+    alert('No se pudo pasar al Sheets: ' + e.message);
+    btn.disabled = false; btn.textContent = txt;
+  } finally { bar(false); }
 }
 
 function historial() {
