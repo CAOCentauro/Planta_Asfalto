@@ -1,7 +1,7 @@
 {
-  "name": "Planta de Asfalto — Control de Producción",
-  "short_name": "Planta",
-  "description": "Registro de producción, insumos y bitácora de flota",
+  "name": "CAO Centauro — Sistema",
+  "short_name": "CAO Centauro",
+  "description": "Planta de asfalto, viajes locales y administración",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",

@@ -51,6 +51,7 @@ const Sesion = (() => {
   async function requerir(pantalla) {
     let s = leer();
     if (!s?.token) return alInicio();
+    franjaDe(pantalla);
     try {
       const j = await api({ action:'yo' });
       s = { ...leer(), nombre:j.nombre, perfil:j.perfil, perfil_nombre:j.perfil_nombre, pantallas:j.pantallas, permisos:j.permisos,
@@ -161,7 +162,74 @@ const Sesion = (() => {
   }
   const cambiarPin = () => pedirPin('', true);
 
+  // ══ FRANJA DEL NEGOCIO ══════════════════════════════
+  // Hasta arriba de cada pantalla: color y nombre del negocio (Inicio › Viajes locales › Diésel de la semana)
+  const NEGOCIOS = {
+    inicio:     { t:'Inicio',            c:'#4b5963', ink:'#fff' },
+    planta:     { t:'Planta de asfalto', c:'#F7931E', ink:'#141414' },
+    viajes:     { t:'Viajes locales',    c:'#1F64B5', ink:'#fff' },
+    general:    { t:'General',           c:'#2E7D4F', ink:'#fff' },
+    sindicatos: { t:'Sindicatos',        c:'#6B3FA0', ink:'#fff' },
+  };
+  const NEG_DE = { dashboard:'planta', registro:'planta', pagos:'planta', viajes:'viajes', nomina:'general', usuarios:'general' };
+  const PREFIJO = { dashboard:'Panel' };
+  const CSS_FRANJA = `:root{--franja:32px}
+#franja{position:fixed;top:0;left:0;right:0;height:var(--franja);z-index:150;display:flex;align-items:center;gap:8px;padding:0 14px;
+  font:600 12px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+#franja a{color:inherit;text-decoration:none}
+#franja a:hover{text-decoration:underline}
+#franja b{font-size:14px;letter-spacing:.06em}
+#franja .fr-s{opacity:.85;overflow:hidden;text-overflow:ellipsis;min-width:0}
+#franja .fr-sep{opacity:.6}
+#franja i{margin-left:auto;padding-left:10px;font-style:normal;font-weight:500;opacity:.7;font-size:11px}
+@media(max-width:640px){#franja i{display:none}#franja{padding:0 10px}}
+body{padding-top:var(--franja)!important}
+header{top:var(--franja)!important}
+#app{height:calc(100vh - var(--franja))!important}
+.theme-fab{top:calc(16px + var(--franja))!important}
+@media(max-width:640px){#sidebar{top:var(--franja)!important}#menu-btn{top:calc(12px + var(--franja))!important}}
+@media print{#franja{display:none}body{padding-top:0!important}}`;
+  const escF = t => String(t).replace(/[&<>"]/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;' }[c]));
+
+  // neg = clave de NEGOCIOS ('inicio' en el menú; null la quita, p. ej. en la pantalla de entrar)
+  function franja(neg, seccion) {
+    let f = document.getElementById('franja');
+    if (!neg) { f?.remove(); document.getElementById('franja-css')?.remove(); return; }
+    const n = NEGOCIOS[neg] || NEGOCIOS.inicio;
+    if (!document.getElementById('franja-css')) {
+      const st = document.createElement('style'); st.id = 'franja-css'; st.textContent = CSS_FRANJA; document.head.appendChild(st);
+    }
+    if (!f) { f = document.createElement('div'); f.id = 'franja'; document.body.prepend(f); }
+    f.style.background = n.c; f.style.color = n.ink;
+    const sep = '<span class="fr-sep">›</span>';
+    f.innerHTML = (neg === 'inicio'
+      ? `<b>Inicio</b>${sep}<span class="fr-s">Elige el negocio</span>`
+      : `<a href="index.html">Inicio</a>${sep}<a href="index.html?n=${neg}"><b>${n.t}</b></a>${seccion ? sep + `<span class="fr-s">${escF(seccion)}</span>` : ''}`)
+      + '<i>CAO Centauro</i>';
+    let m = document.querySelector('meta[name=theme-color]');
+    if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
+    m.content = n.c;
+  }
+  // En las pantallas: el negocio sale de la pantalla y la sección de la pestaña abierta (o del título)
+  function franjaDe(pantalla) {
+    const neg = NEG_DE[pantalla];
+    if (!neg) return;
+    const seccion = () => {
+      const a = document.querySelector('nav a.active');
+      const act = a ? a.firstChild.textContent.trim() : '';
+      const tit = document.querySelector('header h1')?.textContent.trim();
+      return act ? (PREFIJO[pantalla] ? PREFIJO[pantalla] + ' · ' : '') + act : tit || '';
+    };
+    const pintar = () => franja(neg, seccion());
+    const iniciar = () => {
+      pintar();
+      const obs = new MutationObserver(pintar);
+      document.querySelectorAll('nav, header h1').forEach(el => obs.observe(el, { subtree:true, childList:true, characterData:true, attributes:true, attributeFilter:['class'] }));
+    };
+    if (document.body) iniciar(); else addEventListener('DOMContentLoaded', iniciar);
+  }
+
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
 
-  return { URL_API, api, requerir, salir, leer, guardar, borrar, pedirPin, cambiarPin, conCandado, zonaActiva, llaveVigente };
+  return { URL_API, api, requerir, salir, leer, guardar, borrar, pedirPin, cambiarPin, conCandado, zonaActiva, llaveVigente, franja, NEGOCIOS };
 })();

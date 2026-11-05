@@ -80,6 +80,18 @@ select:focus,input:focus{border-color:var(--amb)}
 #nt-tbl td{vertical-align:top}
 .bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px}
 .bulk .ci{width:auto;min-width:120px}
+/* CAMIONES DEL DÍA */
+summary.pnh{cursor:pointer;list-style:none}
+summary.pnh::-webkit-details-marker{display:none}
+.cam-fl{white-space:nowrap}
+.cam-fl::after{content:'Mostrar ▸';text-transform:none;letter-spacing:0;font-weight:500}
+details[open] .cam-fl::after{content:'Ocultar ▾'}
+.cam-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:8px 20px;padding:12px 16px}
+.cam-f{display:flex;align-items:center;gap:10px}
+.cam-n{flex:1;min-width:0;font-size:12px;font-weight:600}
+.cam-n small{display:block;font-weight:400;color:var(--muted);font-size:10.5px;margin-top:2px}
+.cam-f select{width:170px;flex:none}
+@media(max-width:640px){.cam-grid{grid-template-columns:1fr}.cam-f select{width:150px}}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
 #modal-foto.on{display:flex}
 #modal-foto img{max-width:95vw;max-height:92vh}
@@ -464,6 +476,20 @@ function Subidor(cfg) {
   const el = s => document.getElementById(k + '-' + s);
   const porGuardar = () => items.filter(n => n.estado === 'pendiente' || n.estado === 'error');
   const campos = () => cfg.campos(cat);
+  // Opciones de un desplegable: lista de textos o de {v, t}, o grupos [{t, ops}] (p. ej. "Usados en esta obra")
+  const normOp = o => typeof o === 'object' ? o : { v:o, t:o };
+  const gruposDe = (c, d) => {
+    const g = typeof c.ops === 'function' ? c.ops(d, cat) : c.ops;
+    return g.length && g[0].ops ? g.map(x => ({ t:x.t, ops:x.ops.map(normOp) })) : [{ t:null, ops:g.map(normOp) }];
+  };
+  const opcionesHtml = (c, d, actual) => {
+    const gr = gruposDe(c, d);
+    if (actual && !gr.some(g => g.ops.some(o => claveVj(o.v) === claveVj(actual)))) gr.unshift({ t:null, ops:[{ v:actual, t:actual }] });
+    const op = o => `<option value="${esc(o.v)}" ${actual && claveVj(o.v) === claveVj(actual) ? 'selected' : ''}>${esc(o.t)}</option>`;
+    return `<option value="">${c.vacio}</option>` + gr.map(g => g.t ? `<optgroup label="${esc(g.t)}">${g.ops.map(op).join('')}</optgroup>` : g.ops.map(op).join('')).join('');
+  };
+  // Lo que se cambia solo cuando cambia otro dato (p. ej. el chofer pone la placa)
+  const ajustar = (n, cambios) => cfg.ajustar?.(n.d, cambios, cat);
 
   sec.innerHTML = `<div class="ph"><h2>${cfg.titulo}</h2><div class="flt">
       <label class="ftb" style="display:inline-block">Elegir fotos<input type="file" id="${k}-fotos" accept="image/*" multiple hidden></label>
@@ -472,6 +498,7 @@ function Subidor(cfg) {
       <button class="ftb p" id="${k}-guardar" onclick="SUB.${k}.guardar()">Registrar ${cfg.que}</button>
     </div></div>
     <div class="sb">
+      <div id="${k}-arriba" style="display:contents"></div>
       <div class="pn" id="${k}-bulk" style="display:none"><div class="pnh">Aplicar a todas las que falta registrar</div>
         <div class="bulk"><span id="${k}-bulkc" style="display:contents"></span><button class="ftb" onclick="SUB.${k}.aplicar()">Aplicar</button>
           <span id="${k}-cont" style="margin-left:auto;font-size:12px;color:var(--muted)"></span></div></div>
@@ -485,9 +512,16 @@ function Subidor(cfg) {
       try { cat = await api({ action:cfg.acciones.cat }); }
       catch(e) { el('lista').innerHTML = `<div class="empty">No se pudieron cargar los catálogos: ${esc(e.message)}</div>`; return; }
       el('bulkc').innerHTML = campos().filter(c => cfg.bulk.includes(c.f)).map(c => c.tipo === 'sel'
-        ? `<select class="ci" data-b="${c.f}"><option value="">${c.vacio}</option>${c.ops.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select>`
+        ? `<select class="ci" data-b="${c.f}">${opcionesHtml(c, cfg.vacia(), '')}</select>`
         : `<input class="ci" type="${c.tipo}" data-b="${c.f}" placeholder="${c.t}" title="${c.t}" ${c.attr || ''} style="${c.tipo === 'number' ? 'min-width:70px;width:90px' : ''}">`).join('');
+      cfg.alCargar?.(cat, el('arriba'));
     }
+    render();
+  }
+  // Volver a calcular lo automático de las que falta registrar (p. ej. después de guardar los camiones del día)
+  function reajustar(cambio) {
+    if (!cat) return;
+    porGuardar().forEach(n => ajustar(n, [cambio]));
     render();
   }
 
@@ -496,11 +530,8 @@ function Subidor(cfg) {
     const d = n.d, dis = ['pendiente','error'].includes(n.estado) ? '' : 'disabled';
     const celda = c => {
       if (c.tipo === 'calc') return `<td data-calc="${c.f}" style="color:var(--muted)">${esc(c.calc(d, cat)) || '—'}</td>`;
-      if (c.tipo === 'sel') {
-        const vals = [...c.ops]; if (d[c.f] && !vals.some(v => claveVj(v) === claveVj(d[c.f]))) vals.unshift(d[c.f]);
-        return `<td style="min-width:${c.w}px"><select class="ci" data-f="${c.f}" ${dis}><option value="">${c.vacio}</option>${vals.map(v =>
-          `<option value="${esc(v)}" ${claveVj(v) === claveVj(d[c.f]) ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></td>`;
-      }
+      if (c.tipo === 'sel')
+        return `<td style="min-width:${c.w}px"><select class="ci" data-f="${c.f}" ${dis}>${opcionesHtml(c, d, d[c.f])}</select></td>`;
       return `<td style="min-width:${c.w}px"><input class="ci" type="${c.tipo}" data-f="${c.f}" value="${esc(d[c.f])}" placeholder="${c.ph || ''}" ${c.attr || ''} ${dis}></td>`;
     };
     const av = n.estado === 'leyendo' ? [] : avisos(n);
@@ -547,7 +578,17 @@ function Subidor(cfg) {
   function escribir(tr, f, valor) {
     const n = items.find(x => x.id == tr.dataset.id);
     if (!n) return;
+    const antes = { ...n.d };
     n.d[f] = valor;
+    ajustar(n, [f]);
+    // Un desplegable que cambia las opciones o los datos de otros (chofer, obra): se vuelve a dibujar la fila
+    if (cfg.rehacer?.includes(f)) return renderFila(n);
+    // Si no, solo se ponen los datos que cambiaron solos, sin tocar lo que se está escribiendo
+    for (const c of campos().filter(c => c.f !== f && c.tipo !== 'calc' && n.d[c.f] !== antes[c.f])) {
+      const x = tr.querySelector(`[data-f="${c.f}"]`);
+      if (x) x.value = n.d[c.f] ?? '';
+      if (x && x.value !== String(n.d[c.f] ?? '')) return renderFila(n);     // ese valor no estaba en el desplegable
+    }
     campos().filter(c => c.tipo === 'calc').forEach(c => tr.querySelector(`[data-calc="${c.f}"]`).textContent = c.calc(n.d, cat) || '—');
     tr.querySelector('[data-av]').innerHTML = avisos(n).map(esc).join('<br>');
   }
@@ -573,7 +614,7 @@ function Subidor(cfg) {
     leyendo++;
     try {
       const { datos } = await Sesion.api({ action:cfg.acciones.extraer, foto:n.foto }, 90000);
-      if (datos) Object.assign(n.d, cfg.deIA(datos));
+      if (datos) { Object.assign(n.d, cfg.deIA(datos)); ajustar(n, ['ia']); }
       else n.msg = 'La IA no pudo leerla: captura los datos a mano';
     } catch(e) { n.msg = 'No se pudo leer: ' + e.message + '. Captura los datos a mano.'; }
     n.estado = 'pendiente';
@@ -586,7 +627,7 @@ function Subidor(cfg) {
     const vals = {};
     el('bulkc').querySelectorAll('[data-b]').forEach(x => { if (x.value) vals[x.dataset.b] = x.value; });
     if (!Object.keys(vals).length) return alert('Escoge al menos un dato para aplicar');
-    porGuardar().forEach(n => Object.assign(n.d, vals));
+    porGuardar().forEach(n => { Object.assign(n.d, vals); ajustar(n, Object.keys(vals)); });
     render();
   }
 
@@ -616,7 +657,8 @@ function Subidor(cfg) {
     alert(`Registradas: ${ok}` + (dup ? `\nYa estaban registradas (no se repitieron): ${dup}` : '') + (mal ? `\nCon error: ${mal} (quedan marcadas en rojo para reintentar)` : ''));
   }
 
-  return { abrir, sinFoto, quitar, limpiar, aplicar, guardar, escribir, pendientes: () => porGuardar().length + leyendo };
+  return { abrir, sinFoto, quitar, limpiar, aplicar, guardar, escribir, reajustar, catalogo: () => cat,
+           pendientes: () => porGuardar().length + leyendo };
 }
 
 document.addEventListener('input', e => {
@@ -627,30 +669,142 @@ window.addEventListener('beforeunload', e => { if (Object.values(SUB).some(s => 
 
 // ── Notas de viaje (Viajes.gs) ──
 const clienteDeObra = (obra, cat) => (cat?.obras || []).find(o => claveVj(o.obra) === claveVj(obra))?.cliente || '';
+const placaK = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+// Camión de un chofer en un día: lo último guardado en "Camiones del día" con fecha igual o anterior;
+// si nunca se le ha guardado, su última placa en las notas (o en el diésel). placa '' = ese día no traía camión.
+function camionDe(chofer, fecha, cat, ultima) {
+  if (!chofer || !cat) return null;
+  const k = claveVj(chofer), dia = fecha || txtFecha(new Date());
+  let a = null;
+  (cat.camiones || []).forEach(x => { if (claveVj(x.chofer) === k && x.fecha <= dia && (!a || x.fecha >= a.fecha)) a = x; });
+  if (a) return { placa:a.placa, de:'dia', fecha:a.fecha, guardo:a.guardo, cuando:a.cuando };
+  const u = Object.entries(ultima || {}).find(([c]) => claveVj(c) === k)?.[1];
+  return u ? { placa:u.placa, de:'ultima', fecha:u.fecha } : null;
+}
+// Materiales que ya se han llevado a una obra (los del catálogo, del más usado al menos usado)
+function usadosEnObra(obra, cat) {
+  if (!obra || !cat) return [];
+  const cuenta = {};
+  Object.entries(cat.materialesObra || {}).filter(([o]) => claveVj(o) === claveVj(obra))
+    .forEach(([, ms]) => Object.entries(ms).forEach(([m, n]) => cuenta[claveVj(m)] = (cuenta[claveVj(m)] || 0) + n));
+  return (cat.materiales || []).filter(m => cuenta[claveVj(m)]).sort((a, b) => cuenta[claveVj(b)] - cuenta[claveVj(a)]);
+}
+const opsPlacas = cat => (cat.placas || []).map(p => ({ v:p.placa, t:p.placa + (p.descripcion ? ' · ' + p.descripcion : '') }));
+const irSeccion = s => document.querySelector(`nav a[data-s="${s}"]`)?.click();
+
+// ── Camiones del día (arriba de Subir notas): qué camión trae cada chofer; se guarda en el Sheets de la planta ──
+const Camiones = (() => {
+  let cat = null;
+  const $c = id => document.getElementById(id);
+  const guardadoDe = dia => (cat.camiones || []).filter(x => x.fecha === dia);
+  const diaSel = () => $c('cam-dia').value || txtFecha(new Date());
+
+  function iniciar(c, caja) {
+    cat = c;
+    caja.innerHTML = `<details class="pn" id="cam-pn"><summary class="pnh"><span>Camiones del día
+        <span id="cam-est" style="text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px"></span></span><span class="cam-fl"></span></summary>
+      <div class="bulk" style="border-bottom:1px solid var(--bd)">
+        <input type="date" class="ci" id="cam-dia" style="width:auto;min-width:0">
+        <span style="font-size:12px;color:var(--muted);flex:1;min-width:200px">Escoge el camión de cada chofer y guarda. Sigue igual los días siguientes hasta que lo cambies.
+          Al subir una nota, el chofer pone solo la placa de ese día.</span>
+        <button class="ftb p" id="cam-guardar" onclick="Camiones.guardar()">Guardar camiones</button></div>
+      <div class="cam-grid" id="cam-grid"></div></details>`;
+    $c('cam-dia').value = txtFecha(new Date());
+    $c('cam-dia').onchange = pintar;
+    $c('cam-grid').onchange = revisar;
+    pintar();
+    $c('cam-pn').open = !guardadoDe(diaSel()).length;     // abierto si hoy todavía no se guarda
+  }
+  function pintar() {
+    const dia = diaSel(), hechos = guardadoDe(dia), ult = hechos[hechos.length - 1];
+    $c('cam-est').textContent = ult ? `· ${fechaCorta(dia)}: guardado por ${ult.guardo}${ult.cuando?.length > 11 ? ' a las ' + ult.cuando.slice(11, 16) : ''}`
+                                    : `· ${fechaCorta(dia)}: todavía no se guarda (sale lo último que se guardó)`;
+    const ops = opsPlacas(cat), validas = new Set(ops.map(o => o.v));
+    $c('cam-grid').innerHTML = cat.choferes.map(ch => {
+      const c = camionDe(ch, dia, cat, cat.ultimaPlaca);
+      const fuera = c?.placa && !validas.has(c.placa);
+      const origen = !c ? 'Sin camión guardado'
+        : fuera ? `Su última placa (${c.placa}) no está en el catálogo`
+        : c.de === 'ultima' ? `De su última nota (${fechaCorta(c.fecha)})`
+        : c.fecha === dia ? '' : `Igual que el ${fechaCorta(c.fecha)}`;
+      const val = fuera ? '' : c?.placa || '';
+      return `<label class="cam-f"><span class="cam-n">${esc(ch)}<small>${esc(origen)}</small></span>
+        <select class="ci" data-ch="${esc(ch)}" data-antes="${c?.de === 'dia' ? esc(c.placa) : ''}"><option value="">— Sin camión —</option>${ops.map(o =>
+          `<option value="${esc(o.v)}" ${val === o.v ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select></label>`;
+    }).join('') || '<div class="empty">No hay choferes en el catálogo de Notas de Viaje</div>';
+    revisar();
+  }
+  // Una placa con dos choferes el mismo día se marca en rojo (se puede guardar igual, p. ej. dos turnos)
+  function revisar() {
+    const sels = [...$c('cam-grid').querySelectorAll('select')], usos = {};
+    sels.forEach(s => { if (s.value) usos[s.value] = (usos[s.value] || 0) + 1; });
+    sels.forEach(s => { const rep = s.value && usos[s.value] > 1; s.classList.toggle('mal', rep); s.title = rep ? `${s.value} está con ${usos[s.value]} choferes` : ''; });
+  }
+  async function guardar() {
+    const dia = diaSel();
+    // Los que no tienen camión y nunca se les ha guardado uno no se escriben
+    const camiones = [...$c('cam-grid').querySelectorAll('select')].filter(s => s.value || s.dataset.antes)
+      .map(s => ({ chofer:s.dataset.ch, placa:s.value }));
+    if (!camiones.length) return alert('Escoge el camión de al menos un chofer');
+    const b = $c('cam-guardar'); b.disabled = true; b.textContent = 'Guardando…'; bar(true);
+    try {
+      const j = await api({ action:'camiones_guardar', fecha:dia, camiones });
+      cat.camiones = j.camiones;
+      const tk = SUB.tk.catalogo(); if (tk) tk.camiones = j.camiones;
+      pintar();
+      SUB.nt.reajustar('camiones'); SUB.tk.reajustar('camiones');
+      $c('cam-pn').open = false;
+    } catch(e) { alert('No se guardaron los camiones: ' + e.message); }
+    finally { b.disabled = false; b.textContent = 'Guardar camiones'; bar(false); }
+  }
+  return { iniciar, guardar };
+})();
+
 SUB.nt = Subidor({
   k:'nt', sec:'sec-subir', titulo:'Subir notas de viaje', que:'notas', una:'nota', de:'las notas', donde:'Notas de Viaje',
   acciones: { cat:'notas_catalogos', extraer:'nota_extraer', guardar:'nota_guardar', campo:'nota' },
-  vacia: () => ({ chofer:'', folio:'', fecha:'', material:'', m3:'', placa:'', obra:'', observaciones:'', confianza:null, advertencias:[] }),
+  vacia: () => ({ chofer:'', folio:'', fecha:'', material:'', m3:'', placa:'', obra:'', observaciones:'', confianza:null, advertencias:[], placaIA:'', _auto:false, _cam:null }),
   deIA: x => ({ folio: x.folio || '', fecha: /^\d{4}-\d{2}-\d{2}$/.test(x.fecha_nota || '') ? x.fecha_nota : '',
-    material: x.material || '', m3: x.m3 != null ? String(x.m3) : '', placa: x.placa || '',
+    material: x.material || '', m3: x.m3 != null ? String(x.m3) : '', placa: placaK(x.placa), placaIA: placaK(x.placa),
     confianza: x.confianza ?? null, advertencias: Array.isArray(x.advertencias) ? x.advertencias : [] }),
   campos: cat => [
     { f:'chofer', t:'Chofer', tipo:'sel', ops:cat.choferes, vacio:'— Chofer —', w:140 },
     { f:'folio', t:'Folio', tipo:'text', ph:'Folio', w:80 },
     { f:'fecha', t:'Fecha nota', tipo:'date', w:130 },
-    { f:'material', t:'Material', tipo:'sel', ops:cat.materiales, vacio:'— Material —', w:130 },
-    { f:'m3', t:'m³', tipo:'number', attr:'step="0.5" min="0"', w:70 },
-    { f:'placa', t:'Placa', tipo:'text', ph:'Placa', w:95 },
     { f:'obra', t:'Obra', tipo:'sel', ops:cat.obras.map(o => o.obra), vacio:'— Obra —', w:140 },
+    // Primero los materiales que ya se han llevado a esa obra
+    { f:'material', t:'Material', tipo:'sel', vacio:'— Material —', w:140, ops:(d, cat) => {
+        const us = usadosEnObra(d.obra, cat);
+        return us.length ? [{ t:'Usados en esta obra', ops:us }, { t:'Otros materiales', ops:cat.materiales.filter(m => !us.includes(m)) }] : cat.materiales;
+      } },
+    { f:'m3', t:'m³', tipo:'number', attr:'step="0.5" min="0"', w:70 },
+    { f:'placa', t:'Placa', tipo:'sel', ops:opsPlacas(cat), vacio:'— Placa —', w:150 },
     { f:'_cli', t:'A nombre de', tipo:'calc', calc:(d, cat) => clienteDeObra(d.obra, cat) },
     { f:'observaciones', t:'Observaciones', tipo:'text', ph:'Opcional', w:130 },
   ],
+  rehacer: ['chofer', 'obra'],
+  // El chofer pone la placa de su camión ese día (gana sobre lo que leyó la IA); si la cambian a mano, se respeta
+  ajustar: (d, cambios, cat) => {
+    if (cambios.includes('placa')) { d._auto = false; return; }
+    if (!['chofer', 'fecha', 'ia', 'camiones'].some(x => cambios.includes(x))) return;
+    d._cam = camionDe(d.chofer, d.fecha, cat, cat.ultimaPlaca);
+    if (d._cam?.placa && (d._auto || !d.placa || cambios.includes('chofer') || cambios.includes('ia'))) { d.placa = d._cam.placa; d._auto = true; }
+  },
   bulk: ['chofer', 'obra', 'fecha', 'm3'],
   requeridos: [['chofer', 'sin chofer'], ['fecha', 'sin fecha']],
+  alCargar: (cat, caja) => Camiones.iniciar(cat, caja),
   avisos: (d, cat) => {
     const av = new Set((d.advertencias || []).filter(a => !/placa no registrada/i.test(a)));
-    const placa = String(d.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    const placa = placaK(d.placa), cam = d._cam;
     if (placa && !(cat?.placas || []).some(p => p.placa === placa)) av.add(`Placa ${placa} no está en el catálogo`);
+    if (d._auto && d.placaIA && d.placaIA !== placa)
+      av.add(`La IA leyó ${d.placaIA}; se puso ${placa}, ${cam?.de === 'dia' ? 'el camión de ' + d.chofer + ' ese día' : 'la de su última nota'}`);
+    else if (d._auto && cam?.de === 'ultima') av.add(`Placa de su última nota (${fechaCorta(cam.fecha)}): no hay camiones del día guardados para ${d.chofer}`);
+    if (cam?.de === 'dia' && !cam.placa) av.add(`En Camiones del día, ${d.chofer} no traía camión ese día`);
+    else if (cam?.de === 'dia' && placa && !d._auto && placa !== cam.placa) av.add(`Ese día ${d.chofer} traía ${cam.placa}`);
+    const usados = usadosEnObra(d.obra, cat);
+    if (d.material && usados.length && !usados.some(m => claveVj(m) === claveVj(d.material))) av.add('Material que no se ha llevado a esta obra');
     const m3 = parseFloat(d.m3);
     if (d.m3 !== '' && !isNaN(m3) && (m3 < 5 || m3 > 25)) av.add(`m³ fuera de lo normal (${m3})`);
     if (d.fecha) { const dias = diasDesde(d.fecha); if (dias > 45) av.add(`Nota de hace ${dias} días`); if (dias < -1) av.add('La fecha es futura'); }
@@ -674,7 +828,7 @@ function avisosTicket(d) {
 SUB.tk = Subidor({
   k:'tk', sec:'sec-tickets', titulo:'Subir tickets de diésel', que:'tickets', una:'ticket', de:'los tickets', donde:'Diesel',
   acciones: { cat:'diesel_catalogos', extraer:'diesel_extraer', guardar:'diesel_guardar', campo:'ticket' },
-  vacia: () => ({ chofer:'', unidad:'', fecha:'', hora:'', litros:'', monto:'', precio:'', gasolinera:'', descripcion:'', confianza:null }),
+  vacia: () => ({ chofer:'', unidad:'', fecha:'', hora:'', litros:'', monto:'', precio:'', gasolinera:'', descripcion:'', confianza:null, _auto:false, _cam:null }),
   deIA: x => ({ fecha: /^\d{4}-\d{2}-\d{2}$/.test(x.fecha_ticket || '') ? x.fecha_ticket : '', hora: /^\d{2}:\d{2}$/.test(x.hora_ticket || '') ? x.hora_ticket : '',
     litros: x.litros != null ? String(x.litros) : '', monto: x.monto_total != null ? String(x.monto_total) : '',
     precio: x.precio_litro != null ? String(x.precio_litro) : '', gasolinera: x.gasolinera || '', confianza: x.confianza ?? null }),
@@ -690,8 +844,25 @@ SUB.tk = Subidor({
     { f:'descripcion', t:'Descripción', tipo:'text', ph:'Opcional', w:120 },
   ],
   bulk: ['chofer', 'unidad'],
-  requeridos: [['chofer', 'sin chofer'], ['unidad', 'sin unidad'], ['fecha', 'sin fecha'], ['litros', 'sin litros'], ['monto', 'sin monto']],
-  avisos: d => avisosTicket(d),
+  rehacer: ['chofer'],
+  // Igual que en las notas: el chofer pone la unidad de su camión ese día (Camiones del día, o la última que cargó)
+  ajustar: (d, cambios, cat) => {
+    if (cambios.includes('unidad')) { d._auto = false; return; }
+    if (!['chofer', 'fecha', 'ia', 'camiones'].some(x => cambios.includes(x))) return;
+    d._cam = camionDe(d.chofer, d.fecha, cat, cat.ultimaUnidad);
+    const u = d._cam?.placa && cat.unidades.find(x => x.placa === d._cam.placa);
+    if (u && (d._auto || !d.unidad || cambios.includes('chofer'))) { d.unidad = u.valor; d._auto = true; }
+  },
+  alCargar: (cat, caja) => { caja.innerHTML = `<div style="font-size:12px;color:var(--muted)">Al escoger el chofer se pone sola la unidad de su camión ese día
+    (de <a href="#" onclick="event.preventDefault();irSeccion('subir')">Camiones del día</a>, en Subir notas; si no, la última que cargó).</div>`; },
+  avisos: (d, cat) => {
+    const av = avisosTicket(d), cam = d._cam, placa = placaK(String(d.unidad || '').split(/[\s—-]/)[0]);
+    if (cam?.de === 'dia' && cam.placa && !cat.unidades.some(x => x.placa === cam.placa))
+      av.push(`El camión del día (${cam.placa}) no está en las unidades de Diesel`);
+    if (cam?.de === 'dia' && !cam.placa) av.push(`En Camiones del día, ${d.chofer} no traía camión ese día`);
+    else if (cam?.de === 'dia' && placa && !d._auto && placa !== cam.placa) av.push(`Ese día ${d.chofer} traía ${cam.placa}`);
+    return av;
+  },
   alGuardar: () => Object.keys(DS_CACHE).forEach(x => delete DS_CACHE[x]),     // Diésel de la semana vuelve a leer
 });
 

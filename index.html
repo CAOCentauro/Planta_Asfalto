@@ -53,6 +53,9 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 .tile .cdo svg{width:20px;height:20px}
 .sep{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin:10px 0 -2px}
 .oculto{display:none}
+/* Cada negocio con su color (el mismo de la franja de arriba, sesion.js) */
+#menu .tile,#menu .tile:hover,#menu .tile:focus{border-left-color:var(--neg,var(--amb))}
+#menu .tile .ico{color:var(--neg,var(--amb));background:color-mix(in srgb,var(--neg,var(--amb)) 13%,transparent)}
 </style>
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -162,7 +165,9 @@ const $ = s => document.querySelector(s);
 
 function vista(id) {
   ['v-login','v-cambio','v-menu'].forEach(v => $('#'+v).classList.toggle('oculto', v !== id));
+  if (id === 'v-login') Sesion.franja(null);
 }
+const colorNeg = clave => (Sesion.NEGOCIOS[clave] || Sesion.NEGOCIOS.inicio).c;
 // Del servidor o de la red: su mensaje tal cual. Otro error es de la página (p. ej. archivos viejos guardados)
 const errorTxt = e => e.servidor || e.red ? e.message
   : `Error en la página: ${e.message}. Recarga con Ctrl+F5 (en el celular, cierra y vuelve a abrir).`;
@@ -205,11 +210,13 @@ function mostrarMenu() {
   const negs = NEGOCIOS.filter(n => n.pantallas.some(p => ps.includes(p)));
   const neg = negs.length === 1 ? negs[0] : negs.find(n => n.clave === NEG);   // con un solo negocio se entra directo
   $('#m-tit').textContent = neg ? neg.t : 'Sistema';
+  Sesion.franja(neg ? neg.clave : 'inicio');
+  if (neg) $('#menu').style.setProperty('--neg', colorNeg(neg.clave)); else $('#menu').style.removeProperty('--neg');
 
   if (!ps.length) {
     $('#menu').innerHTML = '<div class="res err">Tu perfil todavía no tiene pantallas asignadas. Pide que te den permisos.</div>';
   } else if (!neg) {
-    $('#menu').innerHTML = negs.map(n => `<a class="tile" href="index.html?n=${n.clave}" onclick="event.preventDefault();abrirNegocio('${n.clave}')">
+    $('#menu').innerHTML = negs.map(n => `<a class="tile" style="--neg:${colorNeg(n.clave)}" href="index.html?n=${n.clave}" onclick="event.preventDefault();abrirNegocio('${n.clave}')">
       <div class="ico">${ICONOS[n.clave]}</div><div class="tx"><b>${n.t}</b><span>${n.d}</span></div></a>`).join('');
   } else {
     // Las que tienen candado van al final, aparte
