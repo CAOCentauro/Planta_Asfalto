@@ -844,6 +844,7 @@ SUB.tk = Subidor({
     { f:'descripcion', t:'Descripción', tipo:'text', ph:'Opcional', w:120 },
   ],
   bulk: ['chofer', 'unidad'],
+  requeridos: [['chofer', 'sin chofer'], ['unidad', 'sin unidad'], ['fecha', 'sin fecha'], ['litros', 'sin litros'], ['monto', 'sin monto']],
   rehacer: ['chofer'],
   // Igual que en las notas: el chofer pone la unidad de su camión ese día (Camiones del día, o la última que cargó)
   ajustar: (d, cambios, cat) => {
