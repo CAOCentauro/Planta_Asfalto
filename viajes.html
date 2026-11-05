@@ -92,6 +92,11 @@ details[open] .cam-fl::after{content:'Ocultar ▾'}
 .cam-n small{display:block;font-weight:400;color:var(--muted);font-size:10.5px;margin-top:2px}
 .cam-f select{width:170px;flex:none}
 @media(max-width:640px){.cam-grid{grid-template-columns:1fr}.cam-f select{width:150px}}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:16px}
+.dlg-c{background:var(--s1);border:1px solid var(--bd);border-top:3px solid var(--amb);max-width:440px;width:100%;padding:20px}
+.dlg-t{font-size:14px;line-height:1.5;white-space:pre-line;margin-bottom:18px}
+.dlg-b{display:flex;justify-content:flex-end;gap:8px}
+.dlg-b .ftb{font-size:12px;padding:8px 16px}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
 #modal-foto.on{display:flex}
 #modal-foto img{max-width:95vw;max-height:92vh}
@@ -183,6 +188,24 @@ const N  = v => v==null ? 0 : parseFloat(v)||0;
 const f0 = v => new Intl.NumberFormat('es-MX',{maximumFractionDigits:2}).format(N(v));
 // Lo escriben los choferes o la IA: se escapa antes de ponerlo en la página
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// Avisos y confirmaciones dentro de la página (algunos navegadores bloquean las ventanas alert/confirm)
+function dialogo(msg, siTxt, noTxt) {
+  return new Promise(listo => {
+    const ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c" role="dialog"><div class="dlg-t"></div><div class="dlg-b">
+      ${noTxt ? `<button class="ftb" data-r="0">${noTxt}</button>` : ''}<button class="ftb p" data-r="1">${siTxt}</button></div></div>`;
+    ov.querySelector('.dlg-t').textContent = msg;
+    const cerrar = r => { ov.remove(); removeEventListener('keydown', tecla, true); listo(r); };
+    const tecla = e => { if (e.key === 'Escape') { e.preventDefault(); cerrar(false); } };
+    ov.addEventListener('click', e => { const r = e.target.dataset?.r; if (r != null) cerrar(r === '1'); });
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-r="1"]').focus();
+  });
+}
+const preguntar = (msg, siTxt = 'Sí, continuar') => dialogo(msg, siTxt, 'Cancelar');
+window.alert = msg => { dialogo(String(msg), 'Entendido'); };
 const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
 // Número de WhatsApp para enviar los fletes: lada + número, solo dígitos. Vacío → WhatsApp pide elegir el contacto.
 const WA_NUM = '525566852302';
@@ -636,8 +659,8 @@ function Subidor(cfg) {
     const faltan = cfg.requeridos.map(([f, txt]) => [lista.filter(n => !n.d[f]).length, txt]).filter(([c]) => c).map(([c, txt]) => `${c} ${txt}`);
     if (faltan.length) return alert(faltan.join(', ') + '. Complétalas antes de registrar.');
     const conAviso = lista.filter(n => avisos(n).length).length;
-    if (!confirm(`Se van a registrar ${lista.length} ${lista.length !== 1 ? cfg.que : cfg.una} en ${cfg.donde}` +
-      (conAviso ? ` (${conAviso} con avisos)` : '') + '.\n\n¿Continuar?')) return;
+    if (!(await preguntar(`Se van a registrar ${lista.length} ${lista.length !== 1 ? cfg.que : cfg.una} en ${cfg.donde}` +
+      (conAviso ? ` (${conAviso} con avisos)` : '') + '.\n\n¿Continuar?', 'Sí, registrar'))) return;
     el('guardar').disabled = true; bar(true);
     let ok = 0, dup = 0, mal = 0;
     for (const n of lista) {
