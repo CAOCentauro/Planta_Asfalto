@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Viajes locales — CAO Centauro</title>
+<script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* Mismo aspecto que el panel de la planta (dashboard.html) */
+:root{--bg:#0b1116;--s1:#141d24;--s2:#1b2731;--bd:#26333d;--amb:#F7931E;--green:#16a34a;--red:#dc2626;--text:#e8eef2;--muted:#8796a1;--sw:210px;
+  --pos:#5fd18e;--neg:#f28b82;--warn:#f2b45c;color-scheme:dark;--f-tit:'Outfit',system-ui,sans-serif}
+:root[data-theme="light"]{--bg:#F3F7FA;--s1:#ffffff;--s2:#eef3f6;--bd:#dce3e9;--amb:#E07F0F;--text:#0d141a;--muted:#5d6d78;
+  --pos:#1b7a43;--neg:#b42318;--warn:#a65300;color-scheme:light}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
+#app{display:none;height:100vh}
+#sidebar{width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex-shrink:0}
+.sb-logo{padding:18px 16px;border-bottom:1px solid var(--bd)}
+.sb-logo span{display:block;font-size:10px;color:var(--amb);font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+.sb-logo strong{display:block;font-size:14px;margin-top:3px;font-family:var(--f-tit);font-weight:600}
+nav{padding:10px 0;flex:1}
+nav a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13px;border-left:2px solid transparent}
+nav a:hover{color:var(--text)}
+nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(247,147,30,.05)}
+nav a.pronto{opacity:.55;cursor:default}
+nav a small{font-size:10px;margin-left:4px}
+.sb-foot{padding:12px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--muted)}
+.btn-r{margin-top:10px;padding:6px 10px;background:transparent;border:1px solid var(--bd);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;width:100%}
+.btn-r:hover{border-color:var(--amb);color:var(--amb)}
+.btn-r + .btn-r{margin-top:6px}
+.theme-btn{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:600}
+.theme-btn:hover{background:var(--amb);border-color:var(--amb);color:#000}
+.btn-r.casa{display:flex;align-items:center;justify-content:center;padding:5px 10px}
+.btn-r.casa svg{width:18px;height:18px}
+#main{flex:1;overflow:hidden;display:flex;flex-direction:column}
+#pbar{height:2px;background:var(--amb);width:0;transition:width .3s;position:fixed;top:0;left:0;right:0;z-index:999}
+.sec{display:none;flex-direction:column;height:100%;overflow-y:auto}
+.sec.on{display:flex}
+.ph{padding:15px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px;position:sticky;top:0;background:var(--bg);z-index:10;flex-shrink:0;flex-wrap:wrap}
+.ph h2{font-size:17px;font-weight:600;flex:1;font-family:var(--f-tit)}
+.sb{padding:24px;display:flex;flex-direction:column;gap:20px}
+.mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px}
+.mc{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--amb);padding:16px}
+.mc.r{border-left-color:var(--red)}.mc.g{border-left-color:var(--green)}.mc.m{border-left-color:var(--muted)}
+.ml{font-size:11px;color:var(--muted);margin-bottom:6px}
+.mv{font-size:26px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;font-family:var(--f-tit)}
+.ms{font-size:11px;color:var(--muted);margin-top:5px}
+.pn{background:var(--s1);border:1px solid var(--bd)}
+.pnh{padding:11px 16px;border-bottom:1px solid var(--bd);font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.tw{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:8px 12px;color:var(--muted);font-weight:500;border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:8px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tfoot td{border-top:1px solid var(--bd)}
+.tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600}
+.ta{background:rgba(220,38,38,.15);color:var(--neg)}
+.tm{background:rgba(247,147,30,.15);color:var(--warn)}
+.tb{background:rgba(22,163,74,.15);color:var(--pos)}
+.flt{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+select,input[type=date]{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:6px 10px;font-family:inherit;font-size:12px;outline:none}
+select:focus,input:focus{border-color:var(--amb)}
+.ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
+.ftb:hover{border-color:var(--amb);color:var(--amb)}
+.ftb:disabled{opacity:.5;cursor:default}
+.pos{color:var(--pos)}.neg{color:var(--neg)}.amb{color:var(--amb)}.rt{text-align:right}
+a{color:var(--amb)}
+.empty{padding:36px;text-align:center;color:var(--muted);line-height:2}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:860px){.two{grid-template-columns:1fr}}
+#menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit}
+@media(max-width:640px){
+  #menu-btn{display:block;position:fixed;top:12px;left:12px;z-index:101;background:var(--s1);border:1px solid var(--bd);padding:4px 10px}
+  #sidebar{position:fixed;left:-100%;top:0;bottom:0;z-index:100;transition:left .2s;width:220px}
+  #sidebar.open{left:0}
+  #overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+  #overlay.on{display:block}
+  #main{padding-top:44px}
+}
+</style>
+</head>
+<body>
+<div id="pbar"></div>
+
+<!-- Se muestra cuando la sesión es válida; el acceso está en index.html -->
+<div id="app">
+<button id="menu-btn" onclick="toggleMenu()">Menú</button>
+<div id="overlay" onclick="closeMenu()"></div>
+<div id="sidebar">
+  <div class="sb-logo"><span>CAO Centauro</span><strong>Viajes locales</strong></div>
+  <nav>
+    <a href="#" class="active" data-s="fletes">Fletes de la semana</a>
+    <a class="pronto" title="Próximamente">Subir notas <small>pronto</small></a>
+    <a class="pronto" title="Próximamente">Diésel <small>pronto</small></a>
+  </nav>
+  <div class="sb-foot">
+    <span id="sb-user" style="display:block;margin:0 0 8px;font-weight:600;color:var(--text)">—</span>
+    <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
+    <button class="btn-r casa" onclick="location.href='index.html?n=viajes'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
+    <button class="btn-r" onclick="Sesion.salir()">Salir</button>
+  </div>
+</div>
+
+<div id="main">
+  <!-- FLETES DE LA SEMANA -->
+  <section class="sec on" id="sec-fletes">
+    <div class="ph">
+      <h2>Fletes de la semana</h2>
+      <div class="flt">
+        <button class="ftb" onclick="moverSemanaVj(-7)" title="Semana anterior">‹</button>
+        <input type="date" id="vj-dia" onchange="cargarViajes()" title="Cualquier día de la semana">
+        <button class="ftb" onclick="moverSemanaVj(7)" title="Semana siguiente">›</button>
+        <select id="vj-cli" onchange="renderViajes()"><option value="">Todos los clientes</option></select>
+        <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
+        <button class="ftb" onclick="excelViajes(this)">Descargar Excel</button>
+        <button class="ftb" onclick="whatsViajes()">Enviar por WhatsApp</button>
+      </div>
+    </div>
+    <div class="sb" id="vj-body"></div>
+  </section>
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script src="sesion.js"></script>
+<script>
+const api = body => Sesion.api(body, 60000);
+const N  = v => v==null ? 0 : parseFloat(v)||0;
+const f0 = v => new Intl.NumberFormat('es-MX',{maximumFractionDigits:2}).format(N(v));
+// Lo escriben los choferes o la IA: se escapa antes de ponerlo en la página
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const MESES = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
+// Número de WhatsApp para enviar los fletes: lada + número, solo dígitos. Vacío → WhatsApp pide elegir el contacto.
+const WA_NUM = '525566852302';
+
+function cargarScript(src) {
+  return new Promise((ok, err) => {
+    const s = document.createElement('script');
+    s.src = src; s.onload = ok; s.onerror = () => err(new Error('no se pudo cargar ' + src.split('/').pop()));
+    document.head.appendChild(s);
+  });
+}
+function bar(on) {
+  const el = document.getElementById('pbar');
+  el.style.width = on ? '65%' : '100%';
+  if (!on) setTimeout(() => el.style.width = '0', 400);
+}
+function toggleMenu() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('on');
+}
+function closeMenu() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('on');
+}
+function setTheme(t) {
+  if (t === 'light') document.documentElement.dataset.theme = 'light';
+  else delete document.documentElement.dataset.theme;
+  try { localStorage.setItem('theme', t); } catch(e) {}
+  document.querySelectorAll('.theme-btn').forEach(b => b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
+}
+function toggleTheme() { setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light'); }
+
+// ── NAV ───────────────────────────────────
+document.querySelectorAll('nav a[data-s]').forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  document.querySelectorAll('nav a').forEach(x => x.classList.remove('active'));
+  a.classList.add('active');
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
+  document.getElementById('sec-' + a.dataset.s).classList.add('on');
+  closeMenu();
+}));
+document.querySelectorAll('nav a.pronto').forEach(a => a.addEventListener('click', e => e.preventDefault()));
+
+// ══════════════════════════════════════════
+//  FLETES DE LA SEMANA (Viajes.gs lee el Sheets de Notas de Viaje)
+// ══════════════════════════════════════════
+const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+const DIAS_VJ = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
+const VJ_CACHE = {};        // `${desde}|${hasta}` → respuesta de viajes_semana
+let VJ = null;              // semana en pantalla
+
+const fechaLocal = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const txtFecha = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const diaVj = s => DIAS_VJ[fechaLocal(s).getDay()];
+const claveVj = s => String(s||'').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
+const ddmmyy = s => s.slice(8,10) + s.slice(5,7) + s.slice(2,4);                 // 2026-11-03 → 031126
+const nViajes = n => `${n} viaje${n!==1?'s':''}`;
+// Fecha para Excel como número de serie (con Date el Excel la corre un día por la zona horaria)
+const celdaFecha = s => { const [y, m, d] = s.split('-').map(Number); return { t:'n', v:(Date.UTC(y, m-1, d) - Date.UTC(1899, 11, 30)) / 864e5, z:'dd/mm/yyyy' }; };
+// Lunes a domingo de la semana del día dado
+function semanaVj(dia) {
+  const d = fechaLocal(dia), lun = new Date(d); lun.setDate(d.getDate() - (d.getDay() + 6) % 7);
+  const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
+  return { desde:txtFecha(lun), hasta:txtFecha(dom) };
+}
+
+function moverSemanaVj(dias) {
+  const inp = document.getElementById('vj-dia');
+  const d = fechaLocal(inp.value || txtFecha(new Date())); d.setDate(d.getDate() + dias);
+  inp.value = txtFecha(d);
+  cargarViajes();
+}
+function irSemanaVj(dia) { document.getElementById('vj-dia').value = dia; cargarViajes(); }
+
+async function cargarViajes(forzar) {
+  const { desde, hasta } = semanaVj(document.getElementById('vj-dia').value || txtFecha(new Date()));
+  const k = desde + '|' + hasta, body = document.getElementById('vj-body');
+  if (!forzar && VJ_CACHE[k]) { VJ = VJ_CACHE[k]; return renderViajes(); }
+  body.innerHTML = '<div class="pn"><div class="empty">Leyendo las notas de viaje…</div></div>';
+  bar(true);
+  try {
+    VJ = VJ_CACHE[k] = await api({ action:'viajes_semana', desde, hasta });
+    renderViajes();
+  } catch(e) {
+    body.innerHTML = `<div class="pn"><div class="empty">No se pudieron leer las notas: ${esc(e.message)}</div></div>`;
+  } finally { bar(false); }
+}
+
+// Viajes de la semana ya ordenados, con el filtro de cliente y los avisos de cada nota
+function datosViajes() {
+  const cat = {}; (VJ.placas||[]).forEach(p => cat[p.placa] = p);
+  const cli = document.getElementById('vj-cli').value;
+  const todos = (VJ.viajes||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || claveVj(a.cliente).localeCompare(claveVj(b.cliente))
+    || a.obra.localeCompare(b.obra) || a.placa.localeCompare(b.placa) || (Number(a.folio)||0) - (Number(b.folio)||0) || a.fila - b.fila);
+  const rep = {};
+  todos.forEach(v => { if (v.folio) { const k = claveVj(v.obra) + '|' + v.folio; rep[k] = (rep[k]||0) + 1; } });
+  todos.forEach(v => {
+    v.avisos = [];
+    if (v.duplicado || (v.folio && rep[claveVj(v.obra) + '|' + v.folio] > 1)) v.avisos.push('Folio repetido');
+    if (!cat[v.placa]) v.avisos.push('Placa no está en el catálogo');
+    if (!v.cliente) v.avisos.push('Sin cliente (la obra no está en el catálogo)');
+    if (!v.m3) v.avisos.push('Sin m³');
+  });
+  return { cat, todos, lista: cli ? todos.filter(v => claveVj(v.cliente) === cli) : todos };
+}
+
+// Suma viajes y m³ agrupando por la clave que se le dé
+function agruparVj(lista, clave) {
+  const g = new Map();
+  lista.forEach(v => {
+    const k = clave(v);
+    if (!g.has(k)) g.set(k, { k, viajes:0, m3:0, items:[] });
+    const x = g.get(k); x.viajes++; x.m3 += v.m3; x.items.push(v);
+  });
+  return [...g.values()];
+}
+// "Tepetate 5 · Lodo 3"
+const materialesVj = items => agruparVj(items, v => claveVj(v.material) || 'SIN MATERIAL')
+  .sort((a,b) => b.viajes - a.viajes).map(x => `${x.items[0].material || 'Sin material'} ${x.viajes}`).join(' · ');
+const fechaCorta = s => `${+s.slice(8,10)} ${MESES[+s.slice(5,7)-1].toLowerCase().slice(0,3)}`;
+
+function renderViajes() {
+  if (!VJ) return;
+  const body = document.getElementById('vj-body');
+  // Clientes de la semana para el filtro (se conserva el elegido)
+  const sel = document.getElementById('vj-cli'), antes = sel.value;
+  const clientes = agruparVj(VJ.viajes||[], v => claveVj(v.cliente)).filter(x => x.k).sort((a,b) => a.k.localeCompare(b.k));
+  sel.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(x => `<option value="${esc(x.k)}">${esc(x.items[0].cliente)}</option>`).join('');
+  sel.value = clientes.some(x => x.k === antes) ? antes : '';
+
+  const { cat, lista } = datosViajes();
+  const titulo = `Semana del ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}`;
+  if (!lista.length) {
+    const ult = VJ.ultima && VJ.ultima < VJ.desde
+      ? `<br>La última nota registrada es del <b>${VJ.ultima}</b>. <button class="ftb" onclick="irSemanaVj('${VJ.ultima}')">Ir a esa semana</button>` : '';
+    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin notas de viaje esta semana${ult}</div></div>`;
+    return;
+  }
+  const m3 = lista.reduce((s,v) => s + v.m3, 0);
+  const sinRevisar = lista.filter(v => !v.revisado).length;
+  const sinFisica = lista.filter(v => !v.entregado).length;
+  const conAviso = lista.filter(v => v.avisos.length);
+  const camiones = new Set(lista.map(v => v.placa)).size;
+
+  const porDia = agruparVj(lista, v => v.fecha);
+  const porCli = agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).sort((a,b) => b.m3 - a.m3);
+  const porCam = agruparVj(lista, v => v.placa).sort((a,b) => b.viajes - a.viajes);
+  const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
+  const tot = `<td class="rt"><b>${lista.length}</b></td><td class="rt"><b>${f0(m3)}</b></td>`;
+
+  body.innerHTML = `
+    <div class="mg">
+      <div class="mc m"><div class="ml">Viajes</div><div class="mv">${lista.length}</div><div class="ms">${titulo}</div></div>
+      <div class="mc"><div class="ml">m³ acarreados</div><div class="mv">${f0(m3)}</div><div class="ms">${porDia.length} día${porDia.length!==1?'s':''} con viajes</div></div>
+      <div class="mc"><div class="ml">Camiones</div><div class="mv">${camiones}</div><div class="ms">${porCli.length} obra${porCli.length!==1?'s':''}</div></div>
+      <div class="mc ${conAviso.length || sinRevisar ? 'r' : 'g'}"><div class="ml">Por revisar</div><div class="mv">${conAviso.length}</div>
+        <div class="ms">${sinRevisar} sin revisar · ${sinFisica} sin nota física</div></div>
+    </div>
+    <div class="two">
+      <div class="pn"><div class="pnh">Por día</div>
+        ${tabla('<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+          porDia.map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(v => v.cliente || '—'))].join(', '))}</td>
+            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
+          `<td colspan="3"><b>Total</b></td>${tot}`)}
+      </div>
+      <div class="pn"><div class="pnh">Por cliente y obra</div>
+        ${tabla('<th>A nombre de</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+          porCli.map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra) || '—'}</td>
+            <td style="color:var(--muted)">${esc(materialesVj(x.items))}</td><td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
+          `<td colspan="3"><b>Total</b></td>${tot}`)}
+      </div>
+    </div>
+    <div class="pn"><div class="pnh">Por camión</div>
+      ${tabla('<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+        porCam.map(x => `<tr><td class="amb">${esc(x.k)}</td><td>${cat[x.k] ? esc(cat[x.k].descripcion) : '<span class="neg">No está en el catálogo</span>'}</td>
+          <td>${esc([...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', ')) || '—'}</td>
+          <td style="color:var(--muted)">${[...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ')}</td>
+          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
+        `<td colspan="4"><b>Total</b></td>${tot}`)}
+    </div>
+    ${conAviso.length ? `<div class="pn"><div class="pnh">Notas con aviso (${conAviso.length})</div>
+      ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th>',
+        conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
+          <td class="neg">${v.avisos.join(' · ')}</td></tr>`).join(''))}</div>` : ''}
+    <div class="pn"><div class="pnh">Viajes de la semana <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
+      ${tabla('<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th><th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>',
+        lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
+          <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
+          <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
+          <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
+          <td><span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}</td>
+          <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td></tr>`).join(''),
+        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(m3)}</b></td><td colspan="4"></td>`)}
+    </div>`;
+}
+
+// Mismo formato que la hoja de FLETES DE LA SEMANA, más una hoja con los totales
+async function excelViajes(btn) {
+  if (!VJ) return;
+  const { lista } = datosViajes();
+  if (!lista.length) return alert('No hay viajes en esta semana');
+  btn.disabled = true;
+  try {
+    if (!window.XLSX) await cargarScript(XLSX_URL);
+    const nombre = `${ddmmyy(VJ.desde)}-${ddmmyy(VJ.hasta)}`;
+    const filas = lista.map((v, i) => [i+1, diaVj(v.fecha), celdaFecha(v.fecha), v.folio, v.material.toUpperCase(), v.obra.toUpperCase(),
+      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase()]);
+    const hoja = XLSX.utils.aoa_to_sheet([['', 'FLETES SEMANALES'], [],
+      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER'], ...filas,
+      [], ['', '', '', '', '', '', 'TOTAL', lista.reduce((s,v) => s + v.m3, 0)]]);
+    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18].map(wch => ({ wch }));
+    const tot = [['POR DÍA'], ['DIA','FECHA','VIAJES','M3'],
+      ...agruparVj(lista, v => v.fecha).map(x => [diaVj(x.k), celdaFecha(x.k), x.viajes, x.m3]), [],
+      ['POR CLIENTE Y OBRA'], ['A NOMBRE DE','OBRA','MATERIAL','VIAJES','M3'],
+      ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).map(x => [x.items[0].cliente.toUpperCase(), x.items[0].obra.toUpperCase(), materialesVj(x.items), x.viajes, x.m3]), [],
+      ['POR CAMIÓN'], ['PLACA','CHOFER','VIAJES','M3'],
+      ...agruparVj(lista, v => v.placa).map(x => [x.k, [...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', '), x.viajes, x.m3])];
+    const hoja2 = XLSX.utils.aoa_to_sheet(tot);
+    hoja2['!cols'] = [22,16,30,8,8].map(wch => ({ wch }));
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, nombre);
+    XLSX.utils.book_append_sheet(libro, hoja2, 'TOTALES');
+    const cli = document.getElementById('vj-cli');
+    XLSX.writeFile(libro, `FLETES ${nombre}${cli.value ? ' ' + cli.selectedOptions[0].text : ''}.xlsx`);
+  } catch(e) { alert('No se pudo generar el Excel: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+function whatsViajes() {
+  if (!VJ) return;
+  const { lista } = datosViajes();
+  if (!lista.length) return alert('No hay viajes en esta semana');
+  const m3 = lista.reduce((s,v) => s + v.m3, 0);
+  const cli = document.getElementById('vj-cli');
+  const avisos = lista.filter(v => v.avisos.length).length;
+  const texto = [
+    `*Fletes de la semana — ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}*${cli.value ? `\nCliente: ${cli.selectedOptions[0].text}` : ''}`,
+    `Total: ${nViajes(lista.length)} · ${f0(m3)} m³`,
+    '', '*Por día*',
+    ...agruparVj(lista, v => v.fecha).map(x => `• ${diaVj(x.k).charAt(0) + diaVj(x.k).slice(1).toLowerCase()} ${+x.k.slice(8,10)}: ${nViajes(x.viajes)} · ${f0(x.m3)} m³`),
+    '', '*Por cliente*',
+    ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).sort((a,b) => b.m3 - a.m3)
+      .map(x => `• ${x.items[0].cliente || 'Sin cliente'} (${x.items[0].obra || 'sin obra'}): ${nViajes(x.viajes)} · ${f0(x.m3)} m³ — ${materialesVj(x.items)}`),
+    ...(avisos ? ['', `⚠️ ${avisos} nota${avisos!==1?'s':''} con aviso por revisar`] : []),
+  ].join('\n');
+  window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
+}
+
+setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
+
+// Sin permiso de viajes regresa a index.html
+Sesion.requerir('viajes').then(s => {
+  document.getElementById('sb-user').textContent = s.nombre;
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('vj-dia').value = txtFecha(new Date());
+  cargarViajes();
+}).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
+</script>
+</body>
+</html>

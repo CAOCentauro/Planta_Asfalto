@@ -199,16 +199,14 @@ select:focus,input:focus{border-color:var(--amb)}
     <a href="#" data-s="continuidad">Continuidad</a>
     <a href="#" data-s="anomalias">Anomalías <span id="anom-badge" style="color:var(--red)"></span></a>
     <a href="#" data-s="historial">Historial</a>
-    <a href="#" data-s="reportes">Reportes operador <span id="rep-badge" style="color:var(--amb)"></span></a>
-    <a href="#" data-s="viajes" id="nav-viajes" style="display:none">Viajes locales</a>
-  </nav>
+    <a href="#" data-s="reportes">Reportes operador <span id="rep-badge" style="color:var(--amb)"></span></a>  </nav>
   <div class="sb-foot">
     <span id="sb-user" style="margin:0 0 8px;font-weight:600">—</span>
     Última actualización
     <span id="lu">—</span>
     <button class="btn-r" onclick="reload()">Actualizar</button>
     <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
-    <button class="btn-r casa" onclick="location.href='index.html'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
+    <button class="btn-r casa" onclick="location.href='index.html?n=planta'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
     <button class="btn-r" onclick="Sesion.salir()">Salir</button>
   </div>
 </div>
@@ -549,23 +547,6 @@ select:focus,input:focus{border-color:var(--amb)}
     <div class="sb" id="rep-list"></div>
   </section>
 
-  <!-- VIAJES LOCALES -->
-  <section class="sec" id="sec-viajes">
-    <div class="ph">
-      <h2>Fletes de la semana</h2>
-      <div class="flt">
-        <button class="ftb" onclick="moverSemanaVj(-7)" title="Semana anterior">‹</button>
-        <input type="date" id="vj-dia" onchange="cargarViajes()" title="Cualquier día de la semana">
-        <button class="ftb" onclick="moverSemanaVj(7)" title="Semana siguiente">›</button>
-        <select id="vj-cli" onchange="renderViajes()"><option value="">Todos los clientes</option></select>
-        <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
-        <button class="ftb" onclick="excelViajes(this)">Descargar Excel</button>
-        <button class="ftb" onclick="whatsViajes()">Enviar por WhatsApp</button>
-      </div>
-    </div>
-    <div class="sb" id="vj-body"></div>
-  </section>
-
   <!-- HISTORIAL -->
   <section class="sec" id="sec-historial">
     <div class="ph">
@@ -791,7 +772,6 @@ function renderSec(id) {
   document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
   const el = document.getElementById('sec-'+id);
   if (el) el.classList.add('on');
-  if (id === 'viajes') return viajes();          // no depende de los datos de la planta
   if (!D) return;
   ({resumen,rendimientos,financiero,clientes,pagos,insumos,continuidad,anomalias,historial,reportes})[id]?.();
 }
@@ -2576,216 +2556,6 @@ async function pasarReporte(id, btn) {
   } finally { bar(false); }
 }
 
-// ══════════════════════════════════════════
-//  VIAJES LOCALES — Fletes de la semana (Viajes.gs lee el Sheets de Notas de Viaje)
-// ══════════════════════════════════════════
-const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-const DIAS_VJ = ['DOMINGO','LUNES','MARTES','MIÉRCOLES','JUEVES','VIERNES','SÁBADO'];
-const VJ_CACHE = {};        // `${desde}|${hasta}` → respuesta de viajes_semana
-let VJ = null;              // semana en pantalla
-
-const fechaLocal = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m-1, d); };
-const txtFecha = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const diaVj = s => DIAS_VJ[fechaLocal(s).getDay()];
-const claveVj = s => String(s||'').trim().toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ');
-const ddmmyy = s => s.slice(8,10) + s.slice(5,7) + s.slice(2,4);                 // 2026-11-03 → 031126
-const nViajes = n => `${n} viaje${n!==1?'s':''}`;
-// Fecha para Excel como número de serie (con Date el Excel la corre un día por la zona horaria)
-const celdaFecha = s => { const [y, m, d] = s.split('-').map(Number); return { t:'n', v:(Date.UTC(y, m-1, d) - Date.UTC(1899, 11, 30)) / 864e5, z:'dd/mm/yyyy' }; };
-// Lunes a domingo de la semana del día dado
-function semanaVj(dia) {
-  const d = fechaLocal(dia), lun = new Date(d); lun.setDate(d.getDate() - (d.getDay() + 6) % 7);
-  const dom = new Date(lun); dom.setDate(lun.getDate() + 6);
-  return { desde:txtFecha(lun), hasta:txtFecha(dom) };
-}
-
-function viajes() {
-  const inp = document.getElementById('vj-dia');
-  if (!inp.value) inp.value = txtFecha(new Date());
-  cargarViajes();
-}
-function moverSemanaVj(dias) {
-  const inp = document.getElementById('vj-dia');
-  const d = fechaLocal(inp.value || txtFecha(new Date())); d.setDate(d.getDate() + dias);
-  inp.value = txtFecha(d);
-  cargarViajes();
-}
-function irSemanaVj(dia) { document.getElementById('vj-dia').value = dia; cargarViajes(); }
-
-async function cargarViajes(forzar) {
-  const { desde, hasta } = semanaVj(document.getElementById('vj-dia').value || txtFecha(new Date()));
-  const k = desde + '|' + hasta, body = document.getElementById('vj-body');
-  if (!forzar && VJ_CACHE[k]) { VJ = VJ_CACHE[k]; return renderViajes(); }
-  body.innerHTML = '<div class="pn"><div class="empty">Leyendo las notas de viaje…</div></div>';
-  bar(true);
-  try {
-    VJ = VJ_CACHE[k] = await api({ action:'viajes_semana', desde, hasta });
-    renderViajes();
-  } catch(e) {
-    body.innerHTML = `<div class="pn"><div class="empty">No se pudieron leer las notas: ${esc(e.message)}</div></div>`;
-  } finally { bar(false); }
-}
-
-// Viajes de la semana ya ordenados, con el filtro de cliente y los avisos de cada nota
-function datosViajes() {
-  const cat = {}; (VJ.placas||[]).forEach(p => cat[p.placa] = p);
-  const cli = document.getElementById('vj-cli').value;
-  const todos = (VJ.viajes||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || claveVj(a.cliente).localeCompare(claveVj(b.cliente))
-    || a.obra.localeCompare(b.obra) || a.placa.localeCompare(b.placa) || (Number(a.folio)||0) - (Number(b.folio)||0) || a.fila - b.fila);
-  const rep = {};
-  todos.forEach(v => { if (v.folio) { const k = claveVj(v.obra) + '|' + v.folio; rep[k] = (rep[k]||0) + 1; } });
-  todos.forEach(v => {
-    v.avisos = [];
-    if (v.duplicado || (v.folio && rep[claveVj(v.obra) + '|' + v.folio] > 1)) v.avisos.push('Folio repetido');
-    if (!cat[v.placa]) v.avisos.push('Placa no está en el catálogo');
-    if (!v.cliente) v.avisos.push('Sin cliente (la obra no está en el catálogo)');
-    if (!v.m3) v.avisos.push('Sin m³');
-  });
-  return { cat, todos, lista: cli ? todos.filter(v => claveVj(v.cliente) === cli) : todos };
-}
-
-// Suma viajes y m³ agrupando por la clave que se le dé
-function agruparVj(lista, clave) {
-  const g = new Map();
-  lista.forEach(v => {
-    const k = clave(v);
-    if (!g.has(k)) g.set(k, { k, viajes:0, m3:0, items:[] });
-    const x = g.get(k); x.viajes++; x.m3 += v.m3; x.items.push(v);
-  });
-  return [...g.values()];
-}
-// "Tepetate 5 · Lodo 3"
-const materialesVj = items => agruparVj(items, v => claveVj(v.material) || 'SIN MATERIAL')
-  .sort((a,b) => b.viajes - a.viajes).map(x => `${x.items[0].material || 'Sin material'} ${x.viajes}`).join(' · ');
-const fechaCorta = s => `${+s.slice(8,10)} ${MESES[+s.slice(5,7)-1].toLowerCase().slice(0,3)}`;
-
-function renderViajes() {
-  if (!VJ) return;
-  const body = document.getElementById('vj-body');
-  // Clientes de la semana para el filtro (se conserva el elegido)
-  const sel = document.getElementById('vj-cli'), antes = sel.value;
-  const clientes = agruparVj(VJ.viajes||[], v => claveVj(v.cliente)).filter(x => x.k).sort((a,b) => a.k.localeCompare(b.k));
-  sel.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(x => `<option value="${esc(x.k)}">${esc(x.items[0].cliente)}</option>`).join('');
-  sel.value = clientes.some(x => x.k === antes) ? antes : '';
-
-  const { cat, lista } = datosViajes();
-  const titulo = `Semana del ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}`;
-  if (!lista.length) {
-    const ult = VJ.ultima && VJ.ultima < VJ.desde
-      ? `<br>La última nota registrada es del <b>${VJ.ultima}</b>. <button class="ftb" onclick="irSemanaVj('${VJ.ultima}')">Ir a esa semana</button>` : '';
-    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin notas de viaje esta semana${ult}</div></div>`;
-    return;
-  }
-  const m3 = lista.reduce((s,v) => s + v.m3, 0);
-  const sinRevisar = lista.filter(v => !v.revisado).length;
-  const sinFisica = lista.filter(v => !v.entregado).length;
-  const conAviso = lista.filter(v => v.avisos.length);
-  const camiones = new Set(lista.map(v => v.placa)).size;
-
-  const porDia = agruparVj(lista, v => v.fecha);
-  const porCli = agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).sort((a,b) => b.m3 - a.m3);
-  const porCam = agruparVj(lista, v => v.placa).sort((a,b) => b.viajes - a.viajes);
-  const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
-  const tot = `<td class="rt"><b>${lista.length}</b></td><td class="rt"><b>${f0(m3)}</b></td>`;
-
-  body.innerHTML = `
-    <div class="mg">
-      <div class="mc m"><div class="ml">Viajes</div><div class="mv">${lista.length}</div><div class="ms">${titulo}</div></div>
-      <div class="mc"><div class="ml">m³ acarreados</div><div class="mv">${f0(m3)}</div><div class="ms">${porDia.length} día${porDia.length!==1?'s':''} con viajes</div></div>
-      <div class="mc"><div class="ml">Camiones</div><div class="mv">${camiones}</div><div class="ms">${porCli.length} obra${porCli.length!==1?'s':''}</div></div>
-      <div class="mc ${conAviso.length || sinRevisar ? 'r' : 'g'}"><div class="ml">Por revisar</div><div class="mv">${conAviso.length}</div>
-        <div class="ms">${sinRevisar} sin revisar · ${sinFisica} sin nota física</div></div>
-    </div>
-    <div class="two">
-      <div class="pn"><div class="pnh">Por día</div>
-        ${tabla('<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>',
-          porDia.map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(v => v.cliente || '—'))].join(', '))}</td>
-            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-          `<td colspan="3"><b>Total</b></td>${tot}`)}
-      </div>
-      <div class="pn"><div class="pnh">Por cliente y obra</div>
-        ${tabla('<th>A nombre de</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>',
-          porCli.map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra) || '—'}</td>
-            <td style="color:var(--muted)">${esc(materialesVj(x.items))}</td><td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-          `<td colspan="3"><b>Total</b></td>${tot}`)}
-      </div>
-    </div>
-    <div class="pn"><div class="pnh">Por camión</div>
-      ${tabla('<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>',
-        porCam.map(x => `<tr><td class="amb">${esc(x.k)}</td><td>${cat[x.k] ? esc(cat[x.k].descripcion) : '<span class="neg">No está en el catálogo</span>'}</td>
-          <td>${esc([...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', ')) || '—'}</td>
-          <td style="color:var(--muted)">${[...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ')}</td>
-          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-        `<td colspan="4"><b>Total</b></td>${tot}`)}
-    </div>
-    ${conAviso.length ? `<div class="pn"><div class="pnh">Notas con aviso (${conAviso.length})</div>
-      ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th>',
-        conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
-          <td class="neg">${v.avisos.join(' · ')}</td></tr>`).join(''))}</div>` : ''}
-    <div class="pn"><div class="pnh">Viajes de la semana <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
-      ${tabla('<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th><th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>',
-        lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
-          <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
-          <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
-          <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
-          <td><span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}</td>
-          <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td></tr>`).join(''),
-        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(m3)}</b></td><td colspan="4"></td>`)}
-    </div>`;
-}
-
-// Mismo formato que la hoja de FLETES DE LA SEMANA, más una hoja con los totales
-async function excelViajes(btn) {
-  if (!VJ) return;
-  const { lista } = datosViajes();
-  if (!lista.length) return alert('No hay viajes en esta semana');
-  btn.disabled = true;
-  try {
-    if (!window.XLSX) await cargarScript(XLSX_URL);
-    const nombre = `${ddmmyy(VJ.desde)}-${ddmmyy(VJ.hasta)}`;
-    const filas = lista.map((v, i) => [i+1, diaVj(v.fecha), celdaFecha(v.fecha), v.folio, v.material.toUpperCase(), v.obra.toUpperCase(),
-      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase()]);
-    const hoja = XLSX.utils.aoa_to_sheet([['', 'FLETES SEMANALES'], [],
-      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER'], ...filas,
-      [], ['', '', '', '', '', '', 'TOTAL', lista.reduce((s,v) => s + v.m3, 0)]]);
-    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18].map(wch => ({ wch }));
-    const tot = [['POR DÍA'], ['DIA','FECHA','VIAJES','M3'],
-      ...agruparVj(lista, v => v.fecha).map(x => [diaVj(x.k), celdaFecha(x.k), x.viajes, x.m3]), [],
-      ['POR CLIENTE Y OBRA'], ['A NOMBRE DE','OBRA','MATERIAL','VIAJES','M3'],
-      ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).map(x => [x.items[0].cliente.toUpperCase(), x.items[0].obra.toUpperCase(), materialesVj(x.items), x.viajes, x.m3]), [],
-      ['POR CAMIÓN'], ['PLACA','CHOFER','VIAJES','M3'],
-      ...agruparVj(lista, v => v.placa).map(x => [x.k, [...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', '), x.viajes, x.m3])];
-    const hoja2 = XLSX.utils.aoa_to_sheet(tot);
-    hoja2['!cols'] = [22,16,30,8,8].map(wch => ({ wch }));
-    const libro = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(libro, hoja, nombre);
-    XLSX.utils.book_append_sheet(libro, hoja2, 'TOTALES');
-    const cli = document.getElementById('vj-cli');
-    XLSX.writeFile(libro, `FLETES ${nombre}${cli.value ? ' ' + cli.selectedOptions[0].text : ''}.xlsx`);
-  } catch(e) { alert('No se pudo generar el Excel: ' + e.message); }
-  finally { btn.disabled = false; }
-}
-
-function whatsViajes() {
-  if (!VJ) return;
-  const { lista } = datosViajes();
-  if (!lista.length) return alert('No hay viajes en esta semana');
-  const m3 = lista.reduce((s,v) => s + v.m3, 0);
-  const cli = document.getElementById('vj-cli');
-  const avisos = lista.filter(v => v.avisos.length).length;
-  const texto = [
-    `*Fletes de la semana — ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}*${cli.value ? `\nCliente: ${cli.selectedOptions[0].text}` : ''}`,
-    `Total: ${nViajes(lista.length)} · ${f0(m3)} m³`,
-    '', '*Por día*',
-    ...agruparVj(lista, v => v.fecha).map(x => `• ${diaVj(x.k).charAt(0) + diaVj(x.k).slice(1).toLowerCase()} ${+x.k.slice(8,10)}: ${nViajes(x.viajes)} · ${f0(x.m3)} m³`),
-    '', '*Por cliente*',
-    ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).sort((a,b) => b.m3 - a.m3)
-      .map(x => `• ${x.items[0].cliente || 'Sin cliente'} (${x.items[0].obra || 'sin obra'}): ${nViajes(x.viajes)} · ${f0(x.m3)} m³ — ${materialesVj(x.items)}`),
-    ...(avisos ? ['', `⚠️ ${avisos} nota${avisos!==1?'s':''} con aviso por revisar`] : []),
-  ].join('\n');
-  window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
-}
-
 function historial() {
   const mz=[...new Set((D.producciones||[]).map(p=>p.mezcla).filter(Boolean))];
   const sel=document.getElementById('hm');
@@ -2830,9 +2600,7 @@ setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');  
 
 // Sin sesión de administrador regresa a index.html
 Sesion.requerir('dashboard').then(s => {
-  document.getElementById('sb-user').textContent = s.nombre;
-  if ((s.permisos||[]).includes('viajes')) document.getElementById('nav-viajes').style.display = '';
-  document.getElementById('app').style.display = 'flex';
+  document.getElementById('sb-user').textContent = s.nombre;  document.getElementById('app').style.display = 'flex';
   loadData();
 }).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
 </script>

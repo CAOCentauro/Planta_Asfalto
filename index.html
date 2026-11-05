@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F7931E">
 <link rel="manifest" href="manifest.json">
-<title>Planta de Asfalto</title>
+<title>CAO Centauro</title>
 <style>
 :root{--bg:#f3f3f0;--card:#fff;--bd:#d9d9d3;--text:#1a1a1a;--muted:#66665f;--amb:#d97706;--amb-bg:#fff6e5;
   --ok:#15803d;--ok-bg:#eaf8ef;--err:#b91c1c;--err-bg:#fdeaea;--in:#fbfbf9}
@@ -58,7 +58,7 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 </head>
 <body>
 <div class="wrap">
-  <div class="marca"><span>Panel de control</span><strong>Planta de Asfalto</strong></div>
+  <div class="marca"><span>CAO Centauro</span><strong id="m-tit">Sistema</strong></div>
 
   <!-- ENTRAR -->
   <form class="card oculto" id="v-login" onsubmit="entrar(event)">
@@ -110,9 +110,16 @@ const PANTALLAS = {
   dashboard: { t:'Panel de control',   d:'Producción, finanzas, reportes del operador',    href:'dashboard.html' },
   registro:  { t:'Registro de planta', d:'Captura diaria de producción y tanques',          href:'registro.html'  },
   pagos:     { t:'Pagos de clientes',  d:'Registrar lo que pagan los clientes y ver cuánto deben', href:'pagos.html' },
+  viajes:    { t:'Fletes de la semana', d:'Viajes por día, cliente y camión, con las notas de viaje', href:'viajes.html' },
   nomina:    { t:'Nómina',            d:'Préstamos, faltas y pago de los sábados al personal', href:'nomina.html' },
   usuarios:  { t:'Usuarios',          d:'Quién tiene acceso, perfiles, permisos y contraseñas', href:'usuarios.html' },
 };
+// Primero se elige el negocio y luego sus pantallas. "General" es de todos los negocios (la nómina se ve junta).
+const NEGOCIOS = [
+  { clave:'planta',  t:'Planta de asfalto', d:'Producción, reportes del operador y pagos de clientes', pantallas:['dashboard','registro','pagos'] },
+  { clave:'viajes',  t:'Viajes locales',    d:'Acarreos de material: fletes de la semana',           pantallas:['viajes'] },
+  { clave:'general', t:'General',           d:'Nómina y usuarios',                                     pantallas:['nomina','usuarios'] },
+];
 const MIN = 8;
 
 // Íconos del menú (Tabler Icons, licencia MIT: tabler.io/icons), dibujados aquí para que carguen sin internet
@@ -126,6 +133,9 @@ const ICONOS = {
   nomina:    svg('<g transform="translate(-.6 -.8) scale(.86)"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"/><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M17 10h2a2 2 0 0 1 2 2v1"/><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M3 13v-1a2 2 0 0 1 2 -2h2"/></g>'
              + '<rect x="13.2" y="15.2" width="9.6" height="6.6" rx="1.2" style="fill:var(--amb-bg)" stroke-width="1.7"/><circle cx="18" cy="18.5" r="1.3" stroke-width="1.5"/>'),
   candado:   svg('<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>'),   // lock
+  viajes:    svg('<path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"/>'),   // truck
+  planta:    svg('<path d="M3 21h18"/><path d="M5 21v-12l5 4v-4l5 4h4"/><path d="M19 21v-8l-1.436 -9.574a.5 .5 0 0 0 -.495 -.426h-1.145a.5 .5 0 0 0 -.494 .418l-1.43 8.582"/><path d="M9 17h1"/><path d="M14 17h1"/>'),   // building-factory-2
+  general:   svg('<path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2"/><path d="M12 12l0 .01"/><path d="M3 13a20 20 0 0 0 18 0"/>'),   // briefcase
   usuarios:  svg('<path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/><path d="M15 9h.01"/>'),   // key
 };
 
@@ -169,18 +179,38 @@ async function entrar(ev) {
   } finally { b.disabled = false; b.textContent = 'Entrar'; }
 }
 
-// ── Menú ───────────────────────────────────
+// ── Menú: primero los negocios, luego las pantallas del elegido ──
+let NEG = new URLSearchParams(location.search).get('n');     // ?n=viajes al volver de una pantalla
+
+function abrirNegocio(clave) {
+  NEG = clave;
+  history.replaceState(null, '', clave ? 'index.html?n=' + clave : 'index.html');
+  mostrarMenu();
+}
+
 function mostrarMenu() {
   const s = Sesion.leer();
   if (!s?.token) return vista('v-login');
   $('#m-nombre').textContent = s.nombre;
   $('#m-perfil').textContent = s.perfil_nombre || s.perfil;
-  // Las que tienen candado van al final, aparte
   const ps = (s.pantallas || []).filter(p => PANTALLAS[p]);
-  const libres = ps.filter(p => !Sesion.conCandado(p)), conCdo = ps.filter(p => Sesion.conCandado(p));
-  $('#menu').innerHTML = ps.length ? libres.map(p => tile(p, s)).join('')
-      + (conCdo.length ? `<div class="sep">Con candado · piden tu PIN</div>` + conCdo.map(p => tile(p, s)).join('') : '')
-    : '<div class="res err">Tu perfil todavía no tiene pantallas asignadas. Pide que te den permisos.</div>';
+  const negs = NEGOCIOS.filter(n => n.pantallas.some(p => ps.includes(p)));
+  const neg = negs.length === 1 ? negs[0] : negs.find(n => n.clave === NEG);   // con un solo negocio se entra directo
+  $('#m-tit').textContent = neg ? neg.t : 'Sistema';
+
+  if (!ps.length) {
+    $('#menu').innerHTML = '<div class="res err">Tu perfil todavía no tiene pantallas asignadas. Pide que te den permisos.</div>';
+  } else if (!neg) {
+    $('#menu').innerHTML = negs.map(n => `<a class="tile" href="index.html?n=${n.clave}" onclick="event.preventDefault();abrirNegocio('${n.clave}')">
+      <div class="ico">${ICONOS[n.clave]}</div><div class="tx"><b>${n.t}</b><span>${n.d}</span></div></a>`).join('');
+  } else {
+    // Las que tienen candado van al final, aparte
+    const del = neg.pantallas.filter(p => ps.includes(p));
+    const libres = del.filter(p => !Sesion.conCandado(p)), conCdo = del.filter(p => Sesion.conCandado(p));
+    $('#menu').innerHTML = (negs.length > 1 ? `<button class="lnk" style="align-self:flex-start" onclick="abrirNegocio(null)">← Todos los negocios</button>` : '')
+      + libres.map(p => tile(p, s)).join('')
+      + (conCdo.length ? `<div class="sep">Con candado · piden tu PIN</div>` + conCdo.map(p => tile(p, s)).join('') : '');
+  }
   $('#b-pin').classList.toggle('oculto', !(s.candados?.zonas || []).length);
   $('#b-pin').textContent = s.tiene_pin ? 'Cambiar mi PIN' : 'Crear mi PIN';
   vista('v-menu');
