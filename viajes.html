@@ -655,6 +655,7 @@ Sesion.requerir('viajes').then(s => {
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
   cargarViajes();
+  if (location.hash === '#subir') document.querySelector('nav a[data-s="subir"]').click();   // tarjeta "Subir notas" del inicio
 }).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
 </script>
 </body>

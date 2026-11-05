@@ -111,13 +111,15 @@ const PANTALLAS = {
   registro:  { t:'Registro de planta', d:'Captura diaria de producción y tanques',          href:'registro.html'  },
   pagos:     { t:'Pagos de clientes',  d:'Registrar lo que pagan los clientes y ver cuánto deben', href:'pagos.html' },
   viajes:    { t:'Fletes de la semana', d:'Viajes por día, cliente y camión, con las notas de viaje', href:'viajes.html' },
+  // Misma pantalla que Fletes, abierta en su pestaña de subir notas
+  viajes_subir: { t:'Subir notas de viaje', d:'Fotos de las notas por lote o a mano, la IA las lee y tú revisas', href:'viajes.html#subir', de:'viajes' },
   nomina:    { t:'Nómina',            d:'Préstamos, faltas y pago de los sábados al personal', href:'nomina.html' },
   usuarios:  { t:'Usuarios',          d:'Quién tiene acceso, perfiles, permisos y contraseñas', href:'usuarios.html' },
 };
 // Primero se elige el negocio y luego sus pantallas. "General" es de todos los negocios (la nómina se ve junta).
 const NEGOCIOS = [
   { clave:'planta',  t:'Planta de asfalto', d:'Producción, reportes del operador y pagos de clientes', pantallas:['dashboard','registro','pagos'] },
-  { clave:'viajes',  t:'Viajes locales',    d:'Acarreos de material: fletes de la semana',           pantallas:['viajes'] },
+  { clave:'viajes',  t:'Viajes locales',    d:'Acarreos de material: fletes de la semana y notas de viaje', pantallas:['viajes','viajes_subir'] },
   { clave:'general', t:'General',           d:'Nómina y usuarios',                                     pantallas:['nomina','usuarios'] },
 ];
 const MIN = 8;
@@ -134,6 +136,7 @@ const ICONOS = {
              + '<rect x="13.2" y="15.2" width="9.6" height="6.6" rx="1.2" style="fill:var(--amb-bg)" stroke-width="1.7"/><circle cx="18" cy="18.5" r="1.3" stroke-width="1.5"/>'),
   candado:   svg('<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>'),   // lock
   viajes:    svg('<path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"/>'),   // truck
+  viajes_subir: svg('<path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/>'),   // photo
   planta:    svg('<path d="M3 21h18"/><path d="M5 21v-12l5 4v-4l5 4h4"/><path d="M19 21v-8l-1.436 -9.574a.5 .5 0 0 0 -.495 -.426h-1.145a.5 .5 0 0 0 -.494 .418l-1.43 8.582"/><path d="M9 17h1"/><path d="M14 17h1"/>'),   // building-factory-2
   general:   svg('<path d="M3 7m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2"/><path d="M12 12l0 .01"/><path d="M3 13a20 20 0 0 0 18 0"/>'),   // briefcase
   usuarios:  svg('<path d="M16.555 3.843l3.602 3.602a2.877 2.877 0 0 1 0 4.069l-2.643 2.643a2.877 2.877 0 0 1 -4.069 0l-.301 -.301l-6.558 6.558a2 2 0 0 1 -1.239 .578l-.175 .008h-1.172a1 1 0 0 1 -.993 -.883l-.007 -.117v-1.172a2 2 0 0 1 .467 -1.284l.119 -.13l.414 -.414h2v-2h2v-2l2.144 -2.144l-.301 -.301a2.877 2.877 0 0 1 0 -4.069l2.643 -2.643a2.877 2.877 0 0 1 4.069 0z"/><path d="M15 9h.01"/>'),   // key
@@ -193,7 +196,8 @@ function mostrarMenu() {
   if (!s?.token) return vista('v-login');
   $('#m-nombre').textContent = s.nombre;
   $('#m-perfil').textContent = s.perfil_nombre || s.perfil;
-  const ps = (s.pantallas || []).filter(p => PANTALLAS[p]);
+  // Una tarjeta con "de" se ve si el perfil tiene esa pantalla (p. ej. Subir notas va dentro de viajes)
+  const ps = Object.keys(PANTALLAS).filter(p => (s.pantallas || []).includes(PANTALLAS[p].de || p));
   const negs = NEGOCIOS.filter(n => n.pantallas.some(p => ps.includes(p)));
   const neg = negs.length === 1 ? negs[0] : negs.find(n => n.clave === NEG);   // con un solo negocio se entra directo
   $('#m-tit').textContent = neg ? neg.t : 'Sistema';
