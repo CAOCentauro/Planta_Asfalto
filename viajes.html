@@ -64,6 +64,25 @@ select:focus,input:focus{border-color:var(--amb)}
 .ftb{background:transparent;border:1px solid var(--bd);color:var(--muted);padding:3px 9px;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.04em}
 .ftb:hover{border-color:var(--amb);color:var(--amb)}
 .ftb:disabled{opacity:.5;cursor:default}
+.ftb.active{background:rgba(247,147,30,.12);border-color:var(--amb);color:var(--amb)}
+.ftb.p{background:var(--amb);border-color:var(--amb);color:#000}
+.ftb.p:hover{background:#d97706;color:#000}
+/* SUBIR NOTAS */
+.ci{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:5px 7px;font-family:inherit;font-size:12px;outline:none;width:100%}
+.ci:focus{border-color:var(--amb)}
+.ci.mal{border-color:var(--red)}
+.ci:disabled{opacity:.6}
+.thumb{width:44px;height:44px;object-fit:cover;cursor:zoom-in;border:1px solid var(--bd);display:block}
+.sinfoto{width:44px;height:44px;border:1px dashed var(--bd);color:var(--muted);font-size:9px;display:flex;align-items:center;justify-content:center;text-align:center}
+.drop{border:2px dashed var(--bd);padding:36px 16px;text-align:center;color:var(--muted);cursor:pointer;line-height:1.8}
+.drop.over,.drop:hover{border-color:var(--amb);color:var(--amb)}
+.av{font-size:11px;color:var(--neg);white-space:normal;min-width:150px;max-width:220px;line-height:1.35}
+#nt-tbl td{vertical-align:top}
+.bulk{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:12px 16px}
+.bulk .ci{width:auto;min-width:120px}
+#modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
+#modal-foto.on{display:flex}
+#modal-foto img{max-width:95vw;max-height:92vh}
 .pos{color:var(--pos)}.neg{color:var(--neg)}.amb{color:var(--amb)}.rt{text-align:right}
 a{color:var(--amb)}
 .empty{padding:36px;text-align:center;color:var(--muted);line-height:2}
@@ -91,7 +110,7 @@ a{color:var(--amb)}
   <div class="sb-logo"><span>CAO Centauro</span><strong>Viajes locales</strong></div>
   <nav>
     <a href="#" class="active" data-s="fletes">Fletes de la semana</a>
-    <a class="pronto" title="Próximamente">Subir notas <small>pronto</small></a>
+    <a href="#" data-s="subir">Subir notas <span id="nt-badge" style="color:var(--amb)"></span></a>
     <a class="pronto" title="Próximamente">Diésel <small>pronto</small></a>
   </nav>
   <div class="sb-foot">
@@ -119,8 +138,38 @@ a{color:var(--amb)}
     </div>
     <div class="sb" id="vj-body"></div>
   </section>
+
+  <!-- SUBIR NOTAS (como el admin de Notas de Viaje: la IA lee cada foto, se revisa y se guarda) -->
+  <section class="sec" id="sec-subir">
+    <div class="ph">
+      <h2>Subir notas de viaje</h2>
+      <div class="flt">
+        <label class="ftb" style="display:inline-block">Elegir fotos<input type="file" id="nt-fotos" accept="image/*" multiple hidden></label>
+        <button class="ftb" onclick="agregarSinFoto()">Agregar sin foto</button>
+        <button class="ftb" id="nt-limpiar" onclick="limpiarGuardadas()" style="display:none">Quitar las guardadas</button>
+        <button class="ftb p" id="nt-guardar" onclick="guardarNotas()">Registrar notas</button>
+      </div>
+    </div>
+    <div class="sb">
+      <div class="pn" id="nt-bulk" style="display:none">
+        <div class="pnh">Aplicar a todas las que falta registrar</div>
+        <div class="bulk">
+          <select class="ci" id="nb-chofer"></select>
+          <select class="ci" id="nb-obra"></select>
+          <input class="ci" type="date" id="nb-fecha" title="Fecha de la nota">
+          <input class="ci" type="number" id="nb-m3" placeholder="m³" step="0.5" min="0" style="min-width:70px;width:80px">
+          <button class="ftb" onclick="aplicarATodas()">Aplicar</button>
+          <span id="nt-cont" style="margin-left:auto;font-size:12px;color:var(--muted)"></span>
+        </div>
+      </div>
+      <div class="pn">
+        <div id="nt-lista"></div>
+      </div>
+    </div>
+  </section>
 </div><!-- /main -->
 </div><!-- /app -->
+<div id="modal-foto" onclick="this.classList.remove('on')"><img alt="Foto de la nota"></div>
 
 <script src="sesion.js"></script>
 <script>
@@ -169,6 +218,8 @@ document.querySelectorAll('nav a[data-s]').forEach(a => a.addEventListener('clic
   document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
   document.getElementById('sec-' + a.dataset.s).classList.add('on');
   closeMenu();
+  if (a.dataset.s === 'subir') abrirSubir();
+  if (a.dataset.s === 'fletes' && VJ) cargarViajes();      // por si se registraron notas de esta semana
 }));
 document.querySelectorAll('nav a.pronto').forEach(a => a.addEventListener('click', e => e.preventDefault()));
 
@@ -375,6 +426,225 @@ function whatsViajes() {
     ...(avisos ? ['', `⚠️ ${avisos} nota${avisos!==1?'s':''} con aviso por revisar`] : []),
   ].join('\n');
   window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
+}
+
+// ══════════════════════════════════════════
+//  SUBIR NOTAS — Viajes.gs › nota_extraer / nota_guardar (con foto los guarda el programa de Notas de Viaje)
+// ══════════════════════════════════════════
+const IMG_ANCHO_MAX = 1280, IMG_CALIDAD = 0.78;      // igual que el admin de Notas de Viaje
+const LECTORES = 2;                                  // fotos que se leen a la vez
+let CAT = null;                                      // catálogos de Notas de Viaje
+let NOTAS = [], NT_ID = 0, LEYENDO = 0;
+const COLA = [];
+const ESTADO_NT = {
+  leyendo:   '<span class="tag tm">Leyendo…</span>',
+  pendiente: '',
+  guardando: '<span class="tag tm">Guardando…</span>',
+  ok:        '<span class="tag tb">Registrada</span>',
+  dup:       '<span class="tag tm">Ya estaba</span>',
+  error:     '<span class="tag ta">Error</span>',
+};
+const porGuardar = () => NOTAS.filter(n => n.estado === 'pendiente' || n.estado === 'error');
+
+async function abrirSubir() {
+  if (!CAT) {
+    document.getElementById('nt-lista').innerHTML = '<div class="empty">Cargando catálogos…</div>';
+    try { CAT = await api({ action:'notas_catalogos' }); }
+    catch(e) { document.getElementById('nt-lista').innerHTML = `<div class="empty">No se pudieron cargar los catálogos: ${esc(e.message)}</div>`; return; }
+    const opts = (lista, vacio) => `<option value="">${vacio}</option>` + lista.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
+    document.getElementById('nb-chofer').innerHTML = opts(CAT.choferes, '— Chofer —');
+    document.getElementById('nb-obra').innerHTML = opts(CAT.obras.map(o => o.obra), '— Obra —');
+  }
+  renderNotas();
+}
+
+const clienteDeObra = obra => (CAT?.obras || []).find(o => claveVj(o.obra) === claveVj(obra))?.cliente || '';
+// Avisos de la IA más los que se revisan aquí
+function avisosNota(n) {
+  const d = n.d, av = new Set((d.advertencias || []).filter(a => !/placa no registrada/i.test(a)));
+  const placa = String(d.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  if (placa && !(CAT?.placas || []).some(p => p.placa === placa)) av.add(`Placa ${placa} no está en el catálogo`);
+  const m3 = parseFloat(d.m3);
+  if (d.m3 !== '' && !isNaN(m3) && (m3 < 5 || m3 > 25)) av.add(`m³ fuera de lo normal (${m3})`);
+  if (d.fecha) {
+    const dias = Math.round((Date.now() - fechaLocal(d.fecha)) / 864e5);
+    if (dias > 45) av.add(`Nota de hace ${dias} días`);
+    if (dias < -1) av.add('La fecha es futura');
+  }
+  if (!d.folio) av.add('Sin folio');
+  if (d.obra && !clienteDeObra(d.obra)) av.add('La obra no tiene cliente en el catálogo');
+  return [...av];
+}
+
+function filaNota(n, i) {
+  const d = n.d, dis = ['pendiente','error'].includes(n.estado) ? '' : 'disabled';
+  const sel = (campo, lista, vacio) => {
+    const vals = [...lista]; if (d[campo] && !vals.some(v => claveVj(v) === claveVj(d[campo]))) vals.unshift(d[campo]);
+    return `<select class="ci" data-f="${campo}" ${dis}><option value="">${vacio}</option>${vals.map(v =>
+      `<option value="${esc(v)}" ${claveVj(v) === claveVj(d[campo]) ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
+  };
+  const inp = (campo, tipo, extra = '') => `<input class="ci" type="${tipo}" data-f="${campo}" value="${esc(d[campo])}" ${extra} ${dis}>`;
+  const av = n.estado === 'leyendo' ? [] : avisosNota(n);
+  const conf = d.confianza == null ? '' : `<span class="tag ${d.confianza >= 80 ? 'tb' : d.confianza >= 60 ? 'tm' : 'ta'}">${d.confianza}%</span>`;
+  return `<tr data-id="${n.id}"${n.estado === 'ok' || n.estado === 'dup' ? ' style="opacity:.6"' : ''}>
+    <td>${n.foto ? `<img class="thumb" src="${n.foto}" alt="nota" onclick="verFoto(${n.id})">` : '<div class="sinfoto">sin foto</div>'}</td>
+    <td style="min-width:72px">${ESTADO_NT[n.estado] || ''}${n.estado === 'pendiente' ? `<span style="color:var(--muted)">${i+1}</span>` : ''} ${conf}
+      ${n.msg ? `<div class="av" style="color:${n.estado === 'error' ? 'var(--neg)' : 'var(--muted)'};min-width:0">${esc(n.msg)}</div>` : ''}</td>
+    <td style="min-width:140px">${sel('chofer', CAT.choferes, '— Chofer —')}</td>
+    <td style="min-width:80px">${inp('folio', 'text', 'placeholder="Folio"')}</td>
+    <td style="min-width:130px">${inp('fecha', 'date')}</td>
+    <td style="min-width:130px">${sel('material', CAT.materiales, '— Material —')}</td>
+    <td style="min-width:70px">${inp('m3', 'number', 'step="0.5" min="0"')}</td>
+    <td style="min-width:95px">${inp('placa', 'text', 'placeholder="Placa"')}</td>
+    <td style="min-width:140px">${sel('obra', CAT.obras.map(o => o.obra), '— Obra —')}</td>
+    <td data-cli style="color:var(--muted)">${esc(clienteDeObra(d.obra)) || '—'}</td>
+    <td style="min-width:130px">${inp('observaciones', 'text', 'placeholder="Opcional"')}</td>
+    <td class="av" data-av>${av.map(esc).join('<br>')}</td>
+    <td>${dis ? '' : `<button class="ftb" title="Quitar" onclick="quitarNota(${n.id})">✕</button>`}</td>
+  </tr>`;
+}
+
+function renderNotas() {
+  if (!CAT) return;
+  const cont = document.getElementById('nt-lista');
+  const faltan = porGuardar().length, hechas = NOTAS.filter(n => n.estado === 'ok' || n.estado === 'dup').length;
+  document.getElementById('nt-bulk').style.display = NOTAS.length ? '' : 'none';
+  document.getElementById('nt-limpiar').style.display = hechas ? '' : 'none';
+  document.getElementById('nt-guardar').disabled = !faltan || LEYENDO > 0;
+  document.getElementById('nt-badge').textContent = faltan ? ` (${faltan})` : '';
+  document.getElementById('nt-cont').textContent = NOTAS.length
+    ? `${NOTAS.length} nota${NOTAS.length!==1?'s':''} · ${faltan} por registrar${LEYENDO ? ` · leyendo ${LEYENDO + COLA.length}` : ''}` : '';
+  const drop = `<div class="drop" id="nt-drop" onclick="document.getElementById('nt-fotos').click()">
+      <b>${NOTAS.length ? 'Agregar más fotos' : 'Elige o arrastra aquí las fotos de las notas'}</b><br>
+      Puedes escoger varias a la vez. La IA lee cada una y tú revisas antes de registrar.</div>`;
+  cont.innerHTML = NOTAS.length ? `<div class="tw"><table id="nt-tbl"><thead><tr>
+      <th>Foto</th><th></th><th>Chofer</th><th>Folio</th><th>Fecha nota</th><th>Material</th><th>m³</th><th>Placa</th><th>Obra</th><th>A nombre de</th><th>Observaciones</th><th>Avisos</th><th></th>
+    </tr></thead><tbody>${NOTAS.map(filaNota).join('')}</tbody></table></div><div style="padding:12px 16px">${drop}</div>` : `<div style="padding:16px">${drop}</div>`;
+  const dz = document.getElementById('nt-drop');
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); agregarFotos(e.dataTransfer.files); });
+}
+// Cambia solo la fila de esa nota (para no perder lo que se está escribiendo en otra)
+function renderNota(n) {
+  const tr = document.querySelector(`#nt-tbl tr[data-id="${n.id}"]`);
+  if (!tr) return renderNotas();
+  tr.outerHTML = filaNota(n, NOTAS.indexOf(n));
+  renderNotas.cabecera();
+}
+renderNotas.cabecera = () => {
+  const faltan = porGuardar().length;
+  document.getElementById('nt-guardar').disabled = !faltan || LEYENDO > 0;
+  document.getElementById('nt-badge').textContent = faltan ? ` (${faltan})` : '';
+  document.getElementById('nt-cont').textContent = `${NOTAS.length} nota${NOTAS.length!==1?'s':''} · ${faltan} por registrar${LEYENDO ? ` · leyendo ${LEYENDO + COLA.length}` : ''}`;
+};
+
+// Lo que se escribe en la tabla va directo a la nota
+document.addEventListener('input', e => {
+  const tr = e.target.closest?.('#nt-tbl tr[data-id]'), f = e.target.dataset?.f;
+  if (!tr || !f) return;
+  const n = NOTAS.find(x => x.id == tr.dataset.id);
+  if (!n) return;
+  n.d[f] = e.target.value;
+  if (f === 'obra') tr.querySelector('[data-cli]').textContent = clienteDeObra(n.d.obra) || '—';
+  tr.querySelector('[data-av]').innerHTML = avisosNota(n).map(esc).join('<br>');
+});
+document.getElementById('nt-fotos').addEventListener('change', e => { agregarFotos(e.target.files); e.target.value = ''; });
+window.addEventListener('beforeunload', e => { if (porGuardar().length || LEYENDO) { e.preventDefault(); e.returnValue = ''; } });
+
+const notaVacia = () => ({ chofer:'', folio:'', fecha:'', material:'', m3:'', placa:'', obra:'', observaciones:'', confianza:null, advertencias:[] });
+function agregarSinFoto() {
+  if (!CAT) return;
+  NOTAS.push({ id:++NT_ID, foto:null, estado:'pendiente', msg:'', d:notaVacia() });
+  renderNotas();
+}
+function quitarNota(id) { NOTAS = NOTAS.filter(n => n.id !== id); renderNotas(); }
+function limpiarGuardadas() { NOTAS = NOTAS.filter(n => n.estado !== 'ok' && n.estado !== 'dup'); renderNotas(); }
+function verFoto(id) {
+  const n = NOTAS.find(x => x.id === id);
+  if (!n?.foto) return;
+  const m = document.getElementById('modal-foto'); m.querySelector('img').src = n.foto; m.classList.add('on');
+}
+
+// Reduce la foto como el admin de Notas de Viaje (1280 px de ancho, JPEG)
+function reducirFoto(file) {
+  return new Promise((ok, err) => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > IMG_ANCHO_MAX) { h = Math.round(h * IMG_ANCHO_MAX / w); w = IMG_ANCHO_MAX; }
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg', IMG_CALIDAD));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); err(new Error('No se pudo abrir la imagen')); };
+    img.src = url;
+  });
+}
+
+async function agregarFotos(files) {
+  if (!CAT) return;
+  const imgs = [...files].filter(f => f.type.startsWith('image/'));
+  for (const f of imgs) {
+    const n = { id:++NT_ID, foto:null, estado:'leyendo', msg:'', d:notaVacia() };
+    NOTAS.push(n);
+    try { n.foto = await reducirFoto(f); COLA.push(n); }
+    catch(e) { n.estado = 'pendiente'; n.msg = `${f.name}: ${e.message}. Captúrala a mano o vuelve a elegirla.`; }
+  }
+  renderNotas();
+  while (LEYENDO < LECTORES && COLA.length) leerSiguiente();
+}
+async function leerSiguiente() {
+  const n = COLA.shift();
+  if (!n) return;
+  LEYENDO++;
+  try {
+    const { datos } = await Sesion.api({ action:'nota_extraer', foto:n.foto }, 90000);
+    if (datos) Object.assign(n.d, {
+      folio: datos.folio || '', fecha: /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha_nota || '') ? datos.fecha_nota : '',
+      material: datos.material || '', m3: datos.m3 != null ? String(datos.m3) : '', placa: datos.placa || '',
+      confianza: datos.confianza ?? null, advertencias: Array.isArray(datos.advertencias) ? datos.advertencias : [] });
+    else n.msg = 'La IA no pudo leerla: captura los datos a mano';
+  } catch(e) { n.msg = 'No se pudo leer: ' + e.message + '. Captura los datos a mano.'; }
+  n.estado = NOTAS.includes(n) ? 'pendiente' : n.estado;
+  LEYENDO--;
+  renderNota(n);
+  if (COLA.length) leerSiguiente(); else if (!LEYENDO) renderNotas();
+}
+
+function aplicarATodas() {
+  const v = id => document.getElementById(id).value;
+  const chofer = v('nb-chofer'), obra = v('nb-obra'), fecha = v('nb-fecha'), m3 = v('nb-m3');
+  if (!chofer && !obra && !fecha && !m3) return alert('Escoge al menos un dato para aplicar');
+  porGuardar().forEach(n => Object.assign(n.d, chofer ? { chofer } : {}, obra ? { obra } : {}, fecha ? { fecha } : {}, m3 ? { m3 } : {}));
+  renderNotas();
+}
+
+async function guardarNotas() {
+  const lista = porGuardar();
+  const sinChofer = lista.filter(n => !n.d.chofer).length, sinFecha = lista.filter(n => !n.d.fecha).length;
+  if (sinChofer || sinFecha) return alert([sinChofer && `${sinChofer} sin chofer`, sinFecha && `${sinFecha} sin fecha`].filter(Boolean).join(' y ') + '. Complétalas antes de registrar.');
+  const conAviso = lista.filter(n => avisosNota(n).length).length;
+  if (!confirm(`Se van a registrar ${lista.length} nota${lista.length!==1?'s':''} en Notas de Viaje` +
+    (conAviso ? ` (${conAviso} con avisos)` : '') + '.\n\n¿Continuar?')) return;
+  const btn = document.getElementById('nt-guardar'); btn.disabled = true; bar(true);
+  let ok = 0, dup = 0, mal = 0;
+  for (const n of lista) {
+    n.estado = 'guardando'; n.msg = ''; renderNota(n);
+    try {
+      const j = await Sesion.api({ action:'nota_guardar', nota:{ ...n.d, foto:n.foto || '' } }, 90000);
+      n.estado = 'ok'; n.msg = j.url ? 'Foto guardada en Drive' : ''; ok++;
+    } catch(e) {
+      if (e.code === 'DUPLICADA') { n.estado = 'dup'; n.msg = e.message; dup++; }
+      else { n.estado = 'error'; n.msg = e.message; mal++; }
+    }
+    renderNota(n);
+  }
+  bar(false);
+  Object.keys(VJ_CACHE).forEach(k => delete VJ_CACHE[k]);     // Fletes vuelve a leer las notas
+  renderNotas();
+  alert(`Registradas: ${ok}` + (dup ? `\nYa estaban registradas (no se repitieron): ${dup}` : '') + (mal ? `\nCon error: ${mal} (quedan marcadas en rojo para reintentar)` : ''));
 }
 
 setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
