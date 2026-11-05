@@ -111,7 +111,8 @@ a{color:var(--amb)}
   <nav>
     <a href="#" class="active" data-s="fletes">Fletes de la semana</a>
     <a href="#" data-s="subir">Subir notas <span id="nt-badge" style="color:var(--amb)"></span></a>
-    <a class="pronto" title="Próximamente">Diésel <small>pronto</small></a>
+    <a href="#" data-s="diesel">Diésel de la semana</a>
+    <a href="#" data-s="tickets">Subir tickets de diésel <span id="tk-badge" style="color:var(--amb)"></span></a>
   </nav>
   <div class="sb-foot">
     <span id="sb-user" style="display:block;margin:0 0 8px;font-weight:600;color:var(--text)">—</span>
@@ -139,33 +140,25 @@ a{color:var(--amb)}
     <div class="sb" id="vj-body"></div>
   </section>
 
-  <!-- SUBIR NOTAS (como el admin de Notas de Viaje: la IA lee cada foto, se revisa y se guarda) -->
-  <section class="sec" id="sec-subir">
+  <!-- SUBIR NOTAS y SUBIR TICKETS: las llena Subidor() (como los admin de Notas de Viaje y de Diesel) -->
+  <section class="sec" id="sec-subir"></section>
+  <section class="sec" id="sec-tickets"></section>
+
+  <!-- DIÉSEL DE LA SEMANA -->
+  <section class="sec" id="sec-diesel">
     <div class="ph">
-      <h2>Subir notas de viaje</h2>
+      <h2>Diésel de la semana</h2>
       <div class="flt">
-        <label class="ftb" style="display:inline-block">Elegir fotos<input type="file" id="nt-fotos" accept="image/*" multiple hidden></label>
-        <button class="ftb" onclick="agregarSinFoto()">Agregar sin foto</button>
-        <button class="ftb" id="nt-limpiar" onclick="limpiarGuardadas()" style="display:none">Quitar las guardadas</button>
-        <button class="ftb p" id="nt-guardar" onclick="guardarNotas()">Registrar notas</button>
+        <button class="ftb" onclick="moverSemanaDs(-7)" title="Semana anterior">‹</button>
+        <input type="date" id="ds-dia" onchange="cargarDiesel()" title="Cualquier día de la semana">
+        <button class="ftb" onclick="moverSemanaDs(7)" title="Semana siguiente">›</button>
+        <select id="ds-uni" onchange="renderDiesel()"><option value="">Todas las unidades</option></select>
+        <button class="ftb" onclick="cargarDiesel(true)">Actualizar</button>
+        <button class="ftb" onclick="excelDiesel(this)">Descargar Excel</button>
+        <button class="ftb" onclick="whatsDiesel()">Enviar por WhatsApp</button>
       </div>
     </div>
-    <div class="sb">
-      <div class="pn" id="nt-bulk" style="display:none">
-        <div class="pnh">Aplicar a todas las que falta registrar</div>
-        <div class="bulk">
-          <select class="ci" id="nb-chofer"></select>
-          <select class="ci" id="nb-obra"></select>
-          <input class="ci" type="date" id="nb-fecha" title="Fecha de la nota">
-          <input class="ci" type="number" id="nb-m3" placeholder="m³" step="0.5" min="0" style="min-width:70px;width:80px">
-          <button class="ftb" onclick="aplicarATodas()">Aplicar</button>
-          <span id="nt-cont" style="margin-left:auto;font-size:12px;color:var(--muted)"></span>
-        </div>
-      </div>
-      <div class="pn">
-        <div id="nt-lista"></div>
-      </div>
-    </div>
+    <div class="sb" id="ds-body"></div>
   </section>
 </div><!-- /main -->
 </div><!-- /app -->
@@ -218,10 +211,11 @@ document.querySelectorAll('nav a[data-s]').forEach(a => a.addEventListener('clic
   document.querySelectorAll('.sec').forEach(s => s.classList.remove('on'));
   document.getElementById('sec-' + a.dataset.s).classList.add('on');
   closeMenu();
-  if (a.dataset.s === 'subir') abrirSubir();
+  if (a.dataset.s === 'subir')   SUB.nt.abrir();
+  if (a.dataset.s === 'tickets') SUB.tk.abrir();
   if (a.dataset.s === 'fletes' && VJ) cargarViajes();      // por si se registraron notas de esta semana
+  if (a.dataset.s === 'diesel') cargarDiesel();
 }));
-document.querySelectorAll('nav a.pronto').forEach(a => a.addEventListener('click', e => e.preventDefault()));
 
 // ══════════════════════════════════════════
 //  FLETES DE LA SEMANA (Viajes.gs lee el Sheets de Notas de Viaje)
@@ -429,144 +423,22 @@ function whatsViajes() {
 }
 
 // ══════════════════════════════════════════
-//  SUBIR NOTAS — Viajes.gs › nota_extraer / nota_guardar (con foto los guarda el programa de Notas de Viaje)
+//  SUBIR FOTOS POR LOTE (notas de viaje y tickets de diésel)
+//  Como los admin de Notas de Viaje y de Diesel: la IA lee cada foto, se revisa y se registra.
+//  Con foto lo guarda el programa de cada uno (Viajes.gs / Diesel.gs se lo pasan); sin foto, el servidor.
 // ══════════════════════════════════════════
-const IMG_ANCHO_MAX = 1280, IMG_CALIDAD = 0.78;      // igual que el admin de Notas de Viaje
+const IMG_ANCHO_MAX = 1280, IMG_CALIDAD = 0.78;      // igual que esos admin
 const LECTORES = 2;                                  // fotos que se leen a la vez
-let CAT = null;                                      // catálogos de Notas de Viaje
-let NOTAS = [], NT_ID = 0, LEYENDO = 0;
-const COLA = [];
-const ESTADO_NT = {
+const ESTADO_SUB = {
   leyendo:   '<span class="tag tm">Leyendo…</span>',
-  pendiente: '',
   guardando: '<span class="tag tm">Guardando…</span>',
   ok:        '<span class="tag tb">Registrada</span>',
   dup:       '<span class="tag tm">Ya estaba</span>',
   error:     '<span class="tag ta">Error</span>',
 };
-const porGuardar = () => NOTAS.filter(n => n.estado === 'pendiente' || n.estado === 'error');
+const SUB = {};
 
-async function abrirSubir() {
-  if (!CAT) {
-    document.getElementById('nt-lista').innerHTML = '<div class="empty">Cargando catálogos…</div>';
-    try { CAT = await api({ action:'notas_catalogos' }); }
-    catch(e) { document.getElementById('nt-lista').innerHTML = `<div class="empty">No se pudieron cargar los catálogos: ${esc(e.message)}</div>`; return; }
-    const opts = (lista, vacio) => `<option value="">${vacio}</option>` + lista.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
-    document.getElementById('nb-chofer').innerHTML = opts(CAT.choferes, '— Chofer —');
-    document.getElementById('nb-obra').innerHTML = opts(CAT.obras.map(o => o.obra), '— Obra —');
-  }
-  renderNotas();
-}
-
-const clienteDeObra = obra => (CAT?.obras || []).find(o => claveVj(o.obra) === claveVj(obra))?.cliente || '';
-// Avisos de la IA más los que se revisan aquí
-function avisosNota(n) {
-  const d = n.d, av = new Set((d.advertencias || []).filter(a => !/placa no registrada/i.test(a)));
-  const placa = String(d.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  if (placa && !(CAT?.placas || []).some(p => p.placa === placa)) av.add(`Placa ${placa} no está en el catálogo`);
-  const m3 = parseFloat(d.m3);
-  if (d.m3 !== '' && !isNaN(m3) && (m3 < 5 || m3 > 25)) av.add(`m³ fuera de lo normal (${m3})`);
-  if (d.fecha) {
-    const dias = Math.round((Date.now() - fechaLocal(d.fecha)) / 864e5);
-    if (dias > 45) av.add(`Nota de hace ${dias} días`);
-    if (dias < -1) av.add('La fecha es futura');
-  }
-  if (!d.folio) av.add('Sin folio');
-  if (d.obra && !clienteDeObra(d.obra)) av.add('La obra no tiene cliente en el catálogo');
-  return [...av];
-}
-
-function filaNota(n, i) {
-  const d = n.d, dis = ['pendiente','error'].includes(n.estado) ? '' : 'disabled';
-  const sel = (campo, lista, vacio) => {
-    const vals = [...lista]; if (d[campo] && !vals.some(v => claveVj(v) === claveVj(d[campo]))) vals.unshift(d[campo]);
-    return `<select class="ci" data-f="${campo}" ${dis}><option value="">${vacio}</option>${vals.map(v =>
-      `<option value="${esc(v)}" ${claveVj(v) === claveVj(d[campo]) ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select>`;
-  };
-  const inp = (campo, tipo, extra = '') => `<input class="ci" type="${tipo}" data-f="${campo}" value="${esc(d[campo])}" ${extra} ${dis}>`;
-  const av = n.estado === 'leyendo' ? [] : avisosNota(n);
-  const conf = d.confianza == null ? '' : `<span class="tag ${d.confianza >= 80 ? 'tb' : d.confianza >= 60 ? 'tm' : 'ta'}">${d.confianza}%</span>`;
-  return `<tr data-id="${n.id}"${n.estado === 'ok' || n.estado === 'dup' ? ' style="opacity:.6"' : ''}>
-    <td>${n.foto ? `<img class="thumb" src="${n.foto}" alt="nota" onclick="verFoto(${n.id})">` : '<div class="sinfoto">sin foto</div>'}</td>
-    <td style="min-width:72px">${ESTADO_NT[n.estado] || ''}${n.estado === 'pendiente' ? `<span style="color:var(--muted)">${i+1}</span>` : ''} ${conf}
-      ${n.msg ? `<div class="av" style="color:${n.estado === 'error' ? 'var(--neg)' : 'var(--muted)'};min-width:0">${esc(n.msg)}</div>` : ''}</td>
-    <td style="min-width:140px">${sel('chofer', CAT.choferes, '— Chofer —')}</td>
-    <td style="min-width:80px">${inp('folio', 'text', 'placeholder="Folio"')}</td>
-    <td style="min-width:130px">${inp('fecha', 'date')}</td>
-    <td style="min-width:130px">${sel('material', CAT.materiales, '— Material —')}</td>
-    <td style="min-width:70px">${inp('m3', 'number', 'step="0.5" min="0"')}</td>
-    <td style="min-width:95px">${inp('placa', 'text', 'placeholder="Placa"')}</td>
-    <td style="min-width:140px">${sel('obra', CAT.obras.map(o => o.obra), '— Obra —')}</td>
-    <td data-cli style="color:var(--muted)">${esc(clienteDeObra(d.obra)) || '—'}</td>
-    <td style="min-width:130px">${inp('observaciones', 'text', 'placeholder="Opcional"')}</td>
-    <td class="av" data-av>${av.map(esc).join('<br>')}</td>
-    <td>${dis ? '' : `<button class="ftb" title="Quitar" onclick="quitarNota(${n.id})">✕</button>`}</td>
-  </tr>`;
-}
-
-function renderNotas() {
-  if (!CAT) return;
-  const cont = document.getElementById('nt-lista');
-  const faltan = porGuardar().length, hechas = NOTAS.filter(n => n.estado === 'ok' || n.estado === 'dup').length;
-  document.getElementById('nt-bulk').style.display = NOTAS.length ? '' : 'none';
-  document.getElementById('nt-limpiar').style.display = hechas ? '' : 'none';
-  document.getElementById('nt-guardar').disabled = !faltan || LEYENDO > 0;
-  document.getElementById('nt-badge').textContent = faltan ? ` (${faltan})` : '';
-  document.getElementById('nt-cont').textContent = NOTAS.length
-    ? `${NOTAS.length} nota${NOTAS.length!==1?'s':''} · ${faltan} por registrar${LEYENDO ? ` · leyendo ${LEYENDO + COLA.length}` : ''}` : '';
-  const drop = `<div class="drop" id="nt-drop" onclick="document.getElementById('nt-fotos').click()">
-      <b>${NOTAS.length ? 'Agregar más fotos' : 'Elige o arrastra aquí las fotos de las notas'}</b><br>
-      Puedes escoger varias a la vez. La IA lee cada una y tú revisas antes de registrar.</div>`;
-  cont.innerHTML = NOTAS.length ? `<div class="tw"><table id="nt-tbl"><thead><tr>
-      <th>Foto</th><th></th><th>Chofer</th><th>Folio</th><th>Fecha nota</th><th>Material</th><th>m³</th><th>Placa</th><th>Obra</th><th>A nombre de</th><th>Observaciones</th><th>Avisos</th><th></th>
-    </tr></thead><tbody>${NOTAS.map(filaNota).join('')}</tbody></table></div><div style="padding:12px 16px">${drop}</div>` : `<div style="padding:16px">${drop}</div>`;
-  const dz = document.getElementById('nt-drop');
-  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
-  dz.addEventListener('dragleave', () => dz.classList.remove('over'));
-  dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); agregarFotos(e.dataTransfer.files); });
-}
-// Cambia solo la fila de esa nota (para no perder lo que se está escribiendo en otra)
-function renderNota(n) {
-  const tr = document.querySelector(`#nt-tbl tr[data-id="${n.id}"]`);
-  if (!tr) return renderNotas();
-  tr.outerHTML = filaNota(n, NOTAS.indexOf(n));
-  renderNotas.cabecera();
-}
-renderNotas.cabecera = () => {
-  const faltan = porGuardar().length;
-  document.getElementById('nt-guardar').disabled = !faltan || LEYENDO > 0;
-  document.getElementById('nt-badge').textContent = faltan ? ` (${faltan})` : '';
-  document.getElementById('nt-cont').textContent = `${NOTAS.length} nota${NOTAS.length!==1?'s':''} · ${faltan} por registrar${LEYENDO ? ` · leyendo ${LEYENDO + COLA.length}` : ''}`;
-};
-
-// Lo que se escribe en la tabla va directo a la nota
-document.addEventListener('input', e => {
-  const tr = e.target.closest?.('#nt-tbl tr[data-id]'), f = e.target.dataset?.f;
-  if (!tr || !f) return;
-  const n = NOTAS.find(x => x.id == tr.dataset.id);
-  if (!n) return;
-  n.d[f] = e.target.value;
-  if (f === 'obra') tr.querySelector('[data-cli]').textContent = clienteDeObra(n.d.obra) || '—';
-  tr.querySelector('[data-av]').innerHTML = avisosNota(n).map(esc).join('<br>');
-});
-document.getElementById('nt-fotos').addEventListener('change', e => { agregarFotos(e.target.files); e.target.value = ''; });
-window.addEventListener('beforeunload', e => { if (porGuardar().length || LEYENDO) { e.preventDefault(); e.returnValue = ''; } });
-
-const notaVacia = () => ({ chofer:'', folio:'', fecha:'', material:'', m3:'', placa:'', obra:'', observaciones:'', confianza:null, advertencias:[] });
-function agregarSinFoto() {
-  if (!CAT) return;
-  NOTAS.push({ id:++NT_ID, foto:null, estado:'pendiente', msg:'', d:notaVacia() });
-  renderNotas();
-}
-function quitarNota(id) { NOTAS = NOTAS.filter(n => n.id !== id); renderNotas(); }
-function limpiarGuardadas() { NOTAS = NOTAS.filter(n => n.estado !== 'ok' && n.estado !== 'dup'); renderNotas(); }
-function verFoto(id) {
-  const n = NOTAS.find(x => x.id === id);
-  if (!n?.foto) return;
-  const m = document.getElementById('modal-foto'); m.querySelector('img').src = n.foto; m.classList.add('on');
-}
-
-// Reduce la foto como el admin de Notas de Viaje (1280 px de ancho, JPEG)
+// Reduce la foto (1280 px de ancho, JPEG) antes de mandarla
 function reducirFoto(file) {
   return new Promise((ok, err) => {
     const url = URL.createObjectURL(file), img = new Image();
@@ -582,69 +454,414 @@ function reducirFoto(file) {
     img.src = url;
   });
 }
+function verFoto(src) { const m = document.getElementById('modal-foto'); m.querySelector('img').src = src; m.classList.add('on'); }
+const diasDesde = fecha => Math.round((Date.now() - fechaLocal(fecha)) / 864e5);
 
-async function agregarFotos(files) {
-  if (!CAT) return;
-  const imgs = [...files].filter(f => f.type.startsWith('image/'));
-  for (const f of imgs) {
-    const n = { id:++NT_ID, foto:null, estado:'leyendo', msg:'', d:notaVacia() };
-    NOTAS.push(n);
-    try { n.foto = await reducirFoto(f); COLA.push(n); }
-    catch(e) { n.estado = 'pendiente'; n.msg = `${f.name}: ${e.message}. Captúrala a mano o vuelve a elegirla.`; }
-  }
-  renderNotas();
-  while (LEYENDO < LECTORES && COLA.length) leerSiguiente();
-}
-async function leerSiguiente() {
-  const n = COLA.shift();
-  if (!n) return;
-  LEYENDO++;
-  try {
-    const { datos } = await Sesion.api({ action:'nota_extraer', foto:n.foto }, 90000);
-    if (datos) Object.assign(n.d, {
-      folio: datos.folio || '', fecha: /^\d{4}-\d{2}-\d{2}$/.test(datos.fecha_nota || '') ? datos.fecha_nota : '',
-      material: datos.material || '', m3: datos.m3 != null ? String(datos.m3) : '', placa: datos.placa || '',
-      confianza: datos.confianza ?? null, advertencias: Array.isArray(datos.advertencias) ? datos.advertencias : [] });
-    else n.msg = 'La IA no pudo leerla: captura los datos a mano';
-  } catch(e) { n.msg = 'No se pudo leer: ' + e.message + '. Captura los datos a mano.'; }
-  n.estado = NOTAS.includes(n) ? 'pendiente' : n.estado;
-  LEYENDO--;
-  renderNota(n);
-  if (COLA.length) leerSiguiente(); else if (!LEYENDO) renderNotas();
-}
+function Subidor(cfg) {
+  const k = cfg.k, sec = document.getElementById(cfg.sec);
+  let items = [], sig = 0, leyendo = 0, cat = null;
+  const cola = [];
+  const el = s => document.getElementById(k + '-' + s);
+  const porGuardar = () => items.filter(n => n.estado === 'pendiente' || n.estado === 'error');
+  const campos = () => cfg.campos(cat);
 
-function aplicarATodas() {
-  const v = id => document.getElementById(id).value;
-  const chofer = v('nb-chofer'), obra = v('nb-obra'), fecha = v('nb-fecha'), m3 = v('nb-m3');
-  if (!chofer && !obra && !fecha && !m3) return alert('Escoge al menos un dato para aplicar');
-  porGuardar().forEach(n => Object.assign(n.d, chofer ? { chofer } : {}, obra ? { obra } : {}, fecha ? { fecha } : {}, m3 ? { m3 } : {}));
-  renderNotas();
-}
+  sec.innerHTML = `<div class="ph"><h2>${cfg.titulo}</h2><div class="flt">
+      <label class="ftb" style="display:inline-block">Elegir fotos<input type="file" id="${k}-fotos" accept="image/*" multiple hidden></label>
+      <button class="ftb" onclick="SUB.${k}.sinFoto()">Agregar sin foto</button>
+      <button class="ftb" id="${k}-limpiar" onclick="SUB.${k}.limpiar()" style="display:none">Quitar las registradas</button>
+      <button class="ftb p" id="${k}-guardar" onclick="SUB.${k}.guardar()">Registrar ${cfg.que}</button>
+    </div></div>
+    <div class="sb">
+      <div class="pn" id="${k}-bulk" style="display:none"><div class="pnh">Aplicar a todas las que falta registrar</div>
+        <div class="bulk"><span id="${k}-bulkc" style="display:contents"></span><button class="ftb" onclick="SUB.${k}.aplicar()">Aplicar</button>
+          <span id="${k}-cont" style="margin-left:auto;font-size:12px;color:var(--muted)"></span></div></div>
+      <div class="pn"><div id="${k}-lista"></div></div>
+    </div>`;
+  el('fotos').addEventListener('change', e => { agregarFotos(e.target.files); e.target.value = ''; });
 
-async function guardarNotas() {
-  const lista = porGuardar();
-  const sinChofer = lista.filter(n => !n.d.chofer).length, sinFecha = lista.filter(n => !n.d.fecha).length;
-  if (sinChofer || sinFecha) return alert([sinChofer && `${sinChofer} sin chofer`, sinFecha && `${sinFecha} sin fecha`].filter(Boolean).join(' y ') + '. Complétalas antes de registrar.');
-  const conAviso = lista.filter(n => avisosNota(n).length).length;
-  if (!confirm(`Se van a registrar ${lista.length} nota${lista.length!==1?'s':''} en Notas de Viaje` +
-    (conAviso ? ` (${conAviso} con avisos)` : '') + '.\n\n¿Continuar?')) return;
-  const btn = document.getElementById('nt-guardar'); btn.disabled = true; bar(true);
-  let ok = 0, dup = 0, mal = 0;
-  for (const n of lista) {
-    n.estado = 'guardando'; n.msg = ''; renderNota(n);
-    try {
-      const j = await Sesion.api({ action:'nota_guardar', nota:{ ...n.d, foto:n.foto || '' } }, 90000);
-      n.estado = 'ok'; n.msg = j.url ? 'Foto guardada en Drive' : ''; ok++;
-    } catch(e) {
-      if (e.code === 'DUPLICADA') { n.estado = 'dup'; n.msg = e.message; dup++; }
-      else { n.estado = 'error'; n.msg = e.message; mal++; }
+  async function abrir() {
+    if (!cat) {
+      el('lista').innerHTML = '<div class="empty">Cargando catálogos…</div>';
+      try { cat = await api({ action:cfg.acciones.cat }); }
+      catch(e) { el('lista').innerHTML = `<div class="empty">No se pudieron cargar los catálogos: ${esc(e.message)}</div>`; return; }
+      el('bulkc').innerHTML = campos().filter(c => cfg.bulk.includes(c.f)).map(c => c.tipo === 'sel'
+        ? `<select class="ci" data-b="${c.f}"><option value="">${c.vacio}</option>${c.ops.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('')}</select>`
+        : `<input class="ci" type="${c.tipo}" data-b="${c.f}" placeholder="${c.t}" title="${c.t}" ${c.attr || ''} style="${c.tipo === 'number' ? 'min-width:70px;width:90px' : ''}">`).join('');
     }
-    renderNota(n);
+    render();
   }
-  bar(false);
-  Object.keys(VJ_CACHE).forEach(k => delete VJ_CACHE[k]);     // Fletes vuelve a leer las notas
-  renderNotas();
-  alert(`Registradas: ${ok}` + (dup ? `\nYa estaban registradas (no se repitieron): ${dup}` : '') + (mal ? `\nCon error: ${mal} (quedan marcadas en rojo para reintentar)` : ''));
+
+  const avisos = n => cfg.avisos(n.d, cat);
+  function fila(n, i) {
+    const d = n.d, dis = ['pendiente','error'].includes(n.estado) ? '' : 'disabled';
+    const celda = c => {
+      if (c.tipo === 'calc') return `<td data-calc="${c.f}" style="color:var(--muted)">${esc(c.calc(d, cat)) || '—'}</td>`;
+      if (c.tipo === 'sel') {
+        const vals = [...c.ops]; if (d[c.f] && !vals.some(v => claveVj(v) === claveVj(d[c.f]))) vals.unshift(d[c.f]);
+        return `<td style="min-width:${c.w}px"><select class="ci" data-f="${c.f}" ${dis}><option value="">${c.vacio}</option>${vals.map(v =>
+          `<option value="${esc(v)}" ${claveVj(v) === claveVj(d[c.f]) ? 'selected' : ''}>${esc(v)}</option>`).join('')}</select></td>`;
+      }
+      return `<td style="min-width:${c.w}px"><input class="ci" type="${c.tipo}" data-f="${c.f}" value="${esc(d[c.f])}" placeholder="${c.ph || ''}" ${c.attr || ''} ${dis}></td>`;
+    };
+    const av = n.estado === 'leyendo' ? [] : avisos(n);
+    const conf = d.confianza == null ? '' : `<span class="tag ${d.confianza >= 80 ? 'tb' : d.confianza >= 60 ? 'tm' : 'ta'}">${d.confianza}%</span>`;
+    return `<tr data-id="${n.id}"${n.estado === 'ok' || n.estado === 'dup' ? ' style="opacity:.6"' : ''}>
+      <td>${n.foto ? `<img class="thumb" src="${n.foto}" alt="foto" onclick="verFoto(this.src)">` : '<div class="sinfoto">sin foto</div>'}</td>
+      <td style="min-width:72px">${ESTADO_SUB[n.estado] || `<span style="color:var(--muted)">${i+1}</span>`} ${conf}
+        ${n.msg ? `<div class="av" style="color:${n.estado === 'error' ? 'var(--neg)' : 'var(--muted)'};min-width:0">${esc(n.msg)}</div>` : ''}</td>
+      ${campos().map(celda).join('')}
+      <td class="av" data-av>${av.map(esc).join('<br>')}</td>
+      <td>${dis ? '' : `<button class="ftb" title="Quitar" onclick="SUB.${k}.quitar(${n.id})">✕</button>`}</td>
+    </tr>`;
+  }
+  function cabecera() {
+    const faltan = porGuardar().length, hechas = items.filter(n => n.estado === 'ok' || n.estado === 'dup').length;
+    el('guardar').disabled = !faltan || leyendo > 0;
+    el('limpiar').style.display = hechas ? '' : 'none';
+    el('bulk').style.display = items.length ? '' : 'none';
+    document.getElementById(k + '-badge').textContent = faltan ? ` (${faltan})` : '';
+    el('cont').textContent = items.length ? `${items.length} ${items.length !== 1 ? cfg.que : cfg.una} · ${faltan} por registrar${leyendo ? ` · leyendo ${leyendo + cola.length}` : ''}` : '';
+  }
+  function render() {
+    if (!cat) return;
+    const drop = `<div class="drop" id="${k}-drop" onclick="document.getElementById('${k}-fotos').click()">
+        <b>${items.length ? 'Agregar más fotos' : `Elige o arrastra aquí las fotos de ${cfg.de}`}</b><br>
+        Puedes escoger varias a la vez. La IA lee cada una y tú revisas antes de registrar.</div>`;
+    el('lista').innerHTML = items.length ? `<div class="tw"><table id="${k}-tbl" data-sub="${k}"><thead><tr><th>Foto</th><th></th>
+        ${campos().map(c => `<th>${c.t}</th>`).join('')}<th>Avisos</th><th></th></tr></thead>
+        <tbody>${items.map(fila).join('')}</tbody></table></div><div style="padding:12px 16px">${drop}</div>` : `<div style="padding:16px">${drop}</div>`;
+    const dz = el('drop');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('over'); agregarFotos(e.dataTransfer.files); });
+    cabecera();
+  }
+  // Cambia solo la fila de esa foto (para no perder lo que se está escribiendo en otra)
+  function renderFila(n) {
+    const tr = document.querySelector(`#${k}-tbl tr[data-id="${n.id}"]`);
+    if (!tr) return render();
+    tr.outerHTML = fila(n, items.indexOf(n));
+    cabecera();
+  }
+  // Lo que se escribe en la tabla va directo a su fila
+  function escribir(tr, f, valor) {
+    const n = items.find(x => x.id == tr.dataset.id);
+    if (!n) return;
+    n.d[f] = valor;
+    campos().filter(c => c.tipo === 'calc').forEach(c => tr.querySelector(`[data-calc="${c.f}"]`).textContent = c.calc(n.d, cat) || '—');
+    tr.querySelector('[data-av]').innerHTML = avisos(n).map(esc).join('<br>');
+  }
+
+  function sinFoto() { if (!cat) return; items.push({ id:++sig, foto:null, estado:'pendiente', msg:'', d:cfg.vacia() }); render(); }
+  function quitar(id) { items = items.filter(n => n.id !== id); render(); }
+  function limpiar() { items = items.filter(n => n.estado !== 'ok' && n.estado !== 'dup'); render(); }
+
+  async function agregarFotos(files) {
+    if (!cat) return;
+    for (const f of [...files].filter(f => f.type.startsWith('image/'))) {
+      const n = { id:++sig, foto:null, estado:'leyendo', msg:'', d:cfg.vacia() };
+      items.push(n);
+      try { n.foto = await reducirFoto(f); cola.push(n); }
+      catch(e) { n.estado = 'pendiente'; n.msg = `${f.name}: ${e.message}. Captúrala a mano o vuelve a elegirla.`; }
+    }
+    render();
+    while (leyendo < LECTORES && cola.length) leerSiguiente();
+  }
+  async function leerSiguiente() {
+    const n = cola.shift();
+    if (!n) return;
+    leyendo++;
+    try {
+      const { datos } = await Sesion.api({ action:cfg.acciones.extraer, foto:n.foto }, 90000);
+      if (datos) Object.assign(n.d, cfg.deIA(datos));
+      else n.msg = 'La IA no pudo leerla: captura los datos a mano';
+    } catch(e) { n.msg = 'No se pudo leer: ' + e.message + '. Captura los datos a mano.'; }
+    n.estado = 'pendiente';
+    leyendo--;
+    renderFila(n);
+    if (cola.length) leerSiguiente(); else if (!leyendo) render();
+  }
+
+  function aplicar() {
+    const vals = {};
+    el('bulkc').querySelectorAll('[data-b]').forEach(x => { if (x.value) vals[x.dataset.b] = x.value; });
+    if (!Object.keys(vals).length) return alert('Escoge al menos un dato para aplicar');
+    porGuardar().forEach(n => Object.assign(n.d, vals));
+    render();
+  }
+
+  async function guardar() {
+    const lista = porGuardar();
+    const faltan = cfg.requeridos.map(([f, txt]) => [lista.filter(n => !n.d[f]).length, txt]).filter(([c]) => c).map(([c, txt]) => `${c} ${txt}`);
+    if (faltan.length) return alert(faltan.join(', ') + '. Complétalas antes de registrar.');
+    const conAviso = lista.filter(n => avisos(n).length).length;
+    if (!confirm(`Se van a registrar ${lista.length} ${lista.length !== 1 ? cfg.que : cfg.una} en ${cfg.donde}` +
+      (conAviso ? ` (${conAviso} con avisos)` : '') + '.\n\n¿Continuar?')) return;
+    el('guardar').disabled = true; bar(true);
+    let ok = 0, dup = 0, mal = 0;
+    for (const n of lista) {
+      n.estado = 'guardando'; n.msg = ''; renderFila(n);
+      try {
+        const j = await Sesion.api({ action:cfg.acciones.guardar, [cfg.acciones.campo]:{ ...n.d, foto:n.foto || '' } }, 90000);
+        n.estado = 'ok'; n.msg = j.url ? 'Foto guardada en Drive' : ''; ok++;
+      } catch(e) {
+        if (e.code === 'DUPLICADA') { n.estado = 'dup'; n.msg = e.message; dup++; }
+        else { n.estado = 'error'; n.msg = e.message; mal++; }
+      }
+      renderFila(n);
+    }
+    bar(false);
+    cfg.alGuardar?.();
+    render();
+    alert(`Registradas: ${ok}` + (dup ? `\nYa estaban registradas (no se repitieron): ${dup}` : '') + (mal ? `\nCon error: ${mal} (quedan marcadas en rojo para reintentar)` : ''));
+  }
+
+  return { abrir, sinFoto, quitar, limpiar, aplicar, guardar, escribir, pendientes: () => porGuardar().length + leyendo };
+}
+
+document.addEventListener('input', e => {
+  const tbl = e.target.closest?.('table[data-sub]'), tr = e.target.closest?.('tr[data-id]');
+  if (tbl && tr && e.target.dataset.f) SUB[tbl.dataset.sub].escribir(tr, e.target.dataset.f, e.target.value);
+});
+window.addEventListener('beforeunload', e => { if (Object.values(SUB).some(s => s.pendientes())) { e.preventDefault(); e.returnValue = ''; } });
+
+// ── Notas de viaje (Viajes.gs) ──
+const clienteDeObra = (obra, cat) => (cat?.obras || []).find(o => claveVj(o.obra) === claveVj(obra))?.cliente || '';
+SUB.nt = Subidor({
+  k:'nt', sec:'sec-subir', titulo:'Subir notas de viaje', que:'notas', una:'nota', de:'las notas', donde:'Notas de Viaje',
+  acciones: { cat:'notas_catalogos', extraer:'nota_extraer', guardar:'nota_guardar', campo:'nota' },
+  vacia: () => ({ chofer:'', folio:'', fecha:'', material:'', m3:'', placa:'', obra:'', observaciones:'', confianza:null, advertencias:[] }),
+  deIA: x => ({ folio: x.folio || '', fecha: /^\d{4}-\d{2}-\d{2}$/.test(x.fecha_nota || '') ? x.fecha_nota : '',
+    material: x.material || '', m3: x.m3 != null ? String(x.m3) : '', placa: x.placa || '',
+    confianza: x.confianza ?? null, advertencias: Array.isArray(x.advertencias) ? x.advertencias : [] }),
+  campos: cat => [
+    { f:'chofer', t:'Chofer', tipo:'sel', ops:cat.choferes, vacio:'— Chofer —', w:140 },
+    { f:'folio', t:'Folio', tipo:'text', ph:'Folio', w:80 },
+    { f:'fecha', t:'Fecha nota', tipo:'date', w:130 },
+    { f:'material', t:'Material', tipo:'sel', ops:cat.materiales, vacio:'— Material —', w:130 },
+    { f:'m3', t:'m³', tipo:'number', attr:'step="0.5" min="0"', w:70 },
+    { f:'placa', t:'Placa', tipo:'text', ph:'Placa', w:95 },
+    { f:'obra', t:'Obra', tipo:'sel', ops:cat.obras.map(o => o.obra), vacio:'— Obra —', w:140 },
+    { f:'_cli', t:'A nombre de', tipo:'calc', calc:(d, cat) => clienteDeObra(d.obra, cat) },
+    { f:'observaciones', t:'Observaciones', tipo:'text', ph:'Opcional', w:130 },
+  ],
+  bulk: ['chofer', 'obra', 'fecha', 'm3'],
+  requeridos: [['chofer', 'sin chofer'], ['fecha', 'sin fecha']],
+  avisos: (d, cat) => {
+    const av = new Set((d.advertencias || []).filter(a => !/placa no registrada/i.test(a)));
+    const placa = String(d.placa||'').toUpperCase().replace(/[^A-Z0-9]/g,'');
+    if (placa && !(cat?.placas || []).some(p => p.placa === placa)) av.add(`Placa ${placa} no está en el catálogo`);
+    const m3 = parseFloat(d.m3);
+    if (d.m3 !== '' && !isNaN(m3) && (m3 < 5 || m3 > 25)) av.add(`m³ fuera de lo normal (${m3})`);
+    if (d.fecha) { const dias = diasDesde(d.fecha); if (dias > 45) av.add(`Nota de hace ${dias} días`); if (dias < -1) av.add('La fecha es futura'); }
+    if (!d.folio) av.add('Sin folio');
+    if (d.obra && !clienteDeObra(d.obra, cat)) av.add('La obra no tiene cliente en el catálogo');
+    return [...av];
+  },
+  alGuardar: () => Object.keys(VJ_CACHE).forEach(x => delete VJ_CACHE[x]),     // Fletes vuelve a leer las notas
+});
+
+// ── Tickets de diésel (Diesel.gs); avisos con los mismos rangos que el admin de Diesel ──
+const ALERTAS_DS = { litros_min:30, precio_min:15, precio_max:45, dias_max:60, diff_monto:0.10 };
+function avisosTicket(d) {
+  const av = [], L = parseFloat(d.litros), M = parseFloat(d.monto), P = parseFloat(d.precio);
+  if (L > 0 && L < ALERTAS_DS.litros_min) av.push(`Carga baja: ${L} L`);
+  if (P > 0 && (P < ALERTAS_DS.precio_min || P > ALERTAS_DS.precio_max)) av.push(`Precio fuera de rango: $${P}/L`);
+  if (L > 0 && P > 0 && M > 0 && Math.abs(L * P - M) / M > ALERTAS_DS.diff_monto) av.push(`${L} L × $${P} = $${f0(L * P)}, no $${f0(M)}`);
+  if (d.fecha) { const dias = diasDesde(d.fecha); if (dias > ALERTAS_DS.dias_max) av.push(`Ticket de hace ${dias} días`); if (dias < -1) av.push('La fecha es futura'); }
+  return av;
+}
+SUB.tk = Subidor({
+  k:'tk', sec:'sec-tickets', titulo:'Subir tickets de diésel', que:'tickets', una:'ticket', de:'los tickets', donde:'Diesel',
+  acciones: { cat:'diesel_catalogos', extraer:'diesel_extraer', guardar:'diesel_guardar', campo:'ticket' },
+  vacia: () => ({ chofer:'', unidad:'', fecha:'', hora:'', litros:'', monto:'', precio:'', gasolinera:'', descripcion:'', confianza:null }),
+  deIA: x => ({ fecha: /^\d{4}-\d{2}-\d{2}$/.test(x.fecha_ticket || '') ? x.fecha_ticket : '', hora: /^\d{2}:\d{2}$/.test(x.hora_ticket || '') ? x.hora_ticket : '',
+    litros: x.litros != null ? String(x.litros) : '', monto: x.monto_total != null ? String(x.monto_total) : '',
+    precio: x.precio_litro != null ? String(x.precio_litro) : '', gasolinera: x.gasolinera || '', confianza: x.confianza ?? null }),
+  campos: cat => [
+    { f:'chofer', t:'Chofer', tipo:'sel', ops:cat.choferes, vacio:'— Chofer —', w:140 },
+    { f:'unidad', t:'Unidad', tipo:'sel', ops:cat.unidades.map(u => u.valor), vacio:'— Unidad —', w:170 },
+    { f:'fecha', t:'Fecha ticket', tipo:'date', w:130 },
+    { f:'hora', t:'Hora', tipo:'time', w:95 },
+    { f:'litros', t:'Litros', tipo:'number', attr:'step="0.001" min="0"', w:85 },
+    { f:'monto', t:'Monto $', tipo:'number', attr:'step="0.01" min="0"', w:95 },
+    { f:'precio', t:'Precio/L', tipo:'number', attr:'step="0.001" min="0"', w:80 },
+    { f:'gasolinera', t:'Gasolinera', tipo:'text', ph:'Gasolinera', w:130 },
+    { f:'descripcion', t:'Descripción', tipo:'text', ph:'Opcional', w:120 },
+  ],
+  bulk: ['chofer', 'unidad'],
+  requeridos: [['chofer', 'sin chofer'], ['unidad', 'sin unidad'], ['fecha', 'sin fecha'], ['litros', 'sin litros'], ['monto', 'sin monto']],
+  avisos: d => avisosTicket(d),
+  alGuardar: () => Object.keys(DS_CACHE).forEach(x => delete DS_CACHE[x]),     // Diésel de la semana vuelve a leer
+});
+
+// ══════════════════════════════════════════
+//  DIÉSEL DE LA SEMANA (Diesel.gs lee el Sheets del programa Diesel)
+// ══════════════════════════════════════════
+const DS_CACHE = {};
+let DS = null;
+const $$ = v => '$' + new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(N(v));
+
+function moverSemanaDs(dias) {
+  const inp = document.getElementById('ds-dia');
+  const d = fechaLocal(inp.value || txtFecha(new Date())); d.setDate(d.getDate() + dias);
+  inp.value = txtFecha(d);
+  cargarDiesel();
+}
+async function cargarDiesel(forzar) {
+  const inp = document.getElementById('ds-dia');
+  if (!inp.value) inp.value = txtFecha(new Date());
+  const { desde, hasta } = semanaVj(inp.value);
+  const k = desde + '|' + hasta, body = document.getElementById('ds-body');
+  if (!forzar && DS_CACHE[k]) { DS = DS_CACHE[k]; return renderDiesel(); }
+  body.innerHTML = '<div class="pn"><div class="empty">Leyendo los tickets de diésel…</div></div>';
+  bar(true);
+  try { DS = DS_CACHE[k] = await api({ action:'diesel_semana', desde, hasta }); renderDiesel(); }
+  catch(e) { body.innerHTML = `<div class="pn"><div class="empty">No se pudieron leer los tickets: ${esc(e.message)}</div></div>`; }
+  finally { bar(false); }
+}
+
+// Tickets ordenados, con el filtro de unidad y los avisos de cada uno
+function datosDiesel() {
+  const cat = {}; (DS.placas||[]).forEach(p => cat[p.placa] = p);
+  const uni = document.getElementById('ds-uni').value;
+  const todos = (DS.tickets||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora) || a.fila - b.fila);
+  const rep = {};
+  todos.forEach(t => { const x = `${t.placa}|${t.fecha}|${t.monto.toFixed(2)}`; rep[x] = (rep[x]||0) + 1; });
+  todos.forEach(t => {
+    t.avisos = avisosTicket({ litros:t.litros, monto:t.monto, precio:t.precio, fecha:'' });
+    if (t.duplicado || rep[`${t.placa}|${t.fecha}|${t.monto.toFixed(2)}`] > 1) t.avisos.push('Ticket repetido');
+    if (!cat[t.placa]) t.avisos.push('Unidad no está en el catálogo');
+    if (t.sin_fecha_ticket) t.avisos.push('Sin fecha del ticket (se usó la de registro)');
+  });
+  return { cat, todos, lista: uni ? todos.filter(t => t.placa === uni) : todos };
+}
+const sumaDs = (lista, k) => lista.reduce((s, t) => s + t[k], 0);
+const precioProm = lista => { const L = sumaDs(lista, 'litros'); return L ? sumaDs(lista, 'monto') / L : 0; };
+
+function renderDiesel() {
+  if (!DS) return;
+  const body = document.getElementById('ds-body');
+  const sel = document.getElementById('ds-uni'), antes = sel.value;
+  const unidades = agruparVj(DS.tickets||[], t => t.placa).sort((a,b) => a.k.localeCompare(b.k));
+  sel.innerHTML = '<option value="">Todas las unidades</option>' + unidades.map(x => `<option value="${esc(x.k)}">${esc(x.items[0].unidad)}</option>`).join('');
+  sel.value = unidades.some(x => x.k === antes) ? antes : '';
+
+  const { lista } = datosDiesel();
+  const titulo = `Semana del ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0,4)}`;
+  if (!lista.length) {
+    const ult = DS.ultima && DS.ultima < DS.desde
+      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a esa semana</button>` : '';
+    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel esta semana${ult}</div></div>`;
+    return;
+  }
+  const L = sumaDs(lista, 'litros'), M = sumaDs(lista, 'monto');
+  const sinFact = lista.filter(t => !t.facturado).length, sinRec = lista.filter(t => !t.recibido).length;
+  const conAviso = lista.filter(t => t.avisos.length);
+  const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
+  const tot = `<td class="rt"><b>${lista.length}</b></td><td class="rt"><b>${f0(L)}</b></td><td class="rt"><b>${$$(M)}</b></td><td class="rt"><b>${$$(precioProm(lista))}</b></td>`;
+  const grupo = x => `<td class="rt">${x.items.length}</td><td class="rt amb">${f0(sumaDs(x.items, 'litros'))}</td><td class="rt">${$$(sumaDs(x.items, 'monto'))}</td><td class="rt">${$$(precioProm(x.items))}</td>`;
+  const cols = '<th class="rt">Tickets</th><th class="rt">Litros</th><th class="rt">Monto</th><th class="rt">Precio prom.</th>';
+  const casilla = (t, campo) => DS.marcar
+    ? `<input type="checkbox" ${t[campo] ? 'checked' : ''} onchange="marcarTicket(${t.fila}, '${campo}', this)" title="${campo === 'facturado' ? 'Ya se tiene la factura' : 'El ticket en papel ya llegó'}">`
+    : (t[campo] ? '✓' : '—');
+
+  body.innerHTML = `
+    <div class="mg">
+      <div class="mc m"><div class="ml">Litros</div><div class="mv">${f0(L)}</div><div class="ms">${titulo}</div></div>
+      <div class="mc"><div class="ml">Gasto en diésel</div><div class="mv">${$$(M)}</div><div class="ms">${lista.length} ticket${lista.length!==1?'s':''} · ${$$(precioProm(lista))} por litro</div></div>
+      <div class="mc ${sinFact ? 'r' : 'g'}"><div class="ml">Sin facturar</div><div class="mv">${sinFact}</div><div class="ms">${sinRec} sin ticket en papel</div></div>
+      <div class="mc ${conAviso.length ? 'r' : 'g'}"><div class="ml">Con aviso</div><div class="mv">${conAviso.length}</div><div class="ms">Revisa la tabla de abajo</div></div>
+    </div>
+    <div class="two">
+      <div class="pn"><div class="pnh">Por camión</div>
+        ${tabla('<th>Unidad</th><th>Choferes</th>' + cols,
+          agruparVj(lista, t => t.placa).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
+            <td class="amb">${esc(x.items[0].unidad)}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(t => t.chofer))].join(', '))}</td>${grupo(x)}</tr>`).join(''),
+          `<td colspan="2"><b>Total</b></td>${tot}`)}
+      </div>
+      <div class="pn"><div class="pnh">Por chofer</div>
+        ${tabla('<th>Chofer</th>' + cols,
+          agruparVj(lista, t => claveVj(t.chofer)).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
+            <td>${esc(x.items[0].chofer)}</td>${grupo(x)}</tr>`).join(''),
+          `<td><b>Total</b></td>${tot}`)}
+      </div>
+    </div>
+    <div class="pn"><div class="pnh">Por día</div>
+      ${tabla('<th>Día</th><th>Fecha</th>' + cols,
+        agruparVj(lista, t => t.fecha).map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td>${grupo(x)}</tr>`).join(''),
+        `<td colspan="2"><b>Total</b></td>${tot}`)}
+    </div>
+    <div class="pn"><div class="pnh">Tickets de la semana <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
+      ${tabla('<th>Fecha</th><th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th class="rt">Precio/L</th><th>Gasolinera</th><th>Facturado</th><th>Recibido físico</th><th>Foto</th><th>Avisos</th>',
+        lista.map(t => `<tr${t.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
+          <td>${t.fecha}</td><td>${t.hora || '—'}</td><td>${esc(t.chofer)}</td><td>${esc(t.unidad)}</td>
+          <td class="rt">${f0(t.litros)}</td><td class="rt">${$$(t.monto)}</td><td class="rt">${t.precio ? $$(t.precio) : '—'}</td>
+          <td style="white-space:normal;min-width:120px">${esc(t.gasolinera) || '—'}</td>
+          <td style="text-align:center">${casilla(t, 'facturado')}</td><td style="text-align:center">${casilla(t, 'recibido')}</td>
+          <td>${/^https:\/\/drive\.google\.com\//.test(t.foto) ? `<a href="${esc(t.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+          <td class="av">${t.avisos.map(esc).join('<br>')}</td></tr>`).join(''),
+        `<td colspan="4"><b>Total</b></td><td class="rt"><b>${f0(L)}</b></td><td class="rt"><b>${$$(M)}</b></td><td colspan="6"></td>`)}
+    </div>`;
+}
+
+// Guarda la casilla en la hoja de Diesel; si falla, la regresa como estaba
+async function marcarTicket(fila, campo, chk) {
+  const t = (DS.tickets||[]).find(x => x.fila === fila);
+  if (!t) return;
+  chk.disabled = true;
+  try {
+    await api({ action:'diesel_marcar', fila, campo, valor:chk.checked, fecha:t.fecha, monto:t.monto });
+    t[campo] = chk.checked;
+    renderDiesel();
+  } catch(e) {
+    chk.checked = !chk.checked; chk.disabled = false;
+    alert('No se pudo guardar la casilla: ' + e.message);
+  }
+}
+
+async function excelDiesel(btn) {
+  if (!DS) return;
+  const { lista } = datosDiesel();
+  if (!lista.length) return alert('No hay tickets en esta semana');
+  btn.disabled = true;
+  try {
+    if (!window.XLSX) await cargarScript(XLSX_URL);
+    const nombre = `${ddmmyy(DS.desde)}-${ddmmyy(DS.hasta)}`;
+    const hoja = XLSX.utils.aoa_to_sheet([['', 'DIÉSEL DE LA SEMANA'], [],
+      ['FECHA','HORA','CHOFER','UNIDAD','LITROS','MONTO','PRECIO/L','GASOLINERA','FACTURADO','RECIBIDO FÍSICO'],
+      ...lista.map(t => [celdaFecha(t.fecha), t.hora, t.chofer, t.unidad, t.litros, t.monto, t.precio || '', t.gasolinera, t.facturado ? 'SÍ' : 'NO', t.recibido ? 'SÍ' : 'NO']),
+      [], ['', '', '', 'TOTAL', sumaDs(lista, 'litros'), sumaDs(lista, 'monto')]]);
+    hoja['!cols'] = [11,7,18,24,9,11,9,28,10,14].map(wch => ({ wch }));
+    const fila = x => [x.items.length, sumaDs(x.items, 'litros'), sumaDs(x.items, 'monto'), Math.round(precioProm(x.items) * 100) / 100];
+    const hoja2 = XLSX.utils.aoa_to_sheet([['POR CAMIÓN'], ['UNIDAD','TICKETS','LITROS','MONTO','PRECIO PROM.'],
+      ...agruparVj(lista, t => t.placa).map(x => [x.items[0].unidad, ...fila(x)]), [],
+      ['POR CHOFER'], ['CHOFER','TICKETS','LITROS','MONTO','PRECIO PROM.'],
+      ...agruparVj(lista, t => claveVj(t.chofer)).map(x => [x.items[0].chofer, ...fila(x)])]);
+    hoja2['!cols'] = [24,9,10,12,12].map(wch => ({ wch }));
+    const libro = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(libro, hoja, nombre);
+    XLSX.utils.book_append_sheet(libro, hoja2, 'TOTALES');
+    XLSX.writeFile(libro, `DIESEL ${nombre}.xlsx`);
+  } catch(e) { alert('No se pudo generar el Excel: ' + e.message); }
+  finally { btn.disabled = false; }
+}
+
+function whatsDiesel() {
+  if (!DS) return;
+  const { lista } = datosDiesel();
+  if (!lista.length) return alert('No hay tickets en esta semana');
+  const sinFact = lista.filter(t => !t.facturado).length, avisos = lista.filter(t => t.avisos.length).length;
+  const texto = [
+    `*Diésel de la semana — ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0,4)}*`,
+    `Total: ${f0(sumaDs(lista, 'litros'))} L · ${$$(sumaDs(lista, 'monto'))} (${lista.length} tickets, ${$$(precioProm(lista))}/L)`,
+    '', '*Por camión*',
+    ...agruparVj(lista, t => t.placa).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros'))
+      .map(x => `• ${x.items[0].unidad}: ${f0(sumaDs(x.items, 'litros'))} L · ${$$(sumaDs(x.items, 'monto'))}`),
+    ...(sinFact ? ['', `🧾 ${sinFact} ticket${sinFact!==1?'s':''} sin facturar`] : []),
+    ...(avisos ? [`⚠️ ${avisos} con aviso por revisar`] : []),
+  ].join('\n');
+  window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
 }
 
 setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
@@ -655,7 +872,9 @@ Sesion.requerir('viajes').then(s => {
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
   cargarViajes();
-  if (location.hash === '#subir') document.querySelector('nav a[data-s="subir"]').click();   // tarjeta "Subir notas" del inicio
+  // Tarjetas del inicio: viajes.html#subir, #diesel, #tickets abren esa pestaña
+  const pestana = document.querySelector(`nav a[data-s="${location.hash.slice(1)}"]`);
+  if (pestana) pestana.click();
 }).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
 </script>
 </body>
