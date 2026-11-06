@@ -168,6 +168,38 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
 .row2 .btn{flex:1}
 .btn.casa{display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
 .btn.casa svg{width:19px;height:19px;display:block}
+
+/* Reporte para imprimir (botón en Resumen): solo se ve en papel */
+#print{display:none}
+@media print{
+  @page{size:letter landscape;margin:9mm}
+  html,html body{background:#fff !important;color:#000;padding:0 !important;margin:0}
+  body > *:not(#print){display:none !important}
+  #print{display:block;font-family:var(--f-txt);font-size:10pt;line-height:1.3;color:#000}
+  #print *{color:#000}
+  #print .rp-h{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2.5pt solid #F7931E;padding-bottom:4pt;margin-bottom:5pt}
+  #print .rp-h h1{font-family:var(--f-tit);font-size:17pt;line-height:1.1}
+  #print .rp-h .d{text-align:right;font-size:9pt}
+  #print .rp-nota{font-size:9pt;margin-bottom:6pt}
+  #print h2{font-family:var(--f-tit);font-size:11.5pt;margin:8pt 0 3pt;display:flex;justify-content:space-between}
+  #print table{width:100%;border-collapse:collapse;table-layout:fixed}
+  #print th{font-size:8pt;font-weight:600;text-align:left;border-bottom:1pt solid #000;padding:3pt 4pt;vertical-align:bottom}
+  #print td{border-bottom:.5pt solid #999;padding:5pt 4pt;vertical-align:top;font-variant-numeric:tabular-nums}
+  #print tr{break-inside:avoid}
+  #print .r{text-align:right}
+  #print .nm b{font-size:10.5pt}
+  #print .nm small{display:block;font-size:8pt;color:#333}
+  #print .pp{font-weight:700;font-size:11pt}
+  #print .esc{border-left:1pt solid #000}
+  #print .caja{display:inline-block;width:11pt;height:11pt;border:1pt solid #000}
+  #print tfoot td{border-bottom:none;border-top:1pt solid #000;font-weight:700}
+  #print .tot{display:grid;grid-template-columns:repeat(5,1fr);gap:6pt;margin-top:10pt;break-inside:avoid}
+  #print .tot div{border:1pt solid #000;padding:5pt 7pt}
+  #print .tot small{display:block;font-size:8pt}
+  #print .tot b{font-family:var(--f-tit);font-size:13pt}
+  #print .firmas{display:flex;gap:30pt;margin-top:18pt;font-size:9pt;break-inside:avoid}
+  #print .firmas span{flex:1;border-top:1pt solid #000;padding-top:3pt}
+}
 </style>
 </head>
 <body>
@@ -193,6 +225,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
 <div class="bar oculto" id="bar"><div class="in" id="bar-in"></div></div>
 <div class="msg" id="msg"></div>
 <div id="layer"></div>
+<div id="print"></div>
 
 <script src="sesion.js"></script>
 <script>
@@ -676,6 +709,7 @@ function vResumen() {
       <button class="btn sm" data-act="sem" data-v="1" ${actual ? 'disabled' : ''}>›</button>
     </div>
     ${actual ? `<div class="banner"><span class="dot d-brand"></span><span><b>Sábado ${fCorta(sab)}</b> es día de pago${faltan === 1 ? ' · <b>mañana</b>' : faltan === 0 ? ' · <b>hoy</b>' : faltan < 0 ? ' · ya pasó' : ''}</span></div>` : ''}
+    <button class="btn" data-act="imprimir" id="b-imprimir">Imprimir reporte de nómina${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</button>
     <div class="card filt">${filtroLugar()}</div>
     <div class="card kpi-main">
       <small>${actual ? 'Por pagar el sábado' : 'Quedó pendiente'}${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</small>
@@ -700,6 +734,87 @@ function vResumen() {
       </div>`;
     }).join('') || '<div class="card hint">Nadie en este filtro.</div>'}
     <div class="hint" style="padding:0 4px">El saldo junta todas las semanas: lo ganado menos lo que se le ha dado (préstamos y pagos).</div>`;
+}
+
+// ── Reporte para imprimir: una hoja para que el dueño la lea y anote a mano (vino, cuánto se pagó, notas) ──
+function reporteNomina(lun) {
+  const actual = mismoDia(lun, lunes(HOY)), sab = addDays(lun, DIA_PAGO - 1), ahora = new Date();
+  const filas = W.filter(w => !w.alta || w.alta <= lun)
+    .filter(w => S.lugar === 'Todos' || w.lugar === S.lugar)
+    .map(w => {
+      const c = semana(w, lun), s = saldoHasta(w, lun);
+      const ant = w.alta && lun <= w.alta ? 0 : lun > INICIO ? saldoHasta(w, addDays(lun, -7)) : 0;
+      return { w, c, s, ant };
+    })
+    .filter(f => f.w.activo || Math.abs(f.s) > 0.5);
+  const sum = (arr, fn) => arr.reduce((a, f) => a + fn(f), 0);
+  const dia = d => DIAS[d.getDay()].slice(0, 3);
+  // Lo que pasó en la semana, en corto, debajo del nombre
+  const detalle = c => c.ms.slice().sort((a, b) => a.fecha - b.fecha).map(m =>
+      m.tipo === 'falta' ? `Falta ${fdias(m.valor)} (${dia(m.fecha)})`
+    : m.tipo === 'dias' ? `Días exactos: ${fdias(m.valor)}`
+    : m.tipo === 'prestamo' ? `Préstamo ${money(m.valor)} (${dia(m.fecha)})`
+    : m.tipo === 'pago' ? `Pagado ${money(m.valor)} (${dia(m.fecha)})`
+    : `${m.tipo === 'premio' ? 'Premio' : 'Deducción'} ${money(m.valor)}${m.nota ? ' · ' + m.nota : ''}`).join(' · ');
+  const mon = (v, signo) => Math.abs(v) < 0.5 ? '' : (signo && v > 0 ? '+' : '') + money(v);
+  const fila = ({ w, c, s, ant }, i) => `<tr>
+      <td class="r">${i + 1}</td>
+      <td class="nm"><b>${esc(w.nombre)}</b>${w.activo ? '' : ' (baja)'}<small>${esc(w.puesto)}${detalle(c) ? ' · ' + esc(detalle(c)) : ''}</small></td>
+      <td class="r">${fdias(c.trabajados)} de ${fdias(c.tf.dias)}</td>
+      <td class="r">${money(c.sueldo)}</td>
+      <td class="r">${mon(c.premios - c.deducc, true)}</td>
+      <td class="r">${mon(ant, true)}</td>
+      <td class="r">${c.prestado ? '−' + money(c.prestado) : ''}</td>
+      <td class="r">${c.pagadoNom ? '−' + money(c.pagadoNom) : ''}</td>
+      <td class="r pp">${s > 0.5 ? money(s) : s < -0.5 ? `<span style="font-weight:400;font-size:8.5pt">Debe préstamo<br>${money(-s)}</span>` : '<span style="font-weight:400">Al corriente</span>'}</td>
+      <td>${w.forma === 'Transferencia' ? 'Transf.' : 'Efectivo'}</td>
+      <td class="esc" style="text-align:center"><span class="caja"></span></td>
+      <td class="esc"></td>
+      <td class="esc"></td>
+    </tr>`;
+  // Mismos anchos en todas las tablas (una por lugar) para que se lea como una sola
+  const anchos = [3, 20, 6, 6, 7, 9, 7, 6, 8, 6, 5, 8, 9];
+  const cols = `<colgroup>${anchos.map(a => `<col style="width:${a}%">`).join('')}</colgroup>`;
+  const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Días</th><th class="r">Sueldo</th>
+    <th class="r">Premios /<br>deducc.</th><th class="r">Pendiente (+) /<br>préstamo (−) anterior</th><th class="r">Préstamos<br>semana</th><th class="r">Ya<br>pagado</th>
+    <th class="r">Por pagar</th><th>Forma</th><th class="esc">Vino<br>sábado</th><th class="esc">Se pagó $</th><th class="esc">Notas</th></tr>`;
+  let n = 0;
+  const grupos = porLugar(filas.map(f => f.w)).map(g => {
+    const fs = filas.filter(f => f.w.lugar === g.l).sort((a, b) => a.w.nombre.localeCompare(b.w.nombre, 'es'));
+    return `<h2><span>${esc(g.l)}</span><span>Por pagar ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
+      <table>${cols}<thead>${enc}</thead><tbody>${fs.map(f => fila(f, n++)).join('')}</tbody></table>`;
+  }).join('');
+  const porPagar = sum(filas, f => Math.max(0, f.s)), efectivo = sum(filas.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
+  const debenPrest = sum(filas, f => Math.max(0, -f.s));
+  return `
+    <div class="rp-h">
+      <div><h1>Nómina · semana ${wkLabel(lun)} ${lun.getFullYear()}</h1>
+        <div>CAO Centauro${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''} · Pago: sábado ${fCorta(sab)}</div></div>
+      <div class="d">Actualizado: ${DIAS[ahora.getDay()]} ${fCorta(ahora)} ${ahora.getFullYear()}, ${fHora(ahora)}<br>Imprimió: ${esc(SESION.nombre)}</div>
+    </div>
+    <div class="rp-nota">${actual
+      ? `<b>Supone que todos trabajan completo hasta el sábado.</b> Ya están descontadas las faltas, préstamos y pagos registrados hasta ahora.
+         Si alguien falta o se le paga distinto, anótelo en las columnas de la derecha.`
+      : 'Semana cerrada: así quedó con lo registrado.'}
+      "Por pagar" ya incluye lo pendiente o los préstamos de semanas anteriores.</div>
+    ${grupos || '<p>No hay trabajadores en este filtro.</p>'}
+    <div class="tot">
+      <div><small>Total por pagar</small><b>${money(porPagar)}</b></div>
+      <div><small>Efectivo a preparar</small><b>${money(efectivo)}</b></div>
+      <div><small>Por transferencia</small><b>${money(porPagar - efectivo)}</b></div>
+      <div><small>Nómina de la semana (lo ganado)</small><b>${money(sum(filas, f => f.c.ganado))}</b></div>
+      <div><small>Préstamos por recuperar</small><b>${money(debenPrest)}</b></div>
+    </div>
+    <div class="firmas"><span>Revisó</span><span>Entregó el dinero</span><span>Total pagado: $</span></div>`;
+}
+async function imprimir() {
+  const b = $('#b-imprimir');
+  if (b) { b.disabled = true; b.textContent = 'Actualizando…'; }
+  try { await cargar(); }      // lo más reciente que registraron los demás
+  catch (e) { aviso('No se pudo actualizar; se imprime con lo que ya estaba cargado', 'err', 6000); }
+  render();
+  $('#print').innerHTML = reporteNomina(S.sem);
+  window.print();
 }
 
 function hojaDetalle(id) {
@@ -919,6 +1034,7 @@ document.addEventListener('click', e => {
     case 'sem': S.sem = addDays(S.sem, 7 * +v); render(); break;
     case 'estado': S.estado = v; render(); break;
     case 'detalle': hojaDetalle(id); break;
+    case 'imprimir': imprimir(); break;
     case 'regDesde': cerrarHoja(); S.tab = 'registrar'; R = { wid: id, ...formVacio('prestamo') }; render(); scrollTo(0, 0); break;
     case 'hTipo': S.hTipo = v; render(); break;
     case 'anular': hojaAnular(b.dataset.id); break;
