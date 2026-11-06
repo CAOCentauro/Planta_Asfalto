@@ -191,14 +191,12 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
   #print .nm small{display:block;font-size:8pt;color:#333}
   #print .pp{font-weight:700;font-size:11pt}
   #print .esc{border-left:1pt solid #000}
-  #print .caja{display:inline-block;width:11pt;height:11pt;border:1pt solid #000}
+  #print td .sub{display:block;font-size:8pt;color:#333}
   #print tfoot td{border-bottom:none;border-top:1pt solid #000;font-weight:700}
-  #print .tot{display:grid;grid-template-columns:repeat(5,1fr);gap:6pt;margin-top:10pt;break-inside:avoid}
+  #print .tot{display:grid;grid-template-columns:repeat(4,1fr);gap:6pt;margin-top:10pt;break-inside:avoid}
   #print .tot div{border:1pt solid #000;padding:5pt 7pt}
   #print .tot small{display:block;font-size:8pt}
   #print .tot b{font-family:var(--f-tit);font-size:13pt}
-  #print .firmas{display:flex;gap:30pt;margin-top:18pt;font-size:9pt;break-inside:avoid}
-  #print .firmas span{flex:1;border-top:1pt solid #000;padding-top:3pt}
 }
 </style>
 </head>
@@ -736,7 +734,8 @@ function vResumen() {
     <div class="hint" style="padding:0 4px">El saldo junta todas las semanas: lo ganado menos lo que se le ha dado (préstamos y pagos).</div>`;
 }
 
-// ── Reporte para imprimir: una hoja para que el dueño la lea y anote a mano (vino, cuánto se pagó, notas) ──
+// ── Reporte para imprimir: una hoja para que el dueño vea faltas, bonos, deducciones, préstamos,
+//    lo pagado y lo que falta por pagar a cada quien, y anote a un lado lo que cambie ──
 function reporteNomina(lun) {
   const actual = mismoDia(lun, lunes(HOY)), sab = addDays(lun, DIA_PAGO - 1), ahora = new Date();
   const filas = W.filter(w => !w.alta || w.alta <= lun)
@@ -749,43 +748,49 @@ function reporteNomina(lun) {
     .filter(f => f.w.activo || Math.abs(f.s) > 0.5);
   const sum = (arr, fn) => arr.reduce((a, f) => a + fn(f), 0);
   const dia = d => DIAS[d.getDay()].slice(0, 3);
-  // Lo que pasó en la semana, en corto, debajo del nombre
-  const detalle = c => c.ms.slice().sort((a, b) => a.fecha - b.fecha).map(m =>
-      m.tipo === 'falta' ? `Falta ${fdias(m.valor)} (${dia(m.fecha)})`
-    : m.tipo === 'dias' ? `Días exactos: ${fdias(m.valor)}`
-    : m.tipo === 'prestamo' ? `Préstamo ${money(m.valor)} (${dia(m.fecha)})`
-    : m.tipo === 'pago' ? `Pagado ${money(m.valor)} (${dia(m.fecha)})`
-    : `${m.tipo === 'premio' ? 'Premio' : 'Deducción'} ${money(m.valor)}${m.nota ? ' · ' + m.nota : ''}`).join(' · ');
-  const mon = (v, signo) => Math.abs(v) < 0.5 ? '' : (signo && v > 0 ? '+' : '') + money(v);
-  const fila = ({ w, c, s, ant }, i) => `<tr>
+  const nDias = n => `${fdias(n)} día${n === 1 ? '' : 's'}`;
+  // Debajo del nombre: qué día faltó o pidió, el motivo de bonos y deducciones, y lo que viene de semanas anteriores
+  const detalle = ({ c, ant }) => [
+    ...c.ms.slice().sort((a, b) => a.fecha - b.fecha).map(m =>
+        m.tipo === 'falta' ? `faltó ${dia(m.fecha)}`
+      : m.tipo === 'dias' ? `trabajó ${nDias(m.valor)} (días exactos)`
+      : m.tipo === 'prestamo' ? `préstamo ${money(m.valor)} el ${dia(m.fecha)}`
+      : m.tipo === 'pago' ? `se le pagaron ${money(m.valor)} el ${dia(m.fecha)}`
+      : m.nota ? `${m.tipo === 'premio' ? 'bono' : 'deducción'}: ${m.nota}` : ''),
+    ant > 0.5 ? `incluye ${money(ant)} que quedaron pendientes de antes` : '',
+    ant < -0.5 ? `se descuentan ${money(-ant)} de un préstamo anterior` : '',
+  ].filter(Boolean).join(' · ');
+  const din = (v, signo) => v > 0.5 ? signo + money(v) : '';
+  const fila = (f, i) => {
+    const { w, c, s } = f, falto = c.tf.dias - c.trabajados, det = detalle(f);
+    return `<tr>
       <td class="r">${i + 1}</td>
-      <td class="nm"><b>${esc(w.nombre)}</b>${w.activo ? '' : ' (baja)'}<small>${esc(w.puesto)}${detalle(c) ? ' · ' + esc(detalle(c)) : ''}</small></td>
-      <td class="r">${fdias(c.trabajados)} de ${fdias(c.tf.dias)}</td>
-      <td class="r">${money(c.sueldo)}</td>
-      <td class="r">${mon(c.premios - c.deducc, true)}</td>
-      <td class="r">${mon(ant, true)}</td>
-      <td class="r">${c.prestado ? '−' + money(c.prestado) : ''}</td>
-      <td class="r">${c.pagadoNom ? '−' + money(c.pagadoNom) : ''}</td>
+      <td class="nm"><b>${esc(w.nombre)}</b>${w.activo ? '' : ' (baja)'}<small>${esc(w.puesto)}${det ? ' · ' + esc(det) : ''}</small></td>
+      <td class="r">${money(c.tf.salario)}<small class="sub">${nDias(c.tf.dias)}</small></td>
+      <td class="r">${falto > 0 ? `${nDias(falto)}<small class="sub">−${money(falto * c.pd)}</small>`
+                   : falto < 0 ? `${nDias(-falto)} extra<small class="sub">+${money(-falto * c.pd)}</small>` : ''}</td>
+      <td class="r">${din(c.premios, '+')}</td>
+      <td class="r">${din(c.deducc, '−')}</td>
+      <td class="r">${din(c.prestado, '−')}</td>
+      <td class="r">${din(c.pagadoNom, '−')}</td>
       <td class="r pp">${s > 0.5 ? money(s) : s < -0.5 ? `<span style="font-weight:400;font-size:8.5pt">Debe préstamo<br>${money(-s)}</span>` : '<span style="font-weight:400">Al corriente</span>'}</td>
       <td>${w.forma === 'Transferencia' ? 'Transf.' : 'Efectivo'}</td>
-      <td class="esc" style="text-align:center"><span class="caja"></span></td>
-      <td class="esc"></td>
       <td class="esc"></td>
     </tr>`;
+  };
   // Mismos anchos en todas las tablas (una por lugar) para que se lea como una sola
-  const anchos = [3, 20, 6, 6, 7, 9, 7, 6, 8, 6, 5, 8, 9];
+  const anchos = [3, 25, 8, 8, 7, 7, 7, 7, 9, 6, 13];
   const cols = `<colgroup>${anchos.map(a => `<col style="width:${a}%">`).join('')}</colgroup>`;
-  const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Días</th><th class="r">Sueldo</th>
-    <th class="r">Premios /<br>deducc.</th><th class="r">Pendiente (+) /<br>préstamo (−) anterior</th><th class="r">Préstamos<br>semana</th><th class="r">Ya<br>pagado</th>
-    <th class="r">Por pagar</th><th>Forma</th><th class="esc">Vino<br>sábado</th><th class="esc">Se pagó $</th><th class="esc">Notas</th></tr>`;
+  const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Sueldo semanal</th><th class="r">Faltas</th>
+    <th class="r">Bonos</th><th class="r">Deducciones</th><th class="r">Préstamos</th><th class="r">Pagado</th>
+    <th class="r">Falta por pagar</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
   let n = 0;
   const grupos = porLugar(filas.map(f => f.w)).map(g => {
     const fs = filas.filter(f => f.w.lugar === g.l).sort((a, b) => a.w.nombre.localeCompare(b.w.nombre, 'es'));
-    return `<h2><span>${esc(g.l)}</span><span>Por pagar ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
+    return `<h2><span>${esc(g.l)}</span><span>Falta por pagar ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
       <table>${cols}<thead>${enc}</thead><tbody>${fs.map(f => fila(f, n++)).join('')}</tbody></table>`;
   }).join('');
   const porPagar = sum(filas, f => Math.max(0, f.s)), efectivo = sum(filas.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
-  const debenPrest = sum(filas, f => Math.max(0, -f.s));
   return `
     <div class="rp-h">
       <div><h1>Nómina · semana ${wkLabel(lun)} ${lun.getFullYear()}</h1>
@@ -793,19 +798,16 @@ function reporteNomina(lun) {
       <div class="d">Actualizado: ${DIAS[ahora.getDay()]} ${fCorta(ahora)} ${ahora.getFullYear()}, ${fHora(ahora)}<br>Imprimió: ${esc(SESION.nombre)}</div>
     </div>
     <div class="rp-nota">${actual
-      ? `<b>Supone que todos trabajan completo hasta el sábado.</b> Ya están descontadas las faltas, préstamos y pagos registrados hasta ahora.
-         Si alguien falta o se le paga distinto, anótelo en las columnas de la derecha.`
+      ? '<b>Supone que todos trabajan completo lo que resta de la semana.</b> Ya están descontadas las faltas, préstamos y pagos registrados hasta ahora.'
       : 'Semana cerrada: así quedó con lo registrado.'}
-      "Por pagar" ya incluye lo pendiente o los préstamos de semanas anteriores.</div>
+      "Falta por pagar" también incluye lo que quedó pendiente o los préstamos de semanas anteriores (se explica debajo del nombre).</div>
     ${grupos || '<p>No hay trabajadores en este filtro.</p>'}
     <div class="tot">
-      <div><small>Total por pagar</small><b>${money(porPagar)}</b></div>
-      <div><small>Efectivo a preparar</small><b>${money(efectivo)}</b></div>
+      <div><small>Total que falta por pagar</small><b>${money(porPagar)}</b></div>
+      <div><small>En efectivo</small><b>${money(efectivo)}</b></div>
       <div><small>Por transferencia</small><b>${money(porPagar - efectivo)}</b></div>
-      <div><small>Nómina de la semana (lo ganado)</small><b>${money(sum(filas, f => f.c.ganado))}</b></div>
-      <div><small>Préstamos por recuperar</small><b>${money(debenPrest)}</b></div>
-    </div>
-    <div class="firmas"><span>Revisó</span><span>Entregó el dinero</span><span>Total pagado: $</span></div>`;
+      <div><small>Préstamos por recuperar</small><b>${money(sum(filas, f => Math.max(0, -f.s)))}</b></div>
+    </div>`;
 }
 async function imprimir() {
   const b = $('#b-imprimir');
