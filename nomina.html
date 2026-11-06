@@ -755,34 +755,33 @@ function reporteNomina(lun) {
         m.tipo === 'falta' ? `faltó ${dia(m.fecha)}`
       : m.tipo === 'dias' ? `trabajó ${nDias(m.valor)} (días exactos)`
       : m.tipo === 'prestamo' ? `préstamo ${money(m.valor)} el ${dia(m.fecha)}`
-      : m.tipo === 'pago' ? `se le pagaron ${money(m.valor)} el ${dia(m.fecha)}`
       : m.nota ? `${m.tipo === 'premio' ? 'bono' : 'deducción'}: ${m.nota}` : ''),
-    ant > 0.5 ? `incluye ${money(ant)} que quedaron pendientes de antes` : '',
-    ant < -0.5 ? `se descuentan ${money(-ant)} de un préstamo anterior` : '',
+    // Lo de antes junto con lo ya pagado esta semana (no se muestra lo pagado: confunde)
+    ant - c.pagadoNom > 0.5 ? `incluye ${money(ant - c.pagadoNom)} que quedaron pendientes de antes` : '',
+    ant - c.pagadoNom < -0.5 ? `se descuentan ${money(c.pagadoNom - ant)} que ya se le dieron antes` : '',
   ].filter(Boolean).join(' · ');
-  const din = (v, signo) => v > 0.5 ? signo + money(v) : '';
+  const din = v => v > 0.5 ? money(v) : '';
   const fila = (f, i) => {
     const { w, c, s } = f, falto = c.tf.dias - c.trabajados, det = detalle(f);
     return `<tr>
       <td class="r">${i + 1}</td>
       <td class="nm"><b>${esc(w.nombre)}</b>${w.activo ? '' : ' (baja)'}<small>${esc(w.puesto)}${det ? ' · ' + esc(det) : ''}</small></td>
       <td class="r">${money(c.tf.salario)}<small class="sub">${nDias(c.tf.dias)}</small></td>
-      <td class="r">${falto > 0 ? `${nDias(falto)}<small class="sub">−${money(falto * c.pd)}</small>`
-                   : falto < 0 ? `${nDias(-falto)} extra<small class="sub">+${money(-falto * c.pd)}</small>` : ''}</td>
-      <td class="r">${din(c.premios, '+')}</td>
-      <td class="r">${din(c.deducc, '−')}</td>
-      <td class="r">${din(c.prestado, '−')}</td>
-      <td class="r">${din(c.pagadoNom, '−')}</td>
+      <td class="r">${falto > 0 ? `${nDias(falto)}<small class="sub">${money(falto * c.pd)}</small>`
+                   : falto < 0 ? `${nDias(-falto)} extra<small class="sub">${money(-falto * c.pd)}</small>` : ''}</td>
+      <td class="r">${din(c.premios)}</td>
+      <td class="r">${din(c.deducc)}</td>
+      <td class="r">${din(c.prestado)}</td>
       <td class="r pp">${s > 0.5 ? money(s) : s < -0.5 ? `<span style="font-weight:400;font-size:8.5pt">Debe préstamo<br>${money(-s)}</span>` : '<span style="font-weight:400">Al corriente</span>'}</td>
       <td>${w.forma === 'Transferencia' ? 'Transf.' : 'Efectivo'}</td>
       <td class="esc"></td>
     </tr>`;
   };
   // Mismos anchos en todas las tablas (una por lugar) para que se lea como una sola
-  const anchos = [3, 25, 8, 8, 7, 7, 7, 7, 9, 6, 13];
+  const anchos = [3, 26, 8, 8, 7, 8, 7, 9, 6, 18];
   const cols = `<colgroup>${anchos.map(a => `<col style="width:${a}%">`).join('')}</colgroup>`;
   const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Sueldo semanal</th><th class="r">Faltas</th>
-    <th class="r">Bonos</th><th class="r">Deducciones</th><th class="r">Préstamos</th><th class="r">Pagado</th>
+    <th class="r">Bonos</th><th class="r">Deducciones</th><th class="r">Préstamos</th>
     <th class="r">Falta por pagar</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
   let n = 0;
   const grupos = porLugar(filas.map(f => f.w)).map(g => {
@@ -798,7 +797,7 @@ function reporteNomina(lun) {
       <div class="d">Actualizado: ${DIAS[ahora.getDay()]} ${fCorta(ahora)} ${ahora.getFullYear()}, ${fHora(ahora)}<br>Imprimió: ${esc(SESION.nombre)}</div>
     </div>
     <div class="rp-nota">${actual
-      ? '<b>Supone que todos trabajan completo lo que resta de la semana.</b> Ya están descontadas las faltas, préstamos y pagos registrados hasta ahora.'
+      ? '<b>Supone que todos trabajan completo lo que resta de la semana.</b> Ya están descontadas las faltas y préstamos registrados hasta ahora.'
       : 'Semana cerrada: así quedó con lo registrado.'}
       "Falta por pagar" también incluye lo que quedó pendiente o los préstamos de semanas anteriores (se explica debajo del nombre).</div>
     ${grupos || '<p>No hay trabajadores en este filtro.</p>'}
