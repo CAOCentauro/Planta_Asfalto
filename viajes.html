@@ -108,6 +108,7 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 a{color:var(--amb)}
 .empty{padding:36px;text-align:center;color:var(--muted);line-height:2}
 .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.two > *{min-width:0}     /* una tabla ancha se desplaza dentro de su panel, no empuja la página */
 @media(max-width:860px){.two{grid-template-columns:1fr}}
 #menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;font-size:14px;font-weight:600;font-family:inherit}
 @media(max-width:640px){
@@ -188,9 +189,10 @@ a{color:var(--amb)}
     <div class="ph">
       <h2>Diésel y rendimiento</h2>
       <div class="flt">
-        <button class="ftb" onclick="moverSemanaDs(-7)" title="Semana anterior">‹</button>
-        <input type="date" id="ds-dia" onchange="cargarDiesel()" title="Cualquier día de la semana">
-        <button class="ftb" onclick="moverSemanaDs(7)" title="Semana siguiente">›</button>
+        <select id="ds-per" onchange="cargarDiesel()" title="Ver por semana o por mes"><option value="semana">Semana</option><option value="mes">Mes</option></select>
+        <button class="ftb" onclick="moverDs(-1)" title="Anterior">‹</button>
+        <input type="date" id="ds-dia" onchange="cargarDiesel()" title="Cualquier día de la semana o del mes">
+        <button class="ftb" onclick="moverDs(1)" title="Siguiente">›</button>
         <select id="ds-uni" onchange="renderDiesel()"><option value="">Todas las unidades</option></select>
         <button class="ftb" onclick="cargarDiesel(true)">Actualizar</button>
         <button class="ftb" onclick="excelDiesel(this)">Descargar Excel</button>
@@ -1255,16 +1257,28 @@ const DS_CACHE = {};
 let DS = null;
 const $$ = v => '$' + new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(N(v));
 
-function moverSemanaDs(dias) {
+// Semana (lunes a domingo) o mes completo del día escogido
+const porMesDs = () => document.getElementById('ds-per').value === 'mes';
+function periodoDs(dia) {
+  if (!porMesDs()) return semanaVj(dia);
+  const d = fechaLocal(dia);
+  return { desde:txtFecha(new Date(d.getFullYear(), d.getMonth(), 1)), hasta:txtFecha(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
+}
+const queDs = () => porMesDs() ? 'mes' : 'semana';
+const tituloDs = () => porMesDs()
+  ? `Mes de ${MESES[+DS.desde.slice(5, 7) - 1].toLowerCase()} ${DS.desde.slice(0, 4)}`
+  : `Semana del ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0, 4)}`;
+function moverDs(n) {
   const inp = document.getElementById('ds-dia');
-  const d = fechaLocal(inp.value || txtFecha(new Date())); d.setDate(d.getDate() + dias);
+  const d = fechaLocal(inp.value || txtFecha(new Date()));
+  if (porMesDs()) d.setMonth(d.getMonth() + n, 1); else d.setDate(d.getDate() + 7 * n);
   inp.value = txtFecha(d);
   cargarDiesel();
 }
 async function cargarDiesel(forzar) {
   const inp = document.getElementById('ds-dia');
   if (!inp.value) inp.value = txtFecha(new Date());
-  const { desde, hasta } = semanaVj(inp.value);
+  const { desde, hasta } = periodoDs(inp.value);
   const k = desde + '|' + hasta, body = document.getElementById('ds-body');
   if (!forzar && DS_CACHE[k]) { DS = DS_CACHE[k]; return renderDiesel(); }
   body.innerHTML = '<div class="pn"><div class="empty">Leyendo los tickets de diésel…</div></div>';
@@ -1301,11 +1315,11 @@ function renderDiesel() {
   sel.value = unidades.some(x => x.k === antes) ? antes : '';
 
   const { lista } = datosDiesel();
-  const titulo = `Semana del ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0,4)}`;
+  const titulo = tituloDs();
   if (!lista.length) {
     const ult = DS.ultima && DS.ultima < DS.desde
-      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a esa semana</button>` : '';
-    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel esta semana${ult}</div></div>`;
+      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ese ${queDs()}</button>` : '';
+    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel este ${queDs()}${ult}</div></div>`;
     return;
   }
   const L = sumaDs(lista, 'litros'), M = sumaDs(lista, 'monto');
@@ -1346,7 +1360,7 @@ function renderDiesel() {
         agruparVj(lista, t => t.fecha).map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td>${grupo(x)}</tr>`).join(''),
         `<td colspan="2"><b>Total</b></td>${tot}`)}
     </div>
-    <div class="pn"><div class="pnh">Tickets de la semana <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
+    <div class="pn"><div class="pnh">Tickets del ${queDs()} <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
       ${tabla('<th>Fecha</th><th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th class="rt">Precio/L</th><th>Gasolinera</th><th>Facturado</th><th>Recibido físico</th><th>Foto</th><th>Avisos</th>',
         lista.map(t => `<tr${t.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td>${t.fecha}</td><td>${t.hora || '—'}</td><td>${esc(t.chofer)}</td><td>${esc(t.unidad)}</td>
@@ -1365,10 +1379,15 @@ function rendimientoHtml(lista) {
   const R = DS.rendimiento, pn = (c, t) => `<div class="pn"><div class="pnh"><span>Rendimiento · km por litro${t ? ' · ' + t : ''}</span></div>${c}</div>`;
   if (!R || R.error) return pn(`<div class="empty">No se pudo calcular el rendimiento${R?.error ? ': ' + esc(R.error) : ''}</div>`);
   const kmP = kmPorPlaca(R.km, R.dispositivos);
-  if (!Object.keys(kmP).length) return pn(`<div class="empty">Sin km de ProTrack esta semana. Sube los informes de kilometraje en
+  if (!Object.keys(kmP).length) return pn(`<div class="empty">Sin km de ProTrack este ${queDs()}. Sube los informes de kilometraje en
     <a href="#" onclick="event.preventDefault();irSeccion('diario')">Diario</a>${R.km?.length ? ' y escoge qué camión es cada dispositivo' : ''}.</div>`);
   const uni = document.getElementById('ds-uni').value;
-  const dias = [...Array(7)].map((_, i) => masDias(DS.desde, i));
+  const dias = [];
+  for (let f = DS.desde; f <= DS.hasta; f = masDias(f, 1)) dias.push(f);
+  // Excesos de velocidad de cada placa cada día (de los dispositivos que ya tienen camión)
+  const excPF = {};
+  (R.km || []).forEach(r => { const p = R.dispositivos?.[r.dispositivo]; if (p && r.fecha >= DS.desde && r.fecha <= DS.hasta) excPF[p + '|' + r.fecha] = (excPF[p + '|' + r.fecha] || 0) + r.excesos; });
+  const excDe = p => dias.reduce((s, f) => s + (excPF[p + '|' + f] || 0), 0);
   const kmDe = (p, hasta) => dias.filter(f => f <= hasta).reduce((s, f) => s + (kmP[p + '|' + f] || 0), 0);
   const placas = [...new Set([...Object.keys(kmP).map(k => k.split('|')[0]), ...lista.map(t => t.placa)])].filter(p => !uni || p === uni);
   const kml = (km, L) => km > 0 && L > 0 ? km / L : null;
@@ -1381,36 +1400,36 @@ function rendimientoHtml(lista) {
       const li = litrosCamion(p, ini.cm1, ini.cm2, R.tanques), lf = litrosCamion(p, fin.cm1, fin.cm2, R.tanques);
       if (li != null && lf != null) corr = kml(kmDe(p, fin.fecha), sumaDs(tks.filter(t => t.fecha <= fin.fecha), 'litros') + li - lf);
     }
-    return { p, km, L, M, r:kml(km, L), corr, unidad:tks[0]?.unidad };
+    return { p, km, L, M, r:kml(km, L), corr, exc:excDe(p), unidad:tks[0]?.unidad };
   }).filter(x => x.km > 0 || x.L > 0).sort((a, b) => b.km - a.km);
   const conAmbos = filas.filter(x => x.r != null), prom = kml(conAmbos.reduce((s, x) => s + x.km, 0), conAmbos.reduce((s, x) => s + x.L, 0));
   const aviso = x => x.L > 0 && x.km < 5 ? (R.km.length ? 'Cargó y casi no se movió (o no tiene GPS)' : '')
-    : x.r != null && prom && x.r < prom * 0.6 ? 'Rinde mucho menos que los demás' : x.km > 0 && !x.L ? 'Sin cargas esta semana' : '';
+    : x.r != null && prom && x.r < prom * 0.6 ? 'Rinde mucho menos que los demás' : x.km > 0 && !x.L ? `Sin cargas este ${queDs()}` : '';
   const nomPlaca = x => { const c = (DS.placas || []).find(y => y.placa === x.p); return x.unidad || (c?.descripcion ? `${x.p} — ${c.descripcion}` : x.p); };
   const kmlTxt = v => v == null ? '—' : v.toFixed(2);
   // Por chofer: los km de cada camión cada día van al chofer que lo traía (Camiones del día); los litros, al chofer del ticket
-  const choferes = [...new Set((R.camiones || []).map(a => a.chofer))], kmCh = {}, LCh = {};
+  const choferes = [...new Set((R.camiones || []).map(a => a.chofer))], kmCh = {}, LCh = {}, excCh = {};
   Object.entries(kmP).forEach(([k, km]) => {
     const [p, f] = k.split('|');
     if (f < DS.desde || f > DS.hasta) return;
     const ch = choferes.find(c => camionDe(c, f, R, null)?.placa === p) || '(sin chofer guardado)';
     kmCh[ch] = (kmCh[ch] || 0) + km;
+    excCh[ch] = (excCh[ch] || 0) + (excPF[k] || 0);
   });
-  DS.tickets.forEach(t => { LCh[t.chofer] = (LCh[t.chofer] || 0) + t.litros; });
+  DS.tickets.forEach(t => { if (t.chofer) LCh[t.chofer] = (LCh[t.chofer] || 0) + t.litros; });
   const nomCh = [...new Set([...Object.keys(kmCh), ...Object.keys(LCh)])].sort((a, b) => (kmCh[b] || 0) - (kmCh[a] || 0));
   const tabla = (enc, filas) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody></table></div>`;
-  return `<div class="two">
-    ${pn(tabla('<th>Camión</th><th class="rt">Km</th><th class="rt">Litros cargados</th><th class="rt">km/L</th><th class="rt">$ por km</th><th class="rt" title="Corregido con los cm del tanque al empezar y al terminar">km/L con cm</th><th>Aviso</th>',
+  return `
+    ${pn(tabla('<th>Camión</th><th class="rt">Km</th><th class="rt">Litros cargados</th><th class="rt">km/L</th><th class="rt">$ por km</th><th class="rt" title="Corregido con los cm del tanque al empezar y al terminar">km/L con cm</th><th class="rt">Excesos de velocidad</th><th>Aviso</th>',
       filas.map(x => `<tr><td class="amb">${esc(nomPlaca(x))}</td><td class="rt">${f0(x.km)}</td><td class="rt">${f0(x.L)}</td>
-        <td class="rt"><b>${kmlTxt(x.r)}</b></td><td class="rt">${x.km > 0 && x.M ? $$(x.M / x.km) : '—'}</td><td class="rt">${kmlTxt(x.corr)}</td>
+        <td class="rt"><b>${kmlTxt(x.r)}</b></td><td class="rt">${x.km > 0 && x.M ? $$(x.M / x.km) : '—'}</td><td class="rt">${kmlTxt(x.corr)}</td><td class="rt${x.exc ? ' neg' : ''}">${x.exc}</td>
         <td class="av" style="color:var(--warn)">${aviso(x)}</td></tr>`).join(''))
-      + `<div class="nota-pn">Promedio: <b>${kmlTxt(prom)}</b> km/L. Por semana sale poco exacto porque las cargas no caen parejo: la columna "con cm"
-        usa lo que había en el tanque el domingo anterior y el último día con cm (cuando estén las medidas de los tanques).</div>`, 'por camión')}
-    ${pn(tabla('<th>Chofer</th><th class="rt">Km</th><th class="rt">Litros</th><th class="rt">km/L</th>',
+      + `<div class="nota-pn">Promedio: <b>${kmlTxt(prom)}</b> km/L. ${porMesDs() ? 'Por mes sale más parejo que por semana.' : 'Por semana sale poco exacto porque las cargas no caen parejo (velo por mes).'}
+        La columna "con cm" corrige con lo que había en el tanque el día antes de empezar y el último día con cm (cuando estén las medidas de los tanques).</div>`, 'por camión')}
+    ${pn(tabla('<th>Chofer</th><th class="rt">Km</th><th class="rt">Litros</th><th class="rt">km/L</th><th class="rt">Excesos de velocidad</th>',
       nomCh.map(c => `<tr><td>${esc(c)}</td><td class="rt">${f0(kmCh[c] || 0)}</td><td class="rt">${f0(LCh[c] || 0)}</td>
-        <td class="rt"><b>${kmlTxt(kml(kmCh[c] || 0, LCh[c] || 0))}</b></td></tr>`).join(''))
-      + '<div class="nota-pn">Los km de cada día van al chofer que traía ese camión según el Diario; los litros, al chofer del ticket.</div>', 'por chofer')}
-  </div>`;
+        <td class="rt"><b>${kmlTxt(kml(kmCh[c] || 0, LCh[c] || 0))}</b></td><td class="rt${excCh[c] ? ' neg' : ''}">${excCh[c] || 0}</td></tr>`).join(''))
+      + '<div class="nota-pn">Los km de cada día van al chofer que traía ese camión según el Diario; los litros, al chofer del ticket; los excesos, igual que los km.</div>', 'por chofer')}`;
 }
 
 // Guarda la casilla en la hoja de Diesel; si falla, la regresa como estaba
@@ -1431,12 +1450,12 @@ async function marcarTicket(fila, campo, chk) {
 async function excelDiesel(btn) {
   if (!DS) return;
   const { lista } = datosDiesel();
-  if (!lista.length) return alert('No hay tickets en esta semana');
+  if (!lista.length) return alert(`No hay tickets en este ${queDs()}`);
   btn.disabled = true;
   try {
     if (!window.XLSX) await cargarScript(XLSX_URL);
-    const nombre = `${ddmmyy(DS.desde)}-${ddmmyy(DS.hasta)}`;
-    const hoja = XLSX.utils.aoa_to_sheet([['', 'DIÉSEL DE LA SEMANA'], [],
+    const nombre = porMesDs() ? `${MESES[+DS.desde.slice(5, 7) - 1]} ${DS.desde.slice(0, 4)}` : `${ddmmyy(DS.desde)}-${ddmmyy(DS.hasta)}`;
+    const hoja = XLSX.utils.aoa_to_sheet([['', 'DIÉSEL — ' + tituloDs().toUpperCase()], [],
       ['FECHA','HORA','CHOFER','UNIDAD','LITROS','MONTO','PRECIO/L','GASOLINERA','FACTURADO','RECIBIDO FÍSICO'],
       ...lista.map(t => [celdaFecha(t.fecha), t.hora, t.chofer, t.unidad, t.litros, t.monto, t.precio || '', t.gasolinera, t.facturado ? 'SÍ' : 'NO', t.recibido ? 'SÍ' : 'NO']),
       [], ['', '', '', 'TOTAL', sumaDs(lista, 'litros'), sumaDs(lista, 'monto')]]);
@@ -1458,10 +1477,10 @@ async function excelDiesel(btn) {
 function whatsDiesel() {
   if (!DS) return;
   const { lista } = datosDiesel();
-  if (!lista.length) return alert('No hay tickets en esta semana');
+  if (!lista.length) return alert(`No hay tickets en este ${queDs()}`);
   const sinFact = lista.filter(t => !t.facturado).length, avisos = lista.filter(t => t.avisos.length).length;
   const texto = [
-    `*Diésel de la semana — ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0,4)}*`,
+    `*Diésel — ${tituloDs()}*`,
     `Total: ${f0(sumaDs(lista, 'litros'))} L · ${$$(sumaDs(lista, 'monto'))} (${lista.length} tickets, ${$$(precioProm(lista))}/L)`,
     '', '*Por camión*',
     ...agruparVj(lista, t => t.placa).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros'))
