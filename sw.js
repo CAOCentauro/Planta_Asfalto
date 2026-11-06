@@ -1,17 +1,17 @@
 /**
- * Service Worker — Planta de Asfalto  v7
- * Páginas del sitio: primero internet (siempre la versión nueva) y, sin señal, la copia guardada.
- * Lo que va al Apps Script (POST) no pasa por aquí.
+ * Service Worker â€” Planta de Asfalto  v7
+ * PÃ¡ginas del sitio: primero internet (siempre la versiÃ³n nueva) y, sin seÃ±al, la copia guardada.
+ * Lo que va al Apps Script (POST) no pasa por aquÃ­.
  */
 
-const CACHE_NAME = 'planta-v24';
+const CACHE_NAME = 'planta-v25';
 const APP_SHELL  = ['/', '/index.html', '/registro.html', '/compras.html', '/pagos.html', '/nomina.html', '/dashboard.html', '/viajes.html',
                     '/usuarios.html', '/sesion.js', '/cobranza.js', '/agregados.js', '/estilo.css', '/manifest.json'];
 
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(CACHE_NAME)
-      // Si falta algún archivo no se cae la instalación
+      // Si falta algÃºn archivo no se cae la instalaciÃ³n
       .then(cache => Promise.all(APP_SHELL.map(u => cache.add(u).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
