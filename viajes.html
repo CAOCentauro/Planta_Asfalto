@@ -748,7 +748,9 @@ function camionDe(chofer, fecha, cat, ultima) {
   (cat.camiones || []).forEach(x => { if (claveVj(x.chofer) === k && x.fecha <= dia && (!a || x.fecha >= a.fecha)) a = x; });
   if (a) return { placa:a.placa, de:'dia', fecha:a.fecha, guardo:a.guardo, cuando:a.cuando };
   const u = Object.entries(ultima || {}).find(([c]) => claveVj(c) === k)?.[1];
-  return u ? { placa:u.placa, de:'ultima', fecha:u.fecha } : null;
+  // Si la placa de su última nota está mal escrita (no está en el catálogo) no se toma: no se podría guardar
+  const enCatalogo = p => !(cat.placas || []).length || cat.placas.some(x => x.placa === p);
+  return u && enCatalogo(u.placa) ? { placa:u.placa, de:'ultima', fecha:u.fecha } : null;
 }
 // Materiales que ya se han llevado a una obra (los del catálogo, del más usado al menos usado)
 function usadosEnObra(obra, cat) {
@@ -823,7 +825,7 @@ const Diario = (() => {
     if (!saltarDomingo && !(saltado && f === masDias(saltado, -1))) saltado = '';
     if (!forzar && CACHE[f]) {
       if (saltarDomingo && domingoVacio(CACHE[f])) { saltado = f; $d('dr-dia').value = masDias(f, -1); return cargar(false); }
-      D = CACHE[f]; return pintar();
+      D = CACHE[f]; D.marcadas = null; if (!D.filas) armarFilas(); calcular(); return pintar();
     }
     body.innerHTML = '<div class="pn"><div class="empty">Leyendo lo del día…</div></div>';
     bar(true);
@@ -848,7 +850,9 @@ const Diario = (() => {
   }
   function calcular() {
     D.notasDia = (D.notas || []).filter(v => v.fecha === D.fecha);
-    D.pendPapel = (D.notas || []).filter(v => v.fecha < D.fecha && v.foto && !v.entregado);
+    // Las que se palomean aquí no se quitan de la lista hasta Actualizar o cambiar de día (que no se mueva mientras se palomea)
+    D.marcadas = D.marcadas || new Set();
+    D.pendPapel = (D.notas || []).filter(v => v.fecha < D.fecha && v.foto && (!v.entregado || D.marcadas.has(v.fila)));
     D.kmPlaca = kmPorPlaca(D.km, D.dispositivos);
   }
   const notasDe = ch => D.notasDia.filter(v => claveVj(v.chofer) === claveVj(ch));
@@ -867,6 +871,8 @@ const Diario = (() => {
       : !c ? 'Sin camión guardado' : c.de === 'ultima' ? `De su última nota (${fechaCorta(c.fecha)})`
       : c.fecha === D.fecha ? `Guardado por ${c.guardo}` : `Igual que el ${fechaCorta(c.fecha)}`;
     const dis = x.placa ? '' : 'disabled', rep = repetidas.has(x.placa);
+    // Una placa guardada que ya no está en el catálogo se muestra igual (si no, el renglón diría "Sin camión")
+    if (x.placa && !ops.some(o => o.v === x.placa)) ops = [...ops, { v:x.placa, t:x.placa + ' · no está en el catálogo' }];
     const cm = k => `<input class="ci cm" type="number" min="0" max="150" step="0.5" data-k="${k}" value="${esc(x[k])}" placeholder="cm" ${dis}>`;
     return `<tr data-i="${i}"><td class="dr-n">${esc(x.chofer)}<small>${esc(origen)}</small></td>
       <td><select class="ci${rep ? ' mal' : ''}" data-k="placa" ${rep ? `title="${esc(x.placa)} está con dos choferes"` : ''}><option value="">— Sin camión —</option>${ops.map(o =>
@@ -1045,6 +1051,7 @@ const Diario = (() => {
       await api({ action:'nota_papel', fila, valor:chk.checked, folio:v.folio, fecha:v.fecha });
       Object.values(CACHE).forEach(x => (x.notas || []).forEach(o => { if (o.fila === fila) o.entregado = chk.checked; }));
       Object.keys(VJ_CACHE).forEach(x => delete VJ_CACHE[x]);
+      D.marcadas.add(fila);
       calcular(); pintar();
     } catch(e) { chk.checked = !chk.checked; chk.disabled = false; alert('No se pudo guardar la casilla: ' + e.message); }
   }
@@ -1081,7 +1088,8 @@ const Diario = (() => {
     L.push('', `*Notas*: ${n.length} · ${foto.length} con foto · ${papel.length} ya en papel`);
     if (faltan.length) L.push('📄 Faltan en papel: ' + porChofer(faltan));
     if (sinFoto.length) L.push(`📷 ${cuando} no enviaron foto: ` + porChofer(sinFoto));
-    if (D.pendPapel.length) L.push('⏳ De días anteriores siguen sin papel: ' + porChofer(D.pendPapel, true));
+    const siguen = D.pendPapel.filter(v => !v.entregado);
+    if (siguen.length) L.push('⏳ De días anteriores siguen sin papel: ' + porChofer(siguen, true));
 
     const tk = D.tickets || [];
     L.push('', tk.length ? `*Diésel*: ${tk.length} carga${tk.length !== 1 ? 's' : ''} · ${f0(sumaDs(tk, 'litros'))} L` : '*Diésel*: sin cargas');
