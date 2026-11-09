@@ -1410,6 +1410,9 @@ SUB.nt = Subidor({
     if (!['chofer', 'fecha', 'ia', 'camiones'].some(x => cambios.includes(x))) return;
     d._cam = camionDe(d.chofer, d.fecha, cat, cat.ultimaPlaca);
     if (d._cam?.placa && (d._auto || !d.placa || cambios.includes('chofer') || cambios.includes('ia'))) { d.placa = d._cam.placa; d._auto = true; }
+    // El chofer nuevo no tiene camión conocido: no se deja la placa que se puso sola por el chofer anterior
+    // (vuelve a la que leyó la IA, o vacía para escogerla)
+    else if (d._auto && !d._cam?.placa) { d.placa = d.placaIA || ''; d._auto = false; }
   },
   bulk: ['chofer', 'obra', 'fecha', 'm3'],
   requeridos: [['chofer', 'sin chofer'], ['fecha', 'sin fecha'], ['folio', 'sin folio (las que no tienen foto)', n => !n.foto]],
@@ -1493,6 +1496,7 @@ SUB.tk = Subidor({
     d._cam = camionDe(d.chofer, d.fecha, cat, cat.ultimaUnidad);
     const u = d._cam?.placa && cat.unidades.find(x => x.placa === d._cam.placa);
     if (u && (d._auto || !d.unidad || cambios.includes('chofer'))) { d.unidad = u.valor; d._auto = true; }
+    else if (d._auto && !u) { d.unidad = ''; d._auto = false; }     // igual que en las notas: no se queda la unidad del chofer anterior
   },
   alCargar: (cat, caja) => { caja.innerHTML = `<div style="font-size:12px;color:var(--muted)">Al escoger el chofer se pone sola la unidad de su camión ese día
     (se escoge en <a href="#" onclick="event.preventDefault();irSeccion('diario')">Diario</a>; si no, la última que cargó).</div>`; },
