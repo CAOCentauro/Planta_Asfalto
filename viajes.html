@@ -94,6 +94,18 @@ select:focus,input:focus{border-color:var(--amb)}
 .banner-dr{font-size:12px;padding:10px 14px;border-left:3px solid var(--amb);background:rgba(247,147,30,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 summary.pnh{cursor:pointer;list-style:none}
 summary.pnh::-webkit-details-marker{display:none}
+/* FLETES: filtros y acumulado */
+.flt[hidden]{display:none}
+.vj-fil{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:12px 16px}
+.vj-fil label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.vj-fil select{min-width:120px;max-width:200px}
+.vj-fil select.on{border-color:var(--amb);color:var(--amb)}
+.vj-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 16px 12px;font-size:12px}
+.chip{border:1px solid var(--amb);color:var(--amb);background:rgba(247,147,30,.08);padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+.chip:hover{background:rgba(247,147,30,.2)}
+.vista{display:flex;gap:0}
+.vista .ftb{font-size:11px;padding:5px 12px}
+.sinp{color:var(--warn)}
 .fl{white-space:nowrap}
 .fl::after{content:'Mostrar ▸';text-transform:none;letter-spacing:0;font-weight:500}
 details[open] > summary .fl::after{content:'Ocultar ▾'}
@@ -133,7 +145,7 @@ a{color:var(--amb)}
   <div class="sb-logo"><span>CAO Centauro</span><strong>Viajes locales</strong></div>
   <nav>
     <a href="#" class="active" data-s="diario">Diario</a>
-    <a href="#" data-s="fletes">Fletes de la semana</a>
+    <a href="#" data-s="fletes">Fletes</a>
     <a href="#" data-s="subir">Subir notas <span id="nt-badge" style="color:var(--amb)"></span></a>
     <a href="#" data-s="diesel">Diésel y rendimiento</a>
     <a href="#" data-s="tickets">Subir tickets de diésel <span id="tk-badge" style="color:var(--amb)"></span></a>
@@ -167,12 +179,19 @@ a{color:var(--amb)}
   <!-- FLETES DE LA SEMANA -->
   <section class="sec" id="sec-fletes">
     <div class="ph">
-      <h2>Fletes de la semana</h2>
+      <h2>Fletes</h2>
       <div class="flt">
-        <button class="ftb" onclick="moverSemanaVj(-7)" title="Semana anterior">‹</button>
-        <input type="date" id="vj-dia" onchange="cargarViajes()" title="Cualquier día de la semana">
-        <button class="ftb" onclick="moverSemanaVj(7)" title="Semana siguiente">›</button>
-        <select id="vj-cli" onchange="renderViajes()"><option value="">Todos los clientes</option></select>
+        <select id="vj-per" onchange="cambiarPeriodoVj()" title="Ver por semana, por mes o un rango de fechas">
+          <option value="semana">Semana</option><option value="mes">Mes</option><option value="rango">Desde – hasta</option></select>
+        <span id="vj-nav" class="flt">
+          <button class="ftb" onclick="moverVj(-1)" title="Anterior">‹</button>
+          <input type="date" id="vj-dia" onchange="cargarViajes()" title="Cualquier día de la semana o del mes">
+          <button class="ftb" onclick="moverVj(1)" title="Siguiente">›</button>
+        </span>
+        <span id="vj-rango" class="flt" hidden>
+          <input type="date" id="vj-desde" onchange="cargarViajes()" title="Desde"> –
+          <input type="date" id="vj-hasta" onchange="cargarViajes()" title="Hasta">
+        </span>
         <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
         <button class="ftb" onclick="excelViajes(this)">Descargar Excel</button>
         <button class="ftb" onclick="whatsViajes()">Enviar por WhatsApp</button>
@@ -301,53 +320,140 @@ function semanaVj(dia) {
   return { desde:txtFecha(lun), hasta:txtFecha(dom) };
 }
 
-function moverSemanaVj(dias) {
-  const inp = document.getElementById('vj-dia');
-  const d = fechaLocal(inp.value || txtFecha(new Date())); d.setDate(d.getDate() + dias);
+// Periodo en pantalla: semana (lunes a domingo), mes, o desde – hasta (máximo un año)
+const elVj = id => document.getElementById(id);
+function periodoVj() {
+  const per = elVj('vj-per').value, dia = elVj('vj-dia').value || txtFecha(new Date());
+  if (per === 'mes') {
+    const d = fechaLocal(dia);
+    return { per, desde:txtFecha(new Date(d.getFullYear(), d.getMonth(), 1)), hasta:txtFecha(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
+  }
+  if (per === 'rango') {
+    let a = elVj('vj-desde').value, b = elVj('vj-hasta').value;
+    if (!a || !b) { const s = semanaVj(dia); a = a || s.desde; b = b || s.hasta; }
+    if (a > b) [a, b] = [b, a];
+    return { per, desde:a, hasta:b };
+  }
+  return { per, ...semanaVj(dia) };
+}
+function tituloVj(p) {
+  const anio = p.hasta.slice(0, 4);
+  if (p.per === 'mes') return `${MESES[+p.desde.slice(5, 7) - 1]} ${anio}`;
+  return `${p.per === 'semana' ? 'Semana del' : 'Del'} ${fechaCorta(p.desde)}${p.desde.slice(0, 4) !== anio ? ' ' + p.desde.slice(0, 4) : ''} al ${fechaCorta(p.hasta)} ${anio}`;
+}
+function cambiarPeriodoVj() {
+  const rango = elVj('vj-per').value === 'rango';
+  elVj('vj-rango').hidden = !rango; elVj('vj-nav').hidden = rango;
+  if (rango && (!elVj('vj-desde').value || !elVj('vj-hasta').value)) {
+    elVj('vj-desde').value = VJ?.desde || semanaVj(txtFecha(new Date())).desde;
+    elVj('vj-hasta').value = VJ?.hasta || semanaVj(txtFecha(new Date())).hasta;
+  }
+  cargarViajes();
+}
+function moverVj(n) {
+  const inp = elVj('vj-dia'), d = fechaLocal(inp.value || txtFecha(new Date()));
+  if (elVj('vj-per').value === 'mes') d.setMonth(d.getMonth() + n, 1); else d.setDate(d.getDate() + 7 * n);
   inp.value = txtFecha(d);
   cargarViajes();
 }
-function irSemanaVj(dia) { document.getElementById('vj-dia').value = dia; cargarViajes(); }
+function irSemanaVj(dia) {
+  elVj('vj-per').value = 'semana'; elVj('vj-rango').hidden = true; elVj('vj-nav').hidden = false;
+  elVj('vj-dia').value = dia; cargarViajes();
+}
 
 async function cargarViajes(forzar) {
-  const { desde, hasta } = semanaVj(document.getElementById('vj-dia').value || txtFecha(new Date()));
-  const k = desde + '|' + hasta, body = document.getElementById('vj-body');
+  const { desde, hasta } = periodoVj();
+  const k = desde + '|' + hasta, body = elVj('vj-body');
   if (!forzar && VJ_CACHE[k]) { VJ = VJ_CACHE[k]; return renderViajes(); }
   body.innerHTML = '<div class="pn"><div class="empty">Leyendo las notas de viaje…</div></div>';
   bar(true);
   try {
     VJ = VJ_CACHE[k] = await api({ action:'viajes_semana', desde, hasta });
-    renderViajes();
+    if (periodoVj().desde + '|' + periodoVj().hasta === k) renderViajes();     // mientras tanto se pidió otro periodo
   } catch(e) {
     body.innerHTML = `<div class="pn"><div class="empty">No se pudieron leer las notas: ${esc(e.message)}</div></div>`;
   } finally { bar(false); }
 }
 
-// Viajes de la semana ya ordenados, con el filtro de cliente y los avisos de cada nota
+// ── Filtros: cada lista muestra solo lo que hay con los demás filtros puestos ──
+const FILTROS_VJ = [
+  ['cliente',  'Cliente',  v => v.cliente],
+  ['obra',     'Obra',     v => v.obra],
+  ['chofer',   'Chofer',   v => v.chofer],
+  ['placa',    'Placa',    v => v.placa],
+  ['material', 'Material', v => v.material],
+  ['dia',      'Día',      v => diaNombre(v.fecha)],
+  ['m3',       'm³',       v => v.m3 ? String(v.m3) : ''],
+];
+const FV = {};                       // filtro → clave elegida ('' = todos)
+let VISTA_VJ = 'detalle', AGR_VJ = 'semana';
+const claveFil = t => claveVj(t) || '(VACIO)';
+const pasaVj = (v, salvo) => FILTROS_VJ.every(([k, , get]) => k === salvo || !FV[k] || claveFil(get(v)) === FV[k]);
+function filtrarVj(k, valor) { FV[k] = valor; renderViajes(); }
+function quitarFiltrosVj() { FILTROS_VJ.forEach(([k]) => FV[k] = ''); renderViajes(); }
+function vistaVj(v) { VISTA_VJ = v; renderViajes(); }
+function agruparPorVj(a) { AGR_VJ = a; renderViajes(); }
+// Texto de un filtro puesto ("Soto"), tomado de los viajes
+function textoFiltroVj(k, todos) {
+  const get = FILTROS_VJ.find(f => f[0] === k)[2], v = todos.find(x => claveFil(get(x)) === FV[k]);
+  return v ? (String(get(v)).trim() || '(vacío)') : FV[k];
+}
+const filtrosTxtVj = todos => FILTROS_VJ.filter(([k]) => FV[k]).map(([k, n]) => `${n}: ${textoFiltroVj(k, todos)}`).join(' · ');
+function opcionesVj(todos, k) {
+  const get = FILTROS_VJ.find(f => f[0] === k)[2], m = new Map();
+  todos.filter(v => pasaVj(v, k)).forEach(v => {
+    const t = String(get(v) ?? '').trim(), c = claveFil(t);
+    if (!m.has(c)) m.set(c, { c, t:t || '(vacío)', n:0 });
+    m.get(c).n++;
+  });
+  const ops = [...m.values()];
+  if (FV[k] && !m.has(FV[k])) ops.push({ c:FV[k], t:textoFiltroVj(k, todos), n:0 });
+  const orden = k === 'dia' ? o => (DIAS_VJ.map(claveVj).indexOf(o.c) + 6) % 7 : k === 'm3' ? o => Number(o.c) || 0 : null;
+  return ops.sort((a, b) => orden ? orden(a) - orden(b) : a.t.localeCompare(b.t, 'es'));
+}
+
+// ── Precio por m³ de cada viaje (Sheets "Precios viajes"): cliente + material, la obra si se puso, y el vigente a esa fecha ──
+function precioVj(v, precios) {
+  const c = claveVj(v.cliente), m = claveVj(v.material), o = claveVj(v.obra);
+  let mejor = null;
+  (precios || []).forEach(p => {
+    if (claveVj(p.cliente) !== c || claveVj(p.material) !== m) return;
+    if (p.obra && claveVj(p.obra) !== o) return;
+    if (p.desde && p.desde > v.fecha) return;
+    const r = [p.obra ? 1 : 0, p.desde || ''];
+    if (!mejor || r[0] > mejor.r[0] || (r[0] === mejor.r[0] && r[1] >= mejor.r[1])) mejor = { p, r };
+  });
+  return mejor ? mejor.p.precio : null;
+}
+
+// Viajes del periodo ya ordenados, con avisos, precio e importe, y los filtrados
 function datosViajes() {
   const cat = {}; (VJ.placas||[]).forEach(p => cat[p.placa] = p);
-  const cli = document.getElementById('vj-cli').value;
   const todos = (VJ.viajes||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || claveVj(a.cliente).localeCompare(claveVj(b.cliente))
     || a.obra.localeCompare(b.obra) || a.placa.localeCompare(b.placa) || (Number(a.folio)||0) - (Number(b.folio)||0) || a.fila - b.fila);
   const rep = {};
   todos.forEach(v => { if (v.folio) { const k = claveVj(v.obra) + '|' + v.folio; rep[k] = (rep[k]||0) + 1; } });
+  const hayPrecios = Array.isArray(VJ.precios);
   todos.forEach(v => {
     v.avisos = [];
     if (v.duplicado || (v.folio && rep[claveVj(v.obra) + '|' + v.folio] > 1)) v.avisos.push('Folio repetido');
     if (!cat[v.placa]) v.avisos.push('Placa no está en el catálogo');
     if (!v.cliente) v.avisos.push('Sin cliente (la obra no está en el catálogo)');
     if (!v.m3) v.avisos.push('Sin m³');
+    v.precio = hayPrecios ? precioVj(v, VJ.precios) : null;
+    v.importe = v.precio == null ? null : v.precio * v.m3;
   });
-  return { cat, todos, lista: cli ? todos.filter(v => claveVj(v.cliente) === cli) : todos };
+  return { cat, todos, lista:todos.filter(v => pasaVj(v)), hayPrecios };
 }
 
-// Suma viajes y m³ agrupando por la clave que se le dé
+// Suma viajes, m³ e importe agrupando por la clave que se le dé
 function agruparVj(lista, clave) {
   const g = new Map();
   lista.forEach(v => {
     const k = clave(v);
-    if (!g.has(k)) g.set(k, { k, viajes:0, m3:0, items:[] });
+    if (!g.has(k)) g.set(k, { k, viajes:0, m3:0, importe:0, sinPrecio:0, items:[] });
     const x = g.get(k); x.viajes++; x.m3 += v.m3; x.items.push(v);
+    if (v.importe == null) x.sinPrecio++; else x.importe += v.importe;
   });
   return [...g.values()];
 }
@@ -355,123 +461,200 @@ function agruparVj(lista, clave) {
 const materialesVj = items => agruparVj(items, v => claveVj(v.material) || 'SIN MATERIAL')
   .sort((a,b) => b.viajes - a.viajes).map(x => `${x.items[0].material || 'Sin material'} ${x.viajes}`).join(' · ');
 const fechaCorta = s => `${+s.slice(8,10)} ${MESES[+s.slice(5,7)-1].toLowerCase().slice(0,3)}`;
+// Importe de un grupo: "$12,345" o "$12,345 + 3 sin precio"
+const importeVj = x => x.sinPrecio === x.viajes ? '<span class="sinp">sin precio</span>'
+  : $$(x.importe) + (x.sinPrecio ? ` <span class="sinp" title="Viajes sin precio en el Sheets de precios">+ ${x.sinPrecio} sin precio</span>` : '');
+
+// Acumulado: un renglón por semana, mes o día ("3 al 7 nov" = del primer al último día con viajes)
+function periodosVj(lista, agr) {
+  const clave = agr === 'mes' ? v => v.fecha.slice(0, 7) : agr === 'dia' ? v => v.fecha : v => semanaVj(v.fecha).desde;
+  return agruparVj(lista, clave).sort((a, b) => a.k.localeCompare(b.k)).map(x => {
+    const fs = x.items.map(v => v.fecha).sort(), a = fs[0], b = fs[fs.length - 1];
+    x.nombre = agr === 'mes' ? `${MESES[+x.k.slice(5, 7) - 1]} ${x.k.slice(0, 4)}`
+      : agr === 'dia' ? `${diaNombre(x.k).slice(0, 3)} ${fechaCorta(x.k)}`
+      : a === b ? `${diaNombre(a).slice(0, 3)} ${fechaCorta(a)}`
+      : a.slice(5, 7) === b.slice(5, 7) ? `${+a.slice(8, 10)} al ${fechaCorta(b)}` : `${fechaCorta(a)} al ${fechaCorta(b)}`;
+    return x;
+  });
+}
 
 function renderViajes() {
   if (!VJ) return;
-  const body = document.getElementById('vj-body');
-  // Clientes de la semana para el filtro (se conserva el elegido)
-  const sel = document.getElementById('vj-cli'), antes = sel.value;
-  const clientes = agruparVj(VJ.viajes||[], v => claveVj(v.cliente)).filter(x => x.k).sort((a,b) => a.k.localeCompare(b.k));
-  sel.innerHTML = '<option value="">Todos los clientes</option>' + clientes.map(x => `<option value="${esc(x.k)}">${esc(x.items[0].cliente)}</option>`).join('');
-  sel.value = clientes.some(x => x.k === antes) ? antes : '';
-
-  const { cat, lista } = datosViajes();
-  const titulo = `Semana del ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}`;
-  if (!lista.length) {
+  const body = elVj('vj-body'), p = { per:elVj('vj-per').value, desde:VJ.desde, hasta:VJ.hasta }, titulo = tituloVj(p);
+  if (!(VJ.viajes || []).length) {
     const ult = VJ.ultima && VJ.ultima < VJ.desde
       ? `<br>La última nota registrada es del <b>${VJ.ultima}</b>. <button class="ftb" onclick="irSemanaVj('${VJ.ultima}')">Ir a esa semana</button>` : '';
-    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin notas de viaje esta semana${ult}</div></div>`;
+    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin notas de viaje en este periodo${ult}</div></div>`;
     return;
   }
-  const m3 = lista.reduce((s,v) => s + v.m3, 0);
+  const { cat, todos, lista, hayPrecios } = datosViajes();
+  const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
+  const puestos = FILTROS_VJ.filter(([k]) => FV[k]);
+
+  // Barra de filtros
+  const filtros = `<div class="pn">
+    <div class="vj-fil">${FILTROS_VJ.map(([k, n]) => `<label>${n}<select class="${FV[k] ? 'on' : ''}" onchange="filtrarVj('${k}', this.value)">
+        <option value="">Todos</option>${opcionesVj(todos, k).map(o => `<option value="${esc(o.c)}" ${FV[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}
+      <div class="vista" style="margin-left:auto">
+        <button class="ftb ${VISTA_VJ === 'detalle' ? 'active' : ''}" onclick="vistaVj('detalle')">Detalle</button>
+        <button class="ftb ${VISTA_VJ === 'acumulado' ? 'active' : ''}" onclick="vistaVj('acumulado')">Acumulado</button></div>
+    </div>
+    ${puestos.length ? `<div class="vj-chips">${puestos.map(([k, n]) => `<button class="chip" onclick="filtrarVj('${k}', '')" title="Quitar este filtro">${n}: ${esc(textoFiltroVj(k, todos))} ✕</button>`).join('')}
+      <button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button>
+      <span style="color:var(--muted)">${lista.length} de ${todos.length} viajes</span></div>` : ''}
+  </div>`;
+
+  // Precios: si no se pudo leer el Sheets, o hay viajes sin precio
+  const sinPrecio = hayPrecios ? agruparVj(lista.filter(v => v.precio == null), v => claveVj(v.cliente) + '|' + claveVj(v.material) + '|' + claveVj(v.obra)) : [];
+  const avisoPrecios = VJ.errPrecios ? `<div class="banner-dr">No se pudo leer el Sheets de precios: ${esc(VJ.errPrecios)}</div>`
+    : sinPrecio.length ? `<details class="pn"><summary class="pnh"><span class="sinp">${nViajes(sinPrecio.reduce((s, x) => s + x.viajes, 0))} sin precio
+        (${sinPrecio.length} combinación${sinPrecio.length !== 1 ? 'es' : ''} de cliente y material que no está en el Sheets de precios)</span><span class="fl"></span></summary>
+      ${tabla('<th>Cliente</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+        sinPrecio.sort((a, b) => b.viajes - a.viajes).map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra)}</td>
+          <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td></tr>`).join(''))}
+      <div class="nota-pn">En el Sheets de precios: CLIENTE y MATERIAL escritos igual que en las notas (no importan mayúsculas ni acentos). OBRA vacía = todas las obras del cliente.</div></details>` : '';
+
+  if (!lista.length) {
+    body.innerHTML = filtros + `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Ningún viaje con estos filtros
+      <br><button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button></div></div>`;
+    return;
+  }
+  const tot = agruparVj(lista, () => 'x')[0];
   const sinRevisar = lista.filter(v => !v.revisado).length;
   const sinFisica = lista.filter(v => !v.entregado).length;
   const conAviso = lista.filter(v => v.avisos.length);
   const camiones = new Set(lista.map(v => v.placa)).size;
-
   const porDia = agruparVj(lista, v => v.fecha);
   const porCli = agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).sort((a,b) => b.m3 - a.m3);
   const porCam = agruparVj(lista, v => v.placa).sort((a,b) => b.viajes - a.viajes);
-  const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
-  const tot = `<td class="rt"><b>${lista.length}</b></td><td class="rt"><b>${f0(m3)}</b></td>`;
+  const conImp = hayPrecios;      // columnas de importe solo si se leyó el Sheets de precios
+  const thImp = conImp ? '<th class="rt">Importe</th>' : '', tdImp = x => conImp ? `<td class="rt">${importeVj(x)}</td>` : '';
+  const pie = n => `<td colspan="${n}"><b>Total</b></td><td class="rt"><b>${tot.viajes}</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td class="rt"><b>${importeVj(tot)}</b></td>` : ''}`;
 
-  body.innerHTML = `
-    <div class="mg">
+  const tarjetas = `<div class="mg">
       <div class="mc m"><div class="ml">Viajes</div><div class="mv">${lista.length}</div><div class="ms">${titulo}</div></div>
-      <div class="mc"><div class="ml">m³ acarreados</div><div class="mv">${f0(m3)}</div><div class="ms">${porDia.length} día${porDia.length!==1?'s':''} con viajes</div></div>
+      <div class="mc"><div class="ml">m³ acarreados</div><div class="mv">${f0(tot.m3)}</div><div class="ms">${porDia.length} día${porDia.length!==1?'s':''} con viajes</div></div>
+      ${conImp ? `<div class="mc"><div class="ml">Importe</div><div class="mv">${tot.sinPrecio === tot.viajes ? '—' : $$(tot.importe)}</div>
+        <div class="ms">${tot.sinPrecio ? `<span class="sinp">${tot.sinPrecio} viaje${tot.sinPrecio !== 1 ? 's' : ''} sin precio</span>` : 'Todos con precio'}</div></div>` : ''}
       <div class="mc"><div class="ml">Camiones</div><div class="mv">${camiones}</div><div class="ms">${porCli.length} obra${porCli.length!==1?'s':''}</div></div>
       <div class="mc ${conAviso.length || sinRevisar ? 'r' : 'g'}"><div class="ml">Por revisar</div><div class="mv">${conAviso.length}</div>
         <div class="ms">${sinRevisar} sin revisar · ${sinFisica} sin nota física</div></div>
-    </div>
+    </div>`;
+
+  const panelCli = `<div class="pn"><div class="pnh">Por cliente y obra</div>
+      ${tabla(`<th>A nombre de</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
+        porCli.map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra) || '—'}</td>
+          <td style="color:var(--muted)">${esc(materialesVj(x.items))}</td><td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+        pie(3))}
+    </div>`;
+
+  if (VISTA_VJ === 'acumulado') {
+    const mats = agruparVj(lista, v => claveVj(v.material) || 'SIN MATERIAL').sort((a, b) => b.m3 - a.m3);
+    const per = periodosVj(lista, AGR_VJ);
+    const celdasMat = items => mats.map(m => { const s = items.filter(v => (claveVj(v.material) || 'SIN MATERIAL') === m.k).reduce((a, v) => a + v.m3, 0); return `<td class="rt">${s ? f0(s) : '—'}</td>`; }).join('');
+    body.innerHTML = filtros + avisoPrecios + tarjetas + `
+      <div class="pn"><div class="pnh"><span>Acumulado ${puestos.length ? '· ' + esc(filtrosTxtVj(todos)) : ''}</span>
+          <span class="vista">${[['semana', 'Por semana'], ['mes', 'Por mes'], ['dia', 'Por día']].map(([a, t]) =>
+            `<button class="ftb ${AGR_VJ === a ? 'active' : ''}" onclick="agruparPorVj('${a}')">${t}</button>`).join('')}</span></div>
+        ${tabla(`<th class="rt">#</th><th>${AGR_VJ === 'mes' ? 'Mes' : AGR_VJ === 'dia' ? 'Día' : 'Semana'}</th><th class="rt">Viajes</th>
+            ${mats.map(m => `<th class="rt">${esc(m.items[0].material || 'Sin material')} m³</th>`).join('')}<th class="rt">Total m³</th>${thImp}`,
+          per.map((x, i) => `<tr><td class="rt" style="color:var(--muted)">${i + 1}</td><td>${esc(x.nombre)}</td><td class="rt">${x.viajes}</td>
+            ${celdasMat(x.items)}<td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+          `<td colspan="2"><b>Total</b></td><td class="rt"><b>${tot.viajes}</b></td>${mats.map(m => `<td class="rt"><b>${f0(m.m3)}</b></td>`).join('')}
+            <td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td class="rt"><b>${importeVj(tot)}</b></td>` : ''}`)}
+        <div class="nota-pn">Para ver el acumulado de un cliente desde que empezó, escoge el cliente arriba y en el periodo "Desde – hasta" pon la fecha de inicio de la obra.</div>
+      </div>
+      ${panelCli}`;
+    return;
+  }
+
+  body.innerHTML = filtros + avisoPrecios + tarjetas + `
     <div class="two">
       <div class="pn"><div class="pnh">Por día</div>
-        ${tabla('<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+        ${tabla(`<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
           porDia.map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(v => v.cliente || '—'))].join(', '))}</td>
-            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-          `<td colspan="3"><b>Total</b></td>${tot}`)}
+            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+          pie(3))}
       </div>
-      <div class="pn"><div class="pnh">Por cliente y obra</div>
-        ${tabla('<th>A nombre de</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>',
-          porCli.map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra) || '—'}</td>
-            <td style="color:var(--muted)">${esc(materialesVj(x.items))}</td><td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-          `<td colspan="3"><b>Total</b></td>${tot}`)}
-      </div>
+      ${panelCli}
     </div>
     <div class="pn"><div class="pnh">Por camión</div>
-      ${tabla('<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>',
+      ${tabla(`<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
         porCam.map(x => `<tr><td class="amb">${esc(x.k)}</td><td>${cat[x.k] ? esc(cat[x.k].descripcion) : '<span class="neg">No está en el catálogo</span>'}</td>
           <td>${esc([...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', ')) || '—'}</td>
-          <td style="color:var(--muted)">${[...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ')}</td>
-          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td></tr>`).join(''),
-        `<td colspan="4"><b>Total</b></td>${tot}`)}
+          <td style="color:var(--muted)">${p.per === 'semana' ? [...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ') : new Set(x.items.map(v => v.fecha)).size + ' días'}</td>
+          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+        pie(4))}
     </div>
     ${conAviso.length ? `<div class="pn"><div class="pnh">Notas con aviso (${conAviso.length})</div>
       ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th>',
         conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
           <td class="neg">${v.avisos.join(' · ')}</td></tr>`).join(''))}</div>` : ''}
-    <div class="pn"><div class="pnh">Viajes de la semana <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
-      ${tabla('<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th><th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>',
+    <div class="pn"><div class="pnh">Viajes <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
+      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">$/m³</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>`,
         lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
           <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
+          ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
           <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
           <td><span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}</td>
           <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td></tr>`).join(''),
-        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(m3)}</b></td><td colspan="4"></td>`)}
+        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="4"></td>`)}
     </div>`;
 }
 
-// Mismo formato que la hoja de FLETES DE LA SEMANA, más una hoja con los totales
+// Mismo formato que la hoja de FLETES DE LA SEMANA (con lo filtrado), más los totales y el acumulado
 async function excelViajes(btn) {
   if (!VJ) return;
-  const { lista } = datosViajes();
-  if (!lista.length) return alert('No hay viajes en esta semana');
+  const { todos, lista, hayPrecios } = datosViajes();
+  if (!lista.length) return alert('No hay viajes con estos filtros');
   btn.disabled = true;
   try {
     if (!window.XLSX) await cargarScript(XLSX_URL);
-    const nombre = `${ddmmyy(VJ.desde)}-${ddmmyy(VJ.hasta)}`;
+    const nombre = `${ddmmyy(VJ.desde)}-${ddmmyy(VJ.hasta)}`, fil = filtrosTxtVj(todos);
+    const imp = v => hayPrecios ? [v.precio ?? '', v.importe ?? ''] : [];
     const filas = lista.map((v, i) => [i+1, diaVj(v.fecha), celdaFecha(v.fecha), v.folio, v.material.toUpperCase(), v.obra.toUpperCase(),
-      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase()]);
-    const hoja = XLSX.utils.aoa_to_sheet([['', 'FLETES SEMANALES'], [],
-      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER'], ...filas,
-      [], ['', '', '', '', '', '', 'TOTAL', lista.reduce((s,v) => s + v.m3, 0)]]);
-    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18].map(wch => ({ wch }));
-    const tot = [['POR DÍA'], ['DIA','FECHA','VIAJES','M3'],
-      ...agruparVj(lista, v => v.fecha).map(x => [diaVj(x.k), celdaFecha(x.k), x.viajes, x.m3]), [],
-      ['POR CLIENTE Y OBRA'], ['A NOMBRE DE','OBRA','MATERIAL','VIAJES','M3'],
-      ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).map(x => [x.items[0].cliente.toUpperCase(), x.items[0].obra.toUpperCase(), materialesVj(x.items), x.viajes, x.m3]), [],
-      ['POR CAMIÓN'], ['PLACA','CHOFER','VIAJES','M3'],
-      ...agruparVj(lista, v => v.placa).map(x => [x.k, [...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', '), x.viajes, x.m3])];
+      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase(), ...imp(v)]);
+    const totM3 = lista.reduce((s,v) => s + v.m3, 0), totImp = lista.reduce((s, v) => s + (v.importe || 0), 0);
+    const hoja = XLSX.utils.aoa_to_sheet([['', 'FLETES ' + tituloVj({ per:elVj('vj-per').value, desde:VJ.desde, hasta:VJ.hasta }).toUpperCase()], fil ? ['', fil] : [],
+      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER', ...(hayPrecios ? ['PRECIO M3','IMPORTE'] : [])], ...filas,
+      [], ['', '', '', '', '', '', 'TOTAL', totM3, '', '', ...(hayPrecios ? ['', totImp] : [])]]);
+    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18,10,12].map(wch => ({ wch }));
+    const im = x => hayPrecios ? [x.importe] : [];
+    const tot = [['POR DÍA'], ['DIA','FECHA','VIAJES','M3', ...(hayPrecios ? ['IMPORTE'] : [])],
+      ...agruparVj(lista, v => v.fecha).map(x => [diaVj(x.k), celdaFecha(x.k), x.viajes, x.m3, ...im(x)]), [],
+      ['POR CLIENTE Y OBRA'], ['A NOMBRE DE','OBRA','MATERIAL','VIAJES','M3', ...(hayPrecios ? ['IMPORTE'] : [])],
+      ...agruparVj(lista, v => claveVj(v.cliente) + '|' + claveVj(v.obra)).map(x => [x.items[0].cliente.toUpperCase(), x.items[0].obra.toUpperCase(), materialesVj(x.items), x.viajes, x.m3, ...im(x)]), [],
+      ['POR CAMIÓN'], ['PLACA','CHOFER','VIAJES','M3', ...(hayPrecios ? ['IMPORTE'] : [])],
+      ...agruparVj(lista, v => v.placa).map(x => [x.k, [...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', '), x.viajes, x.m3, ...im(x)])];
     const hoja2 = XLSX.utils.aoa_to_sheet(tot);
-    hoja2['!cols'] = [22,16,30,8,8].map(wch => ({ wch }));
+    hoja2['!cols'] = [22,16,30,8,8,12].map(wch => ({ wch }));
+    // Acumulado como el RESUMEN de cada cliente: un renglón por semana (o mes / día, lo que esté escogido)
+    const mats = agruparVj(lista, v => claveVj(v.material) || 'SIN MATERIAL').sort((a, b) => b.m3 - a.m3);
+    const per = periodosVj(lista, AGR_VJ);
+    const hoja3 = XLSX.utils.aoa_to_sheet([['ACUMULADO' + (fil ? ' · ' + fil.toUpperCase() : '')], [],
+      ['N°', AGR_VJ === 'mes' ? 'MES' : AGR_VJ === 'dia' ? 'DÍA' : 'SEMANA', 'VIAJES', ...mats.map(m => (m.items[0].material || 'SIN MATERIAL').toUpperCase() + ' M3'), 'TOTAL M3', ...(hayPrecios ? ['MONTO'] : [])],
+      ...per.map((x, i) => [i + 1, x.nombre.toUpperCase(), x.viajes, ...mats.map(m => x.items.filter(v => (claveVj(v.material) || 'SIN MATERIAL') === m.k).reduce((a, v) => a + v.m3, 0)), x.m3, ...im(x)]),
+      ['', 'TOTAL', lista.length, ...mats.map(m => m.m3), totM3, ...(hayPrecios ? [totImp] : [])]]);
+    hoja3['!cols'] = [5, 22, 8, ...mats.map(() => 14), 10, 14].map(wch => ({ wch }));
     const libro = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(libro, hoja, nombre);
     XLSX.utils.book_append_sheet(libro, hoja2, 'TOTALES');
-    const cli = document.getElementById('vj-cli');
-    XLSX.writeFile(libro, `FLETES ${nombre}${cli.value ? ' ' + cli.selectedOptions[0].text : ''}.xlsx`);
+    XLSX.utils.book_append_sheet(libro, hoja3, 'ACUMULADO');
+    const cliTxt = FV.cliente ? ' ' + textoFiltroVj('cliente', todos) : '';
+    XLSX.writeFile(libro, `FLETES ${nombre}${cliTxt}.xlsx`.replace(/[\\/:*?"<>|]/g, ''));
   } catch(e) { alert('No se pudo generar el Excel: ' + e.message); }
   finally { btn.disabled = false; }
 }
 
 function whatsViajes() {
   if (!VJ) return;
-  const { lista } = datosViajes();
-  if (!lista.length) return alert('No hay viajes en esta semana');
-  const m3 = lista.reduce((s,v) => s + v.m3, 0);
-  const cli = document.getElementById('vj-cli');
+  const { todos, lista } = datosViajes();
+  if (!lista.length) return alert('No hay viajes con estos filtros');
+  const m3 = lista.reduce((s,v) => s + v.m3, 0), fil = filtrosTxtVj(todos);
   const avisos = lista.filter(v => v.avisos.length).length;
   const texto = [
-    `*Fletes de la semana — ${fechaCorta(VJ.desde)} al ${fechaCorta(VJ.hasta)} ${VJ.hasta.slice(0,4)}*${cli.value ? `\nCliente: ${cli.selectedOptions[0].text}` : ''}`,
+    `*Fletes — ${tituloVj({ per:elVj('vj-per').value, desde:VJ.desde, hasta:VJ.hasta })}*${fil ? `\n${fil}` : ''}`,
     `Total: ${nViajes(lista.length)} · ${f0(m3)} m³`,
     '', '*Por día*',
     ...agruparVj(lista, v => v.fecha).map(x => `• ${diaVj(x.k).charAt(0) + diaVj(x.k).slice(1).toLowerCase()} ${+x.k.slice(8,10)}: ${nViajes(x.viajes)} · ${f0(x.m3)} m³`),
@@ -859,6 +1042,24 @@ const Diario = (() => {
   const cambioCamion = x => x.placa !== (x.cam?.placa || '') || (x.placa && x.cam?.de !== 'dia');
   const cambioCm = x => { if (!x.placa) return false; const s = cmDe(x.placa); return String(x.cm1 ?? '') !== String(s?.cm1 ?? '') || String(x.cm2 ?? '') !== String(s?.cm2 ?? ''); };
   const hayCambios = () => D?.filas?.some(x => (x.placa !== (x.cam?.placa || '')) || cambioCm(x));
+  // Camiones que trabajaron y no tienen notas ese día: se movieron (ProTrack) o, sin ProTrack, traían chofer en un día con notas.
+  // A veces es un viaje sin nota (p. ej. llevar material a la planta): se anota como "viaje explicado".
+  const KM_MOVIO = 5;
+  function sinNotas() {
+    const f = D.fecha, hayNotas = D.notasDia.length > 0, out = new Map();
+    const conNotas = (placa, chofer) => D.notasDia.some(v => v.placa === placa || (chofer && claveVj(v.chofer) === claveVj(chofer)));
+    const choferDe = placa => D.filas.find(x => x.placa === placa)?.chofer || '';
+    Object.entries(D.kmPlaca).forEach(([k, km]) => {
+      const [placa, fecha] = k.split('|');
+      if (fecha === f && km >= KM_MOVIO && !conNotas(placa, choferDe(placa))) out.set(placa, { placa, chofer:choferDe(placa), km, motivo:`recorrió ${f0(Math.round(km))} km` });
+    });
+    if (hayNotas) D.filas.filter(x => x.placa && D.kmPlaca[x.placa + '|' + f] == null && !out.has(x.placa) && !conNotas(x.placa, x.chofer))
+      .forEach(x => out.set(x.placa, { placa:x.placa, chofer:x.chofer, km:null, motivo:'traía chofer (sin km de ProTrack)' }));
+    const ex = {}; (D.explicados || []).forEach(e => ex[e.placa] = e);
+    // También los explicados que ya no salen en la lista (p. ej. después llegó la nota), para poder quitarlos
+    (D.explicados || []).forEach(e => { if (!out.has(e.placa)) out.set(e.placa, { placa:e.placa, chofer:e.chofer, km:null, motivo:'—' }); });
+    return [...out.values()].map(x => ({ ...x, expl:ex[x.placa] || null }));
+  }
   const litrosTxt = x => {
     if (!x.placa || vacioCm(x.cm1)) return '—';
     const L = litrosCamion(x.placa, x.cm1, x.cm2, D.tanques);
@@ -904,6 +1105,7 @@ const Diario = (() => {
       : `<span>Cuando tu tío conteste en el grupo que está bien:</span><button class="ftb p" onclick="Diario.confirmar(true)">Confirmado</button>`;
     const sinMedidas = conCamion.filter(x => !(D.tanques?.[x.placa]?.diametro && D.tanques?.[x.placa]?.largo)).length;
     const dispTodos = Object.keys(D.dispositivos || {}).sort();
+    const sn = sinNotas();
 
     body.innerHTML = `${saltado === masDias(f, 1) ? `<div class="banner-dr">El domingo ${fechaCorta(saltado)} no hubo notas, diésel ni recorridos: se muestra el sábado.
         <button class="ftb" onclick="document.getElementById('dr-dia').value='${saltado}';Diario.cargar()">Ver el domingo</button></div>` : ''}
@@ -955,6 +1157,17 @@ const Diario = (() => {
         ${tabla('<th>Fecha</th><th>Folio</th><th>Chofer</th><th>Obra</th><th>Foto</th><th>Llegó en papel</th>',
           D.pendPapel.map(v => `<tr><td>${fechaCorta(v.fecha)}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td>
             <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))}</div>` : ''}
+
+      ${sn.length ? `<div class="pn"><div class="pnh"><span>Camiones sin notas (${sn.filter(x => !x.expl).length} sin explicar)</span></div>
+        ${tabla('<th>Camión</th><th>Chofer</th><th>Por qué sale</th><th>Viaje explicado</th>',
+          sn.map(x => `<tr><td>${esc(placaTxt(x.placa))}</td><td>${esc(x.chofer) || '—'}</td><td>${esc(x.motivo)}</td>
+            <td>${x.expl ? `<span class="pos">✓ ${esc(x.expl.nota)}</span> <span style="color:var(--muted);font-size:11px">(${esc(x.expl.guardo)})</span>
+                <button class="ftb" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this, true)">Quitar</button>`
+              : `<span class="flt"><input class="ci" list="dr-expl" placeholder="¿Por qué? p. ej. a la planta" style="width:200px">
+                <button class="ftb p" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this)">Viaje explicado</button></span>`}</td></tr>`).join(''))}
+        <datalist id="dr-expl"><option value="Llevó material a la planta de asfalto"><option value="Fue al taller"><option value="Fue a cargar diésel"><option value="Movimiento dentro de la obra"></datalist>
+        <div class="nota-pn">Sale aquí un camión que se movió ${KM_MOVIO} km o más según ProTrack, o que traía chofer (si no tiene ProTrack), y no tiene ninguna nota ese día.
+          Si fue un viaje sin nota (p. ej. llevar material a la planta), escribe por qué y toca "Viaje explicado".</div></div>` : ''}
 
       <div class="pn"><div class="pnh"><span>Diésel del día</span></div>
         ${D.errDiesel ? `<div class="empty">No se pudo leer el diésel: ${esc(D.errDiesel)}</div>`
@@ -1056,6 +1269,18 @@ const Diario = (() => {
     } catch(e) { chk.checked = !chk.checked; chk.disabled = false; alert('No se pudo guardar la casilla: ' + e.message); }
   }
 
+  // "Viaje explicado": por qué un camión trabajó sin notas (quitar = se guarda vacío)
+  async function explicar(btn, quitar) {
+    const placa = btn.dataset.p, chofer = btn.dataset.c, inp = btn.parentElement.querySelector('input');
+    const nota = quitar ? '' : (inp?.value || '').trim();
+    if (!quitar && !nota) { inp?.focus(); return alert('Escribe por qué trabajó sin notas (p. ej. llevó material a la planta).'); }
+    if (quitar && !(await preguntar(`¿Quitar la explicación de ${placa}?`, 'Sí, quitar'))) return;
+    btn.disabled = true; bar(true);
+    try { D.explicados = (await api({ action:'viaje_explicar', fecha:D.fecha, placa, chofer, nota })).explicados; pintar(); }
+    catch(e) { btn.disabled = false; alert('No se guardó: ' + e.message); }
+    finally { bar(false); }
+  }
+
   async function confirmar(valor) {
     if (!valor && !(await preguntar('¿Quitar el "Confirmado" de este día?', 'Sí, quitar'))) return;
     if (valor && hayCambios()) return alert('Hay camiones o cm sin guardar. Toca "Guardar" primero.');
@@ -1108,6 +1333,12 @@ const Diario = (() => {
       const p = D.dispositivos[r.dispositivo], ch = p && D.filas.find(x => x.placa === p)?.chofer;
       return `${ch ? nombreCorto(ch) + ' (' + p + ')' : p || r.dispositivo} ${r.excesos}`;
     }).join(' · '));
+    // Camiones que trabajaron sin notas: los explicados como observación; los demás, para que digan qué fue
+    const sn = sinNotas().filter(x => x.motivo !== '—' || x.expl), quien = x => x.chofer ? `${nombreCorto(x.chofer)} (${x.placa})` : x.placa;
+    if (sn.length) {
+      L.push('', '*Sin notas*');
+      sn.forEach(x => L.push(x.expl ? `• ${quien(x)}: ${x.expl.nota}` : `• ❓ ${quien(x)} ${x.motivo} y no hay notas, ¿qué fue?`));
+    }
     if (D.confirmado) L.push('', '✅ Confirmado');
     return L.join('\n');
   }
@@ -1125,7 +1356,7 @@ const Diario = (() => {
     }
   }
 
-  return { cargar, ir, mover, guardar, subirKm, asignar, papel, confirmar, copiar, olvidar };
+  return { cargar, ir, mover, guardar, subirKm, asignar, papel, explicar, confirmar, copiar, olvidar };
 })();
 const DIAS_PAPEL_VER = 14;     // igual que DIAS_PAPEL de Diario.gs
 
