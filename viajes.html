@@ -1042,13 +1042,25 @@ function kmPorPlaca(km, dispositivos) {
   return o;
 }
 // "Informe sobre kilometraje" de ProTrack: un bloque por dispositivo ("Dispositivo:NOMBRE") con un renglón por día
+// También el "Resumen de movimiento" (.xls): "Desde AAAA-MM-DD Hasta AAAA-MM-DD" y un renglón por dispositivo
+// (# · Nombre del dispositivo · Kilometraje · Exceso de velocidad · Estacionamiento) con el total del periodo;
+// solo sirve si es de un día, porque no trae cada día por separado.
 function leerInformeKm(wb) {
   const out = [];
   wb.SheetNames.forEach(n => {
-    let disp = '';
+    let disp = '', rango = null, resumen = false;
     XLSX.utils.sheet_to_json(wb.Sheets[n], { header:1, raw:false, defval:'' }).forEach(r => {
       const a = String(r[0] ?? '').trim(), m = a.match(/^Dispositivo\s*:\s*(.+)$/i);
-      if (m) { disp = m[1].trim(); return; }
+      const dh = a.match(/Desde\s+(\d{4}-\d{2}-\d{2})\s+Hasta\s+(\d{4}-\d{2}-\d{2})/i);
+      if (dh) { rango = { desde:dh[1], hasta:dh[2] }; return; }
+      if (/nombre del dispositivo/i.test(String(r[1] ?? ''))) { resumen = !!rango; return; }
+      if (resumen && /^\d+$/.test(a) && String(r[1] ?? '').trim()) {
+        if (rango.desde !== rango.hasta) throw new Error(`ese "Resumen de movimiento" es de varios días (del ${fechaCorta(rango.desde)} al ${fechaCorta(rango.hasta)}) y no trae cada día por separado. `
+          + 'Descárgalo de un solo día, o usa el "Informe sobre kilometraje", que sí viene por día.');
+        out.push({ fecha:rango.desde, dispositivo:String(r[1]).trim(), km:parseFloat(r[2]) || 0, excesos:parseInt(r[3]) || 0, paradas:parseInt(r[4]) || 0 });
+        return;
+      }
+      if (m) { disp = m[1].trim(); resumen = false; return; }
       const fecha = String(r[1] ?? '').trim().slice(0, 10);
       if (disp && /^\d+$/.test(a) && /^\d{4}-\d{2}-\d{2}$/.test(fecha))
         out.push({ fecha, dispositivo:disp, km:parseFloat(r[2]) || 0, excesos:parseInt(r[3]) || 0, paradas:parseInt(r[4]) || 0 });
@@ -1189,7 +1201,7 @@ const Diario = (() => {
       ['km', 'Km de ProTrack', !!D.km?.length && !kmSinCamion.length,
         !D.km?.length ? 'Falta subir el informe' : kmSinCamion.length ? `${kmSinCamion.length} dispositivo${kmSinCamion.length !== 1 ? 's' : ''} sin camión escogido`
           : `Subido · ${movidos.length} se movieron · ${f0(Math.round(kmTot))} km`,
-        'Descarga de ProTrack el "Informe sobre kilometraje" y súbelo aquí. Puede traer varios días; si lo vuelves a subir, se reemplaza.',
+        'Descarga de ProTrack el "Informe sobre kilometraje" (puede traer varios días) o el "Resumen de movimiento" de un solo día, y súbelo aquí. Si lo vuelves a subir, se reemplaza.',
         `<div class="bar-paso"><label class="ftb p">Subir informe de kilometraje<input type="file" accept=".xlsx,.xls" multiple hidden onchange="Diario.subirKm(this.files);this.value=''"></label>
           <span>${D.km?.length ? `Ya está el del ${fechaCorta(f)}: ${movidos.length} dispositivo${movidos.length !== 1 ? 's' : ''} se movieron.` : `Todavía no está el del ${fechaCorta(f)}.`}</span></div>
          ${kmSinCamion.length ? `<div class="nota-pn neg" style="padding-top:0">Se movieron y no se sabe qué camión son: ${esc(kmSinCamion.map(r => r.dispositivo).join(', '))}.
@@ -1369,7 +1381,7 @@ const Diario = (() => {
       if (!window.XLSX) await cargarScript(XLSX_URL);
       const filas = [];
       for (const file of files) filas.push(...leerInformeKm(XLSX.read(await file.arrayBuffer())));
-      if (!filas.length) return alert('No encontré kilometraje en ese archivo. Debe ser el "Informe sobre kilometraje" que descargas de ProTrack.');
+      if (!filas.length) return alert('No encontré kilometraje en ese archivo. Debe ser el "Informe sobre kilometraje" o el "Resumen de movimiento" (de un día) que descargas de ProTrack.');
       const fechas = [...new Set(filas.map(x => x.fecha))].sort(), disp = new Set(filas.map(x => x.dispositivo)).size;
       const rango = fechas.length === 1 ? 'del ' + fechaCorta(fechas[0]) : `del ${fechaCorta(fechas[0])} al ${fechaCorta(fechas[fechas.length - 1])}`;
       if (!(await preguntar(`Informe de kilometraje ${rango}: ${disp} dispositivos, ${f0(filas.reduce((s, x) => s + x.km, 0))} km en total.\n\n¿Guardarlo?`, 'Sí, guardar'))) return;
