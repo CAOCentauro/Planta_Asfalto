@@ -91,6 +91,7 @@ select:focus,input:focus{border-color:var(--amb)}
 .nota-pn{font-size:12px;color:var(--muted);padding:10px 16px;line-height:1.6;white-space:normal}
 #dr-resumen{width:100%;min-height:260px;background:var(--s2);border:1px solid var(--bd);color:var(--text);font-family:inherit;font-size:13px;line-height:1.5;padding:12px;resize:vertical}
 .conf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.banner-dr{font-size:12px;padding:10px 14px;border-left:3px solid var(--amb);background:rgba(247,147,30,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 summary.pnh{cursor:pointer;list-style:none}
 summary.pnh::-webkit-details-marker{display:none}
 .fl{white-space:nowrap}
@@ -810,18 +811,28 @@ const Diario = (() => {
   const $d = id => document.getElementById(id);
   const dia = () => $d('dr-dia').value || txtFecha(new Date());
   const olvidar = () => Object.keys(CACHE).forEach(x => delete CACHE[x]);
-  function ir(n) { $d('dr-dia').value = masDias(txtFecha(new Date()), n); cargar(); }
+  let saltado = '';      // domingo sin nada que "Ayer" se saltó para mostrar el sábado
+  function ir(n) { $d('dr-dia').value = masDias(txtFecha(new Date()), n); cargar(false, n === -1); }
   function mover(n) { $d('dr-dia').value = masDias(dia(), n); cargar(); }
+  // Un domingo sin notas, sin cargas de diésel y sin camiones moviéndose (si algún domingo se trabaja, sí se muestra)
+  const domingoVacio = r => fechaLocal(r.fecha).getDay() === 0 && !(r.notas || []).some(v => v.fecha === r.fecha)
+    && !(r.tickets || []).length && !(r.km || []).some(k => k.km > 0);
 
-  async function cargar(forzar) {
+  async function cargar(forzar, saltarDomingo) {
     const f = dia(), body = $d('dr-body'), yo = ++pide;
-    if (!forzar && CACHE[f]) { D = CACHE[f]; return pintar(); }
+    if (!saltarDomingo && !(saltado && f === masDias(saltado, -1))) saltado = '';
+    if (!forzar && CACHE[f]) {
+      if (saltarDomingo && domingoVacio(CACHE[f])) { saltado = f; $d('dr-dia').value = masDias(f, -1); return cargar(false); }
+      D = CACHE[f]; return pintar();
+    }
     body.innerHTML = '<div class="pn"><div class="empty">Leyendo lo del día…</div></div>';
     bar(true);
     try {
       const r = await api({ action:'diario_dia', fecha:f });
       if (yo !== pide) return;          // mientras tanto se pidió otro día
-      D = CACHE[f] = r;
+      CACHE[f] = r;
+      if (saltarDomingo && domingoVacio(r)) { saltado = f; $d('dr-dia').value = masDias(f, -1); bar(false); return cargar(false); }
+      D = r;
       armarFilas(); calcular(); pintar();
     } catch(e) {
       if (yo === pide) body.innerHTML = `<div class="pn"><div class="empty">No se pudo leer el día: ${esc(e.message)}</div></div>`;
@@ -888,7 +899,8 @@ const Diario = (() => {
     const sinMedidas = conCamion.filter(x => !(D.tanques?.[x.placa]?.diametro && D.tanques?.[x.placa]?.largo)).length;
     const dispTodos = Object.keys(D.dispositivos || {}).sort();
 
-    body.innerHTML = `
+    body.innerHTML = `${saltado === masDias(f, 1) ? `<div class="banner-dr">El domingo ${fechaCorta(saltado)} no hubo notas, diésel ni recorridos: se muestra el sábado.
+        <button class="ftb" onclick="document.getElementById('dr-dia').value='${saltado}';Diario.cargar()">Ver el domingo</button></div>` : ''}
       <div class="mg">
         <div class="mc m"><div class="ml">Camiones trabajando</div><div class="mv">${conCamion.length}</div><div class="ms">${titulo}</div></div>
         <div class="mc ${sinCm.length ? 'r' : 'g'}"><div class="ml">cm de diésel</div><div class="mv">${conCamion.length - sinCm.length} de ${conCamion.length}</div>
@@ -1061,27 +1073,33 @@ const Diario = (() => {
     if (!activos.length) L.push('• Sin camiones registrados');
 
     const n = D.notasDia, foto = n.filter(v => v.foto), papel = n.filter(v => v.entregado), faltan = foto.filter(v => !v.entregado);
-    const solo = n.filter(v => !v.foto && v.entregado);
+    // Por chofer: "Juan S. folios 1234, 1235 · Noe G. folio 889"
+    const porChofer = (lista, conFecha) => agruparVj(lista, v => claveVj(v.chofer)).map(g => `${nombreCorto(g.items[0].chofer) || 'Sin chofer'} `
+      + `folio${g.items.length > 1 ? 's' : ''} ${g.items.map(v => (v.folio || 's/folio') + (conFecha ? ` (${fechaCorta(v.fecha)})` : '')).join(', ')}`).join(' · ');
+    const cuando = f === masDias(txtFecha(new Date()), -1) ? 'Ayer' : `El ${diaNombre(f).toLowerCase()}`;
+    const sinFoto = n.filter(v => !v.foto);
     L.push('', `*Notas*: ${n.length} · ${foto.length} con foto · ${papel.length} ya en papel`);
-    if (faltan.length) L.push('Faltan en papel: ' + agruparVj(faltan, v => claveVj(v.chofer))
-      .map(g => `${nombreCorto(g.items[0].chofer)} ${g.items.map(v => v.folio || 's/folio').join(', ')}`).join(' · '));
-    if (solo.length) L.push(`Llegaron solo en papel (sin foto): ${solo.length}`);
-    if (D.pendPapel.length) L.push(`De días anteriores siguen sin llegar en papel: ${D.pendPapel.length}`);
+    if (faltan.length) L.push('📄 Faltan en papel: ' + porChofer(faltan));
+    if (sinFoto.length) L.push(`📷 ${cuando} no enviaron foto: ` + porChofer(sinFoto));
+    if (D.pendPapel.length) L.push('⏳ De días anteriores siguen sin papel: ' + porChofer(D.pendPapel, true));
 
     const tk = D.tickets || [];
-    L.push('', tk.length ? `*Diésel*: ${tk.length} carga${tk.length !== 1 ? 's' : ''} · ${f0(sumaDs(tk, 'litros'))} L · ${$$(sumaDs(tk, 'monto'))}` : '*Diésel*: sin cargas');
+    L.push('', tk.length ? `*Diésel*: ${tk.length} carga${tk.length !== 1 ? 's' : ''} · ${f0(sumaDs(tk, 'litros'))} L` : '*Diésel*: sin cargas');
     tk.forEach(t => L.push(`• ${nombreCorto(t.chofer)} – ${t.unidad.split(' — ')[0]} – ${f0(t.litros)} L`));
     const cam = D.filas.filter(x => x.placa);
     if (cam.length) {
       const con = cam.filter(x => !vacioCm(x.cm1)), sin = cam.filter(x => vacioCm(x.cm1));
-      L.push(`cm en el tanque: ${con.length} de ${cam.length}` + (sin.length ? ` (faltó ${sin.map(x => nombreCorto(x.chofer)).join(', ')})` : ''));
+      L.push(`⛽ cm en el tanque: ${con.length} de ${cam.length}` + (sin.length ? ` (faltó ${sin.map(x => nombreCorto(x.chofer)).join(', ')})` : ''));
       if (con.length) L.push(con.map(x => {
         const l = litrosCamion(x.placa, x.cm1, x.cm2, D.tanques);
         return `${nombreCorto(x.chofer)} ${x.cm1}${vacioCm(x.cm2) ? '' : '/' + x.cm2} cm${l == null ? '' : ` (≈${f0(Math.round(l))} L)`}`;
       }).join(' · '));
     }
     const exc = (D.km || []).filter(r => r.excesos > 0);
-    if (exc.length) L.push('', '⚠️ Excesos de velocidad: ' + exc.map(r => `${D.dispositivos[r.dispositivo] || r.dispositivo} ${r.excesos}`).join(' · '));
+    if (exc.length) L.push('', '⚠️ Excesos de velocidad: ' + exc.map(r => {
+      const p = D.dispositivos[r.dispositivo], ch = p && D.filas.find(x => x.placa === p)?.chofer;
+      return `${ch ? nombreCorto(ch) + ' (' + p + ')' : p || r.dispositivo} ${r.excesos}`;
+    }).join(' · '));
     if (D.confirmado) L.push('', '✅ Confirmado');
     return L.join('\n');
   }
@@ -1498,10 +1516,10 @@ Sesion.requerir('viajes').then(s => {
   document.getElementById('sb-user').textContent = s.nombre;
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
-  document.getElementById('dr-dia').value = masDias(txtFecha(new Date()), -1);     // el Diario abre en ayer (el resumen de cada mañana)
+  // El Diario abre en ayer (el resumen de cada mañana); el lunes, en el sábado si el domingo no hubo nada
   // Tarjetas del inicio: viajes.html#fletes, #subir, #diesel, #tickets abren esa pestaña
   const pestana = document.querySelector(`nav a[data-s="${location.hash.slice(1)}"]`);
-  if (pestana) pestana.click(); else Diario.cargar();
+  if (pestana) pestana.click(); else Diario.ir(-1);
 }).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
 </script>
 </body>
