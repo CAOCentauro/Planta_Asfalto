@@ -25,6 +25,8 @@ nav a:hover{color:var(--text)}
 nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(247,147,30,.05)}
 nav a.pronto{opacity:.55;cursor:default}
 nav a small{font-size:10px;margin-left:4px}
+.nav-g{padding:14px 16px 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;opacity:.75}
+.nav-g:first-child{padding-top:4px}
 .sb-foot{padding:12px 16px;border-top:1px solid var(--bd);font-size:11px;color:var(--muted)}
 .btn-r{margin-top:10px;padding:6px 10px;background:transparent;border:1px solid var(--bd);color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;width:100%}
 .btn-r:hover{border-color:var(--amb);color:var(--amb)}
@@ -94,8 +96,45 @@ select:focus,input:focus{border-color:var(--amb)}
 .banner-dr{font-size:12px;padding:10px 14px;border-left:3px solid var(--amb);background:rgba(247,147,30,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 summary.pnh{cursor:pointer;list-style:none}
 summary.pnh::-webkit-details-marker{display:none}
+/* Barra de arriba igual en Diario, Fletes y Diésel: a la izquierda qué día/periodo; a la derecha Actualizar y el botón principal */
+.ph.bar h2{flex:0 0 auto;margin-right:6px}
+.acc{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+.ftb.s2{border-color:transparent;text-decoration:underline;text-underline-offset:3px}
+/* Vistas (Capturar / Ver, Viajes / Resúmenes / Acumulado, Tickets / Rendimiento) */
+.vistas{display:flex;flex-wrap:wrap;border-bottom:1px solid var(--bd)}
+.vistas button{background:none;border:none;border-bottom:2px solid transparent;color:var(--muted);padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;margin-bottom:-1px}
+.vistas button:hover{color:var(--text)}
+.vistas button.on{color:var(--amb);border-bottom-color:var(--amb)}
+.vista-c{display:flex;flex-direction:column;gap:16px}
+.vista-c[hidden]{display:none}
+/* Línea gris bajo el título de cada panel: para qué sirve */
+.pn-sub{font-size:12px;color:var(--muted);padding:8px 16px;border-bottom:1px solid var(--bd);line-height:1.5}
+/* Pasos del Diario */
+.avance{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.avance i{display:inline-block;width:26px;height:6px;background:var(--bd)}
+.avance i.ok{background:var(--green)}
+.avance b{margin-left:6px;color:var(--text);font-weight:600}
+.paso{background:var(--s1);border:1px solid var(--bd);border-left:3px solid var(--amb)}
+.paso.ok{border-left-color:var(--green)}
+.paso.aj{border-left-color:var(--muted)}
+.paso > summary{list-style:none;cursor:pointer;padding:12px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.paso > summary::-webkit-details-marker{display:none}
+.paso[open] > summary{border-bottom:1px solid var(--bd)}
+.paso-n{width:24px;height:24px;border-radius:50%;border:1px solid var(--amb);color:var(--amb);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.paso.ok .paso-n{background:var(--green);border-color:var(--green);color:#fff}
+.paso.aj .paso-n{border-color:var(--muted);color:var(--muted)}
+.paso-t{font-weight:600;font-size:14px;font-family:var(--f-tit)}
+.paso-e{font-size:12px;color:var(--muted);margin-left:auto}
+.paso-e.mal{color:var(--warn)}
+.paso .fl{font-size:11px;color:var(--muted)}
+.paso .pn.sub{border:none;border-top:1px solid var(--bd)}
+.bar-paso{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px;font-size:12px;color:var(--muted)}
+.bar-paso .ftb{font-size:12px;padding:6px 14px}
 /* FLETES: filtros y acumulado */
 .flt[hidden]{display:none}
+details.fil > summary{cursor:pointer;list-style:none}
+details.fil > summary::-webkit-details-marker{display:none}
+details.fil:not([open]) > summary{border-bottom:none}
 .vj-fil{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;padding:12px 16px}
 .vj-fil label{display:flex;flex-direction:column;gap:3px;font-size:10px;color:var(--muted);font-weight:600;letter-spacing:.04em;text-transform:uppercase}
 .vj-fil select{min-width:120px;max-width:200px}
@@ -144,11 +183,13 @@ a{color:var(--amb)}
 <div id="sidebar">
   <div class="sb-logo"><span>CAO Centauro</span><strong>Viajes locales</strong></div>
   <nav>
+    <div class="nav-g">Cada día</div>
     <a href="#" class="active" data-s="diario">Diario</a>
-    <a href="#" data-s="fletes">Fletes</a>
     <a href="#" data-s="subir">Subir notas <span id="nt-badge" style="color:var(--amb)"></span></a>
-    <a href="#" data-s="diesel">Diésel y rendimiento</a>
     <a href="#" data-s="tickets">Subir tickets de diésel <span id="tk-badge" style="color:var(--amb)"></span></a>
+    <div class="nav-g">Consultar</div>
+    <a href="#" data-s="fletes">Fletes</a>
+    <a href="#" data-s="diesel">Diésel y rendimiento</a>
   </nav>
   <div class="sb-foot">
     <span id="sb-user" style="display:block;margin:0 0 8px;font-weight:600;color:var(--text)">—</span>
@@ -161,7 +202,7 @@ a{color:var(--amb)}
 <div id="main">
   <!-- DIARIO: lo de un día (camiones, cm de diésel, km, notas, diésel) y el resumen para el grupo -->
   <section class="sec on" id="sec-diario">
-    <div class="ph">
+    <div class="ph bar">
       <h2>Diario</h2>
       <div class="flt">
         <button class="ftb" onclick="Diario.mover(-1)" title="Día anterior">‹</button>
@@ -169,6 +210,8 @@ a{color:var(--amb)}
         <button class="ftb" onclick="Diario.mover(1)" title="Día siguiente">›</button>
         <button class="ftb" onclick="Diario.ir(-1)">Ayer</button>
         <button class="ftb" onclick="Diario.ir(0)">Hoy</button>
+      </div>
+      <div class="acc">
         <button class="ftb" onclick="Diario.cargar(true)">Actualizar</button>
         <button class="ftb p" onclick="Diario.copiar()">Copiar resumen</button>
       </div>
@@ -178,7 +221,7 @@ a{color:var(--amb)}
 
   <!-- FLETES DE LA SEMANA -->
   <section class="sec" id="sec-fletes">
-    <div class="ph">
+    <div class="ph bar">
       <h2>Fletes</h2>
       <div class="flt">
         <select id="vj-per" onchange="cambiarPeriodoVj()" title="Ver por semana, por mes o un rango de fechas">
@@ -192,9 +235,11 @@ a{color:var(--amb)}
           <input type="date" id="vj-desde" onchange="cargarViajes()" title="Desde"> –
           <input type="date" id="vj-hasta" onchange="cargarViajes()" title="Hasta">
         </span>
+      </div>
+      <div class="acc">
+        <button class="ftb s2" onclick="excelViajes(this)">Descargar Excel</button>
+        <button class="ftb s2" onclick="whatsViajes()">Enviar por WhatsApp</button>
         <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
-        <button class="ftb" onclick="excelViajes(this)">Descargar Excel</button>
-        <button class="ftb" onclick="whatsViajes()">Enviar por WhatsApp</button>
       </div>
     </div>
     <div class="sb" id="vj-body"></div>
@@ -206,17 +251,18 @@ a{color:var(--amb)}
 
   <!-- DIÉSEL DE LA SEMANA -->
   <section class="sec" id="sec-diesel">
-    <div class="ph">
+    <div class="ph bar">
       <h2>Diésel y rendimiento</h2>
       <div class="flt">
         <select id="ds-per" onchange="cargarDiesel()" title="Ver por semana o por mes"><option value="semana">Semana</option><option value="mes">Mes</option></select>
         <button class="ftb" onclick="moverDs(-1)" title="Anterior">‹</button>
         <input type="date" id="ds-dia" onchange="cargarDiesel()" title="Cualquier día de la semana o del mes">
         <button class="ftb" onclick="moverDs(1)" title="Siguiente">›</button>
-        <select id="ds-uni" onchange="renderDiesel()"><option value="">Todas las unidades</option></select>
+      </div>
+      <div class="acc">
+        <button class="ftb s2" onclick="excelDiesel(this)">Descargar Excel</button>
+        <button class="ftb s2" onclick="whatsDiesel()">Enviar por WhatsApp</button>
         <button class="ftb" onclick="cargarDiesel(true)">Actualizar</button>
-        <button class="ftb" onclick="excelDiesel(this)">Descargar Excel</button>
-        <button class="ftb" onclick="whatsDiesel()">Enviar por WhatsApp</button>
       </div>
     </div>
     <div class="sb" id="ds-body"></div>
@@ -281,6 +327,19 @@ function setTheme(t) {
   document.querySelectorAll('.theme-btn').forEach(b => b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
 }
 function toggleTheme() { setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light'); }
+
+// Vistas dentro de una sección (Capturar / Ver, Viajes / Resúmenes / Acumulado, Tickets / Rendimiento):
+// se pintan todas y solo se muestra una, así cambiar de vista es inmediato y no se pierde lo escrito
+const vistasHtml = (fn, ops, actual) => `<div class="vistas">${ops.map(([v, t]) =>
+  `<button data-v="${v}" class="${v === actual ? 'on' : ''}" onclick="${fn}('${v}')">${t}</button>`).join('')}</div>`;
+function mostrarVista(raiz, v) {
+  raiz.querySelectorAll(':scope > .vistas button').forEach(b => b.classList.toggle('on', b.dataset.v === v));
+  raiz.querySelectorAll(':scope > .vista-c').forEach(c => c.hidden = c.dataset.v !== v);
+}
+const vistaGuardada = (k, def, validas) => { try { const v = localStorage.getItem(k); return validas.includes(v) ? v : def; } catch(e) { return def; } };
+const guardarVista = (k, v) => { try { localStorage.setItem(k, v); } catch(e) {} };
+// Línea gris bajo el título de un panel: para qué sirve
+const subTxt = t => `<div class="pn-sub">${t}</div>`;
 
 // ── NAV ───────────────────────────────────
 document.querySelectorAll('nav a[data-s]').forEach(a => a.addEventListener('click', e => {
@@ -386,12 +445,12 @@ const FILTROS_VJ = [
   ['m3',       'm³',       v => v.m3 ? String(v.m3) : ''],
 ];
 const FV = {};                       // filtro → clave elegida ('' = todos)
-let VISTA_VJ = 'detalle', AGR_VJ = 'semana';
+let VISTA_VJ = vistaGuardada('vj-vista', 'viajes', ['viajes', 'resumenes', 'acumulado']), AGR_VJ = 'semana', FIL_VJ_ABIERTO = false;
 const claveFil = t => claveVj(t) || '(VACIO)';
 const pasaVj = (v, salvo) => FILTROS_VJ.every(([k, , get]) => k === salvo || !FV[k] || claveFil(get(v)) === FV[k]);
 function filtrarVj(k, valor) { FV[k] = valor; renderViajes(); }
 function quitarFiltrosVj() { FILTROS_VJ.forEach(([k]) => FV[k] = ''); renderViajes(); }
-function vistaVj(v) { VISTA_VJ = v; renderViajes(); }
+function vistaVj(v) { VISTA_VJ = v; guardarVista('vj-vista', v); mostrarVista(elVj('vj-body'), v); }
 function agruparPorVj(a) { AGR_VJ = a; renderViajes(); }
 // Texto de un filtro puesto ("Soto"), tomado de los viajes
 function textoFiltroVj(k, todos) {
@@ -491,18 +550,15 @@ function renderViajes() {
   const tabla = (enc, filas, pie) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody>${pie ? `<tfoot><tr>${pie}</tr></tfoot>` : ''}</table></div>`;
   const puestos = FILTROS_VJ.filter(([k]) => FV[k]);
 
-  // Barra de filtros
-  const filtros = `<div class="pn">
-    <div class="vj-fil">${FILTROS_VJ.map(([k, n]) => `<label>${n}<select class="${FV[k] ? 'on' : ''}" onchange="filtrarVj('${k}', this.value)">
-        <option value="">Todos</option>${opcionesVj(todos, k).map(o => `<option value="${esc(o.c)}" ${FV[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}
-      <div class="vista" style="margin-left:auto">
-        <button class="ftb ${VISTA_VJ === 'detalle' ? 'active' : ''}" onclick="vistaVj('detalle')">Detalle</button>
-        <button class="ftb ${VISTA_VJ === 'acumulado' ? 'active' : ''}" onclick="vistaVj('acumulado')">Acumulado</button></div>
-    </div>
-    ${puestos.length ? `<div class="vj-chips">${puestos.map(([k, n]) => `<button class="chip" onclick="filtrarVj('${k}', '')" title="Quitar este filtro">${n}: ${esc(textoFiltroVj(k, todos))} ✕</button>`).join('')}
+  // Filtros plegados en una línea; lo que está puesto se ve como etiquetas aunque estén cerrados
+  const filtros = `<details class="pn fil" ${FIL_VJ_ABIERTO ? 'open' : ''} ontoggle="FIL_VJ_ABIERTO = this.open">
+      <summary class="pnh"><span>Filtros${puestos.length ? ` (${puestos.length})` : ''} · cliente, obra, chofer, placa, material, día, m³</span><span class="fl"></span></summary>
+      <div class="vj-fil">${FILTROS_VJ.map(([k, n]) => `<label>${n}<select class="${FV[k] ? 'on' : ''}" onchange="filtrarVj('${k}', this.value)">
+        <option value="">Todos</option>${opcionesVj(todos, k).map(o => `<option value="${esc(o.c)}" ${FV[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}</div>
+    </details>
+    ${puestos.length ? `<div class="vj-chips" style="padding:0">${puestos.map(([k, n]) => `<button class="chip" onclick="filtrarVj('${k}', '')" title="Quitar este filtro">${n}: ${esc(textoFiltroVj(k, todos))} ✕</button>`).join('')}
       <button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button>
-      <span style="color:var(--muted)">${lista.length} de ${todos.length} viajes</span></div>` : ''}
-  </div>`;
+      <span style="color:var(--muted)">${lista.length} de ${todos.length} viajes</span></div>` : ''}`;
 
   // Precios: si no se pudo leer el Sheets, o hay viajes sin precio
   const sinPrecio = hayPrecios ? agruparVj(lista.filter(v => v.precio == null), v => claveVj(v.cliente) + '|' + claveVj(v.material) + '|' + claveVj(v.obra)) : [];
@@ -514,8 +570,9 @@ function renderViajes() {
           <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td></tr>`).join(''))}
       <div class="nota-pn">En el Sheets de precios: CLIENTE y MATERIAL escritos igual que en las notas (no importan mayúsculas ni acentos). OBRA vacía = todas las obras del cliente.</div></details>` : '';
 
+  const vistas = vistasHtml('vistaVj', [['viajes', 'Viajes'], ['resumenes', 'Resúmenes'], ['acumulado', 'Acumulado']], VISTA_VJ);
   if (!lista.length) {
-    body.innerHTML = filtros + `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Ningún viaje con estos filtros
+    body.innerHTML = vistas + filtros + `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Ningún viaje con estos filtros
       <br><button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button></div></div>`;
     return;
   }
@@ -542,55 +599,22 @@ function renderViajes() {
     </div>`;
 
   const panelCli = `<div class="pn"><div class="pnh">Por cliente y obra</div>
+      ${subTxt('Viajes y m³ de cada obra, con los materiales que se llevaron.')}
       ${tabla(`<th>A nombre de</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
         porCli.map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra) || '—'}</td>
           <td style="color:var(--muted)">${esc(materialesVj(x.items))}</td><td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
         pie(3))}
     </div>`;
 
-  if (VISTA_VJ === 'acumulado') {
-    const mats = agruparVj(lista, v => claveVj(v.material) || 'SIN MATERIAL').sort((a, b) => b.m3 - a.m3);
-    const per = periodosVj(lista, AGR_VJ);
-    const celdasMat = items => mats.map(m => { const s = items.filter(v => (claveVj(v.material) || 'SIN MATERIAL') === m.k).reduce((a, v) => a + v.m3, 0); return `<td class="rt">${s ? f0(s) : '—'}</td>`; }).join('');
-    body.innerHTML = filtros + avisoPrecios + tarjetas + `
-      <div class="pn"><div class="pnh"><span>Acumulado ${puestos.length ? '· ' + esc(filtrosTxtVj(todos)) : ''}</span>
-          <span class="vista">${[['semana', 'Por semana'], ['mes', 'Por mes'], ['dia', 'Por día']].map(([a, t]) =>
-            `<button class="ftb ${AGR_VJ === a ? 'active' : ''}" onclick="agruparPorVj('${a}')">${t}</button>`).join('')}</span></div>
-        ${tabla(`<th class="rt">#</th><th>${AGR_VJ === 'mes' ? 'Mes' : AGR_VJ === 'dia' ? 'Día' : 'Semana'}</th><th class="rt">Viajes</th>
-            ${mats.map(m => `<th class="rt">${esc(m.items[0].material || 'Sin material')} m³</th>`).join('')}<th class="rt">Total m³</th>${thImp}`,
-          per.map((x, i) => `<tr><td class="rt" style="color:var(--muted)">${i + 1}</td><td>${esc(x.nombre)}</td><td class="rt">${x.viajes}</td>
-            ${celdasMat(x.items)}<td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
-          `<td colspan="2"><b>Total</b></td><td class="rt"><b>${tot.viajes}</b></td>${mats.map(m => `<td class="rt"><b>${f0(m.m3)}</b></td>`).join('')}
-            <td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td class="rt"><b>${importeVj(tot)}</b></td>` : ''}`)}
-        <div class="nota-pn">Para ver el acumulado de un cliente desde que empezó, escoge el cliente arriba y en el periodo "Desde – hasta" pon la fecha de inicio de la obra.</div>
-      </div>
-      ${panelCli}`;
-    return;
-  }
-
-  body.innerHTML = filtros + avisoPrecios + tarjetas + `
-    <div class="two">
-      <div class="pn"><div class="pnh">Por día</div>
-        ${tabla(`<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
-          porDia.map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(v => v.cliente || '—'))].join(', '))}</td>
-            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
-          pie(3))}
-      </div>
-      ${panelCli}
-    </div>
-    <div class="pn"><div class="pnh">Por camión</div>
-      ${tabla(`<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
-        porCam.map(x => `<tr><td class="amb">${esc(x.k)}</td><td>${cat[x.k] ? esc(cat[x.k].descripcion) : '<span class="neg">No está en el catálogo</span>'}</td>
-          <td>${esc([...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', ')) || '—'}</td>
-          <td style="color:var(--muted)">${p.per === 'semana' ? [...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ') : new Set(x.items.map(v => v.fecha)).size + ' días'}</td>
-          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
-        pie(4))}
-    </div>
+  // ── Vista Viajes: lo que hay que atender (notas con aviso) y la lista ──
+  const vViajes = `
     ${conAviso.length ? `<div class="pn"><div class="pnh">Notas con aviso (${conAviso.length})</div>
+      ${subTxt('Notas que hay que revisar: folio repetido, placa que no está en el catálogo, obra sin cliente o sin m³.')}
       ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th>',
         conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
           <td class="neg">${v.avisos.join(' · ')}</td></tr>`).join(''))}</div>` : ''}
     <div class="pn"><div class="pnh">Viajes <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
+      ${subTxt('Todas las notas del periodo, una por renglón (en rojo las que tienen aviso).')}
       ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">$/m³</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>`,
         lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
@@ -601,6 +625,49 @@ function renderViajes() {
           <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td></tr>`).join(''),
         `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="4"></td>`)}
     </div>`;
+
+  // ── Vista Resúmenes: por día, por cliente y obra, por camión ──
+  const vResumenes = `
+    <div class="two">
+      <div class="pn"><div class="pnh">Por día</div>
+        ${subTxt('Viajes y m³ de cada día, con los clientes de ese día.')}
+        ${tabla(`<th>Día</th><th>Fecha</th><th>Clientes</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
+          porDia.map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(v => v.cliente || '—'))].join(', '))}</td>
+            <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+          pie(3))}
+      </div>
+      ${panelCli}
+    </div>
+    <div class="pn"><div class="pnh">Por camión</div>
+      ${subTxt('Viajes y m³ de cada camión, con quién lo manejó y qué días trabajó.')}
+      ${tabla(`<th>Placa</th><th>Camión</th><th>Chofer</th><th>Días</th><th class="rt">Viajes</th><th class="rt">m³</th>${thImp}`,
+        porCam.map(x => `<tr><td class="amb">${esc(x.k)}</td><td>${cat[x.k] ? esc(cat[x.k].descripcion) : '<span class="neg">No está en el catálogo</span>'}</td>
+          <td>${esc([...new Set(x.items.map(v => v.chofer).filter(Boolean))].join(', ')) || '—'}</td>
+          <td style="color:var(--muted)">${p.per === 'semana' ? [...new Set(x.items.map(v => diaVj(v.fecha).slice(0,3)))].join(' ') : new Set(x.items.map(v => v.fecha)).size + ' días'}</td>
+          <td class="rt">${x.viajes}</td><td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+        pie(4))}
+    </div>`;
+
+  // ── Vista Acumulado: un renglón por semana, mes o día, como el RESUMEN de cada cliente ──
+  const mats = agruparVj(lista, v => claveVj(v.material) || 'SIN MATERIAL').sort((a, b) => b.m3 - a.m3);
+  const per = periodosVj(lista, AGR_VJ);
+  const celdasMat = items => mats.map(m => { const s = items.filter(v => (claveVj(v.material) || 'SIN MATERIAL') === m.k).reduce((a, v) => a + v.m3, 0); return `<td class="rt">${s ? f0(s) : '—'}</td>`; }).join('');
+  const vAcumulado = `
+    <div class="pn"><div class="pnh"><span>Acumulado ${puestos.length ? '· ' + esc(filtrosTxtVj(todos)) : ''}</span>
+        <span class="vista">${[['semana', 'Por semana'], ['mes', 'Por mes'], ['dia', 'Por día']].map(([a, t]) =>
+          `<button class="ftb ${AGR_VJ === a ? 'active' : ''}" onclick="agruparPorVj('${a}')">${t}</button>`).join('')}</span></div>
+      ${subTxt('Lo que se lleva acumulado: m³ de cada material y monto por semana (o mes, o día). Para un cliente desde que empezó la obra, escógelo en Filtros y en el periodo "Desde – hasta" pon la fecha de inicio.')}
+      ${tabla(`<th class="rt">#</th><th>${AGR_VJ === 'mes' ? 'Mes' : AGR_VJ === 'dia' ? 'Día' : 'Semana'}</th><th class="rt">Viajes</th>
+          ${mats.map(m => `<th class="rt">${esc(m.items[0].material || 'Sin material')} m³</th>`).join('')}<th class="rt">Total m³</th>${thImp}`,
+        per.map((x, i) => `<tr><td class="rt" style="color:var(--muted)">${i + 1}</td><td>${esc(x.nombre)}</td><td class="rt">${x.viajes}</td>
+          ${celdasMat(x.items)}<td class="rt amb">${f0(x.m3)}</td>${tdImp(x)}</tr>`).join(''),
+        `<td colspan="2"><b>Total</b></td><td class="rt"><b>${tot.viajes}</b></td>${mats.map(m => `<td class="rt"><b>${f0(m.m3)}</b></td>`).join('')}
+          <td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td class="rt"><b>${importeVj(tot)}</b></td>` : ''}`)}
+    </div>
+    ${panelCli}`;
+
+  const c = (v, html) => `<div class="vista-c" data-v="${v}" ${VISTA_VJ === v ? '' : 'hidden'}>${html}</div>`;
+  body.innerHTML = vistas + filtros + avisoPrecios + tarjetas + c('viajes', vViajes) + c('resumenes', vResumenes) + c('acumulado', vAcumulado);
 }
 
 // Mismo formato que la hoja de FLETES DE LA SEMANA (con lo filtrado), más los totales y el acumulado
@@ -1084,9 +1151,16 @@ const Diario = (() => {
       <td class="rt">${nv.length ? `${nViajes(nv.length)} · ${f0(nv.reduce((s, v) => s + v.m3, 0))} m³` : '—'}</td></tr>`;
   }
 
+  // Dos vistas: Capturar (pasos en el orden de la mañana) y Ver (todo lo del día, solo para leer).
+  // Los pasos abiertos o cerrados se respetan mientras se ve el mismo día (no se cierran solos mientras se palomea).
+  let vista = vistaGuardada('dr-vista', 'capturar', ['capturar', 'ver']);
+  let abiertos = {}, diaAbiertos = '';
+  function verVista(v) { vista = v; guardarVista('dr-vista', v); mostrarVista($d('dr-body'), v); }
+
   function pintar() {
     if (!D) return;
     const f = D.fecha, body = $d('dr-body');
+    if (diaAbiertos !== f) { abiertos = {}; diaAbiertos = f; }
     const titulo = `${diaNombre(f)} ${fechaCorta(f)} ${f.slice(0, 4)}`;
     const conCamion = D.filas.filter(x => x.placa), sinCm = conCamion.filter(x => !cmDe(x.placa));
     const n = D.notasDia, foto = n.filter(v => v.foto), papel = n.filter(v => v.entregado), faltan = foto.filter(v => !v.entregado);
@@ -1105,82 +1179,144 @@ const Diario = (() => {
       : `<span>Cuando tu tío conteste en el grupo que está bien:</span><button class="ftb p" onclick="Diario.confirmar(true)">Confirmado</button>`;
     const sinMedidas = conCamion.filter(x => !(D.tanques?.[x.placa]?.diametro && D.tanques?.[x.placa]?.largo)).length;
     const dispTodos = Object.keys(D.dispositivos || {}).sort();
-    const sn = sinNotas();
+    const sn = sinNotas(), snSin = sn.filter(x => !x.expl && x.motivo !== '—');
+    const pendSiguen = D.pendPapel.filter(v => !v.entregado);
+    const kmSinCamion = movidos.filter(r => !D.dispositivos[r.dispositivo]);
+    const nombres = l => l.map(x => nombreCorto(x.chofer)).join(', ');
 
-    body.innerHTML = `${saltado === masDias(f, 1) ? `<div class="banner-dr">El domingo ${fechaCorta(saltado)} no hubo notas, diésel ni recorridos: se muestra el sábado.
-        <button class="ftb" onclick="document.getElementById('dr-dia').value='${saltado}';Diario.cargar()">Ver el domingo</button></div>` : ''}
+    // ── Los pasos: [clave, título, listo, cómo va, para qué sirve, contenido] ──
+    const pasos = [
+      ['km', 'Km de ProTrack', !!D.km?.length && !kmSinCamion.length,
+        !D.km?.length ? 'Falta subir el informe' : kmSinCamion.length ? `${kmSinCamion.length} dispositivo${kmSinCamion.length !== 1 ? 's' : ''} sin camión escogido`
+          : `Subido · ${movidos.length} se movieron · ${f0(Math.round(kmTot))} km`,
+        'Descarga de ProTrack el "Informe sobre kilometraje" y súbelo aquí. Puede traer varios días; si lo vuelves a subir, se reemplaza.',
+        `<div class="bar-paso"><label class="ftb p">Subir informe de kilometraje<input type="file" accept=".xlsx,.xls" multiple hidden onchange="Diario.subirKm(this.files);this.value=''"></label>
+          <span>${D.km?.length ? `Ya está el del ${fechaCorta(f)}: ${movidos.length} dispositivo${movidos.length !== 1 ? 's' : ''} se movieron.` : `Todavía no está el del ${fechaCorta(f)}.`}</span></div>
+         ${kmSinCamion.length ? `<div class="nota-pn neg" style="padding-top:0">Se movieron y no se sabe qué camión son: ${esc(kmSinCamion.map(r => r.dispositivo).join(', '))}.
+           Escógelo en <b>Ajustes</b>, abajo.</div>` : ''}`],
+
+      ['cam', 'Camiones y diésel en el tanque', !hayCambios() && !sinCm.length,
+        hayCambios() ? 'Hay cambios sin guardar' : sinCm.length ? `Faltan cm de ${sinCm.length}: ${nombres(sinCm)}` : conCamion.length ? `${conCamion.length} camiones, todos con cm` : 'Sin camiones',
+        'Qué camión trae cada chofer (se queda igual los días siguientes hasta que lo cambies) y los cm que marca la varilla al terminar el día; si llega en la mañana, va en el día anterior.',
+        `<div class="bar-paso"><button class="ftb p" id="dr-guardar" onclick="Diario.guardar()">Guardar</button>
+          <span>Escoge el camión, escribe los cm y toca Guardar.</span></div>
+         ${tabla('<th>Chofer</th><th>Camión</th><th>cm tanque 1</th><th>cm tanque 2</th><th class="rt">≈ Litros</th><th class="rt">Km</th><th class="rt">Notas</th>',
+            D.filas.map((x, i) => filaCam(x, i, ops, repetidas)).join('') || '<tr><td colspan="7" class="empty">No hay choferes en el catálogo de Notas de Viaje</td></tr>', '', 'dr-cam')}
+         ${sinMedidas ? `<div class="nota-pn">Los litros salen cuando estén las medidas en la hoja <b>Tanques</b> del Sheets de la planta (faltan ${sinMedidas}).</div>` : ''}`],
+
+      ['papel', 'Notas en papel', !faltan.length && !pendSiguen.length,
+        faltan.length || pendSiguen.length ? `Faltan ${faltan.length} de este día${pendSiguen.length ? ` y ${pendSiguen.length} de días anteriores` : ''}`
+          : n.length ? 'Todas llegaron en papel' : 'Sin notas este día',
+        'Palomea cada nota cuyo papel ya llegó a la oficina. La fila no se quita hasta que toques Actualizar o cambies de día.',
+        `<div class="pn sub"><div class="pnh"><span>Notas del día · ${n.length}</span></div>
+          ${n.length ? tabla('<th>Folio</th><th>Chofer</th><th>Obra</th><th>Material</th><th class="rt">m³</th><th>Foto</th><th>Llegó en papel</th>',
+            n.slice().sort((a, b) => a.chofer.localeCompare(b.chofer) || (Number(a.folio) || 0) - (Number(b.folio) || 0)).map(v => `<tr>
+              <td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td><td>${esc(v.material)}</td><td class="rt">${f0(v.m3)}</td>
+              <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))
+            : `<div class="empty">Sin notas registradas del ${fechaCorta(f)}</div>`}</div>
+         ${D.pendPapel.length ? `<div class="pn sub"><div class="pnh"><span>Días anteriores: con foto y todavía sin llegar en papel (últimos ${DIAS_PAPEL_VER} días)</span></div>
+          ${tabla('<th>Fecha</th><th>Folio</th><th>Chofer</th><th>Obra</th><th>Foto</th><th>Llegó en papel</th>',
+            D.pendPapel.map(v => `<tr><td>${fechaCorta(v.fecha)}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td>
+              <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))}</div>` : ''}`],
+
+      ['sin', 'Camiones sin notas', !snSin.length,
+        snSin.length ? `${snSin.length} sin explicar` : sn.length ? 'Todos explicados' : 'Todos los que trabajaron tienen notas',
+        `Camión que se movió ${KM_MOVIO} km o más según ProTrack, o que traía chofer (si no tiene ProTrack), y no tiene ninguna nota ese día.
+          Si fue un viaje sin nota (p. ej. llevar material a la planta), escribe por qué y toca "Viaje explicado".`,
+        sn.length ? tabla('<th>Camión</th><th>Chofer</th><th>Por qué sale</th><th>Viaje explicado</th>',
+          sn.map(x => `<tr><td>${esc(placaTxt(x.placa))}</td><td>${esc(x.chofer) || '—'}</td><td>${esc(x.motivo)}</td>
+            <td>${x.expl ? `<span class="pos">✓ ${esc(x.expl.nota)}</span> <span style="color:var(--muted);font-size:11px">(${esc(x.expl.guardo)})</span>
+                <button class="ftb" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this, true)">Quitar</button>`
+              : `<span class="flt"><input class="ci" list="dr-expl" placeholder="¿Por qué? p. ej. a la planta" style="width:200px">
+                <button class="ftb p" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this)">Viaje explicado</button></span>`}</td></tr>`).join(''))
+          + `<datalist id="dr-expl"><option value="Llevó material a la planta de asfalto"><option value="Fue al taller"><option value="Fue a cargar diésel"><option value="Movimiento dentro de la obra"></datalist>`
+          : `<div class="empty">Ningún camión trabajó sin notas este día</div>`],
+
+      ['grupo', 'Resumen para el grupo', !!D.confirmado,
+        D.confirmado ? 'Confirmado' : 'Falta mandarlo y marcar Confirmado',
+        'Cópialo y pégalo en el grupo de WhatsApp. Cuando tu tío conteste que está bien, toca Confirmado.',
+        `<div class="bar-paso"><button class="ftb p" onclick="Diario.copiar()">Copiar resumen</button></div>
+         <div style="padding:0 16px 12px"><textarea id="dr-resumen" readonly></textarea></div>
+         <div class="nota-pn conf" style="border-top:1px solid var(--bd)">${conf}</div>`],
+    ];
+    const listos = pasos.filter(p => p[2]).length;
+    const paso = ([k, t, listo, estado, para, contenido], i) => `<details class="paso${listo ? ' ok' : ''}" data-p="${k}" ${(abiertos[k] ?? !listo) ? 'open' : ''}>
+        <summary><span class="paso-n">${listo ? '✓' : i + 1}</span><span class="paso-t">${t}</span>
+          <span class="paso-e${listo ? '' : ' mal'}">${esc(estado)}</span><span class="fl"></span></summary>
+        ${subTxt(para)}${contenido}</details>`;
+    const ajustes = `<details class="paso aj" data-p="aj" ${abiertos.aj ? 'open' : ''}>
+        <summary><span class="paso-n">⚙</span><span class="paso-t">Ajustes</span>
+          <span class="paso-e">${dispTodos.filter(d => !D.dispositivos[d]).length} dispositivo(s) sin escoger · ${sinMedidas} tanque(s) sin medidas</span><span class="fl"></span></summary>
+        ${subTxt('Se cambian casi nunca: qué camión es cada dispositivo de ProTrack. Las medidas de los tanques se escriben en la hoja Tanques del Sheets de la planta.')}
+        ${dispTodos.length ? tabla('<th>Dispositivo de ProTrack</th><th>Camión</th>', dispTodos.map(d => `<tr><td>${esc(d)}</td><td><select class="ci" data-d="${esc(d)}" onchange="Diario.asignar(this.dataset.d, this)">
+            <option value="">— No es camión / sin escoger —</option>${ops.map(o => `<option value="${esc(o.v)}" ${D.dispositivos[d] === o.v ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select></td></tr>`).join(''))
+          : '<div class="empty">Los dispositivos aparecen aquí después de subir el primer informe de kilometraje</div>'}
+      </details>`;
+
+    // ── Ver: lo del día para leer ──
+    const activos = D.filas.filter(x => x.placa || notasDe(x.chofer).length);
+    const ver = `
       <div class="mg">
         <div class="mc m"><div class="ml">Camiones trabajando</div><div class="mv">${conCamion.length}</div><div class="ms">${titulo}</div></div>
         <div class="mc ${sinCm.length ? 'r' : 'g'}"><div class="ml">cm de diésel</div><div class="mv">${conCamion.length - sinCm.length} de ${conCamion.length}</div>
-          <div class="ms">${sinCm.length ? 'Faltan: ' + esc(sinCm.map(x => nombreCorto(x.chofer)).join(', ')) : 'Todos reportados'}</div></div>
+          <div class="ms">${sinCm.length ? 'Faltan: ' + esc(nombres(sinCm)) : 'Todos reportados'}</div></div>
         <div class="mc ${faltan.length ? 'r' : 'g'}"><div class="ml">Notas</div><div class="mv">${n.length}</div><div class="ms">${foto.length} con foto · ${papel.length} en papel · faltan ${faltan.length}</div></div>
         <div class="mc"><div class="ml">Diésel cargado</div><div class="mv">${f0(sumaDs(tk, 'litros'))} L</div><div class="ms">${tk.length} carga${tk.length !== 1 ? 's' : ''} · ${$$(sumaDs(tk, 'monto'))}</div></div>
         <div class="mc ${D.km?.length ? '' : 'm'}"><div class="ml">Km (ProTrack)</div><div class="mv">${D.km?.length ? f0(kmTot) : '—'}</div>
           <div class="ms">${D.km?.length ? `${movidos.length} dispositivo${movidos.length !== 1 ? 's' : ''} se movieron` : 'Falta subir el informe'}</div></div>
       </div>
-
-      <div class="pn"><div class="pnh"><span>Camiones, choferes y diésel en el tanque</span><button class="ftb p" id="dr-guardar" onclick="Diario.guardar()">Guardar</button></div>
-        ${tabla('<th>Chofer</th><th>Camión</th><th>cm tanque 1</th><th>cm tanque 2</th><th class="rt">≈ Litros</th><th class="rt">Km</th><th class="rt">Notas</th>',
-          D.filas.map((x, i) => filaCam(x, i, ops, repetidas)).join('') || '<tr><td colspan="7" class="empty">No hay choferes en el catálogo de Notas de Viaje</td></tr>', '', 'dr-cam')}
-        <div class="nota-pn">El camión se queda igual los días siguientes hasta que lo cambies. cm = lo que marca la varilla al terminar el día
-          (si llega en la mañana, va en el día anterior).${sinMedidas ? ` Los litros salen cuando estén las medidas en la hoja <b>Tanques</b> del Sheets de la planta (faltan ${sinMedidas}).` : ''}</div>
-        <div class="nota-pn conf" style="border-top:1px solid var(--bd)">${conf}</div>
+      <div class="pn"><div class="pnh"><span>Camiones del día</span></div>
+        ${subTxt('Quién traía cada camión, lo que reportó de diésel, cuánto se movió y cuántas notas hizo.')}
+        ${activos.length ? tabla('<th>Chofer</th><th>Camión</th><th class="rt">cm</th><th class="rt">≈ Litros</th><th class="rt">Km</th><th class="rt">Notas</th><th>Sin notas</th>',
+          activos.map(x => { const nv = notasDe(x.chofer), km = x.placa ? D.kmPlaca[x.placa + '|' + f] : null, s = sn.find(y => y.placa === x.placa);
+            return `<tr><td>${esc(x.chofer)}</td><td>${x.placa ? esc(placaTxt(x.placa)) : '<span style="color:var(--muted)">sin camión</span>'}</td>
+              <td class="rt">${vacioCm(x.cm1) ? '—' : esc(x.cm1) + (vacioCm(x.cm2) ? '' : ' / ' + esc(x.cm2))}</td><td class="rt">${litrosTxt(x)}</td>
+              <td class="rt">${km == null ? '—' : f0(km)}</td><td class="rt">${nv.length ? `${nViajes(nv.length)} · ${f0(nv.reduce((a, v) => a + v.m3, 0))} m³` : '—'}</td>
+              <td>${!s ? '' : s.expl ? `<span class="pos" title="${esc(s.expl.nota)}">✓ Explicado</span>` : `<span class="neg" title="${esc(s.motivo)}">Sin explicar</span>`}</td></tr>`; }).join(''))
+          : `<div class="empty">Sin camiones registrados del ${fechaCorta(f)}</div>`}
       </div>
-
-      <div class="pn"><div class="pnh"><span>Km de ProTrack</span>
-          <label class="ftb">Subir informe de kilometraje<input type="file" accept=".xlsx,.xls" multiple hidden onchange="Diario.subirKm(this.files);this.value=''"></label></div>
-        ${D.km?.length ? tabla('<th>Dispositivo</th><th>Camión</th><th class="rt">Km</th><th class="rt">Excesos de velocidad</th><th class="rt">Paradas</th>',
-            movidos.sort((a, b) => b.km - a.km).map(r => `<tr><td>${esc(r.dispositivo)}</td>
-              <td>${D.dispositivos[r.dispositivo] ? esc(placaTxt(D.dispositivos[r.dispositivo])) : '<span class="neg">Escoge cuál es abajo</span>'}</td>
-              <td class="rt amb">${f0(r.km)}</td><td class="rt${r.excesos ? ' neg' : ''}">${r.excesos}</td><td class="rt">${r.paradas}</td></tr>`).join('')
-              || '<tr><td colspan="5" class="empty">Ningún dispositivo se movió</td></tr>')
-          + (quietos.length ? `<div class="nota-pn">Sin movimiento: ${esc(quietos.map(r => r.dispositivo).join(', '))}</div>` : '')
-          : `<div class="empty">No se ha subido el informe del ${fechaCorta(f)}. Descárgalo de ProTrack y súbelo aquí (puede ser de varios días).</div>`}
-        ${dispTodos.length ? `<details><summary class="pnh" style="border-top:1px solid var(--bd)"><span>Qué camión es cada dispositivo
-            (${dispTodos.filter(d => !D.dispositivos[d]).length} sin escoger)</span><span class="fl"></span></summary>
-          ${tabla('<th>Dispositivo de ProTrack</th><th>Camión</th>', dispTodos.map(d => `<tr><td>${esc(d)}</td><td><select class="ci" data-d="${esc(d)}" onchange="Diario.asignar(this.dataset.d, this)">
-              <option value="">— No es camión / sin escoger —</option>${ops.map(o => `<option value="${esc(o.v)}" ${D.dispositivos[d] === o.v ? 'selected' : ''}>${esc(o.t)}</option>`).join('')}</select></td></tr>`).join(''))}</details>` : ''}
-      </div>
-
-      <div class="pn"><div class="pnh"><span>Notas del día · foto y papel</span></div>
+      <div class="pn"><div class="pnh"><span>Notas por chofer</span></div>
+        ${subTxt('Cuántas notas hizo cada chofer y cuáles con foto todavía no llegan en papel.')}
         ${n.length ? tabla('<th>Chofer</th><th class="rt">Notas</th><th class="rt">m³</th><th class="rt">Con foto</th><th class="rt">En papel</th><th>Faltan en papel</th>',
             agruparVj(n, v => claveVj(v.chofer)).map(g => { const fl = g.items.filter(v => v.foto && !v.entregado); return `<tr><td>${esc(g.items[0].chofer) || '—'}</td>
               <td class="rt">${g.viajes}</td><td class="rt">${f0(g.m3)}</td><td class="rt">${g.items.filter(v => v.foto).length}</td><td class="rt">${g.items.filter(v => v.entregado).length}</td>
-              <td class="${fl.length ? 'neg' : 'pos'}">${fl.length ? 'Folio ' + esc(fl.map(v => v.folio || 's/folio').join(', ')) : '✓'}</td></tr>`; }).join(''))
-          + tabla('<th>Folio</th><th>Chofer</th><th>Obra</th><th>Material</th><th class="rt">m³</th><th>Foto</th><th>Llegó en papel</th>',
-            n.slice().sort((a, b) => a.chofer.localeCompare(b.chofer) || (Number(a.folio) || 0) - (Number(b.folio) || 0)).map(v => `<tr>
-              <td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td><td>${esc(v.material)}</td><td class="rt">${f0(v.m3)}</td>
-              <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))
+              <td class="${fl.length ? 'neg' : 'pos'}">${fl.length ? 'Folio ' + esc(fl.map(v => v.folio || 's/folio').join(', ')) : '✓'}</td></tr>`; }).join(''),
+            `<td><b>Total</b></td><td class="rt"><b>${n.length}</b></td><td class="rt"><b>${f0(n.reduce((a, v) => a + v.m3, 0))}</b></td><td class="rt"><b>${foto.length}</b></td><td class="rt"><b>${papel.length}</b></td><td></td>`)
           : `<div class="empty">Sin notas registradas del ${fechaCorta(f)}</div>`}
       </div>
-      ${D.pendPapel.length ? `<div class="pn"><div class="pnh"><span>Días anteriores: con foto y todavía sin llegar en papel (últimos ${DIAS_PAPEL_VER} días)</span></div>
-        ${tabla('<th>Fecha</th><th>Folio</th><th>Chofer</th><th>Obra</th><th>Foto</th><th>Llegó en papel</th>',
-          D.pendPapel.map(v => `<tr><td>${fechaCorta(v.fecha)}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td>
-            <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))}</div>` : ''}
+      <div class="two">
+        <div class="pn"><div class="pnh"><span>Recorridos (ProTrack)</span></div>
+          ${subTxt('Km, excesos de velocidad y paradas de cada dispositivo que se movió.')}
+          ${D.km?.length ? tabla('<th>Dispositivo</th><th>Camión</th><th class="rt">Km</th><th class="rt">Excesos</th><th class="rt">Paradas</th>',
+              movidos.slice().sort((a, b) => b.km - a.km).map(r => `<tr><td>${esc(r.dispositivo)}</td>
+                <td>${D.dispositivos[r.dispositivo] ? esc(placaTxt(D.dispositivos[r.dispositivo])) : '<span class="neg">Sin escoger (Ajustes)</span>'}</td>
+                <td class="rt amb">${f0(r.km)}</td><td class="rt${r.excesos ? ' neg' : ''}">${r.excesos}</td><td class="rt">${r.paradas}</td></tr>`).join('')
+                || '<tr><td colspan="5" class="empty">Ningún dispositivo se movió</td></tr>')
+            + (quietos.length ? `<div class="nota-pn">Sin movimiento: ${esc(quietos.map(r => r.dispositivo).join(', '))}</div>` : '')
+            : `<div class="empty">No se ha subido el informe del ${fechaCorta(f)} (paso 1 de Capturar)</div>`}
+        </div>
+        <div class="pn"><div class="pnh"><span>Diésel del día</span></div>
+          ${subTxt('Las cargas de diésel con ticket de este día.')}
+          ${D.errDiesel ? `<div class="empty">No se pudo leer el diésel: ${esc(D.errDiesel)}</div>`
+            : tk.length ? tabla('<th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th>Gasolinera</th>',
+                tk.map(t => `<tr><td>${t.hora || '—'}</td><td>${esc(t.chofer)}</td><td>${esc(t.unidad)}</td><td class="rt">${f0(t.litros)}</td><td class="rt">${$$(t.monto)}</td>
+                  <td>${esc(t.gasolinera) || '—'}</td></tr>`).join(''),
+                `<td colspan="3"><b>Total</b></td><td class="rt"><b>${f0(sumaDs(tk, 'litros'))}</b></td><td class="rt"><b>${$$(sumaDs(tk, 'monto'))}</b></td><td></td>`)
+            : `<div class="empty">Sin tickets de diésel del ${fechaCorta(f)}</div>`}
+        </div>
+      </div>`;
 
-      ${sn.length ? `<div class="pn"><div class="pnh"><span>Camiones sin notas (${sn.filter(x => !x.expl).length} sin explicar)</span></div>
-        ${tabla('<th>Camión</th><th>Chofer</th><th>Por qué sale</th><th>Viaje explicado</th>',
-          sn.map(x => `<tr><td>${esc(placaTxt(x.placa))}</td><td>${esc(x.chofer) || '—'}</td><td>${esc(x.motivo)}</td>
-            <td>${x.expl ? `<span class="pos">✓ ${esc(x.expl.nota)}</span> <span style="color:var(--muted);font-size:11px">(${esc(x.expl.guardo)})</span>
-                <button class="ftb" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this, true)">Quitar</button>`
-              : `<span class="flt"><input class="ci" list="dr-expl" placeholder="¿Por qué? p. ej. a la planta" style="width:200px">
-                <button class="ftb p" data-p="${esc(x.placa)}" data-c="${esc(x.chofer)}" onclick="Diario.explicar(this)">Viaje explicado</button></span>`}</td></tr>`).join(''))}
-        <datalist id="dr-expl"><option value="Llevó material a la planta de asfalto"><option value="Fue al taller"><option value="Fue a cargar diésel"><option value="Movimiento dentro de la obra"></datalist>
-        <div class="nota-pn">Sale aquí un camión que se movió ${KM_MOVIO} km o más según ProTrack, o que traía chofer (si no tiene ProTrack), y no tiene ninguna nota ese día.
-          Si fue un viaje sin nota (p. ej. llevar material a la planta), escribe por qué y toca "Viaje explicado".</div></div>` : ''}
-
-      <div class="pn"><div class="pnh"><span>Diésel del día</span></div>
-        ${D.errDiesel ? `<div class="empty">No se pudo leer el diésel: ${esc(D.errDiesel)}</div>`
-          : tk.length ? tabla('<th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th>Gasolinera</th>',
-              tk.map(t => `<tr><td>${t.hora || '—'}</td><td>${esc(t.chofer)}</td><td>${esc(t.unidad)}</td><td class="rt">${f0(t.litros)}</td><td class="rt">${$$(t.monto)}</td>
-                <td>${esc(t.gasolinera) || '—'}</td></tr>`).join(''),
-              `<td colspan="3"><b>Total</b></td><td class="rt"><b>${f0(sumaDs(tk, 'litros'))}</b></td><td class="rt"><b>${$$(sumaDs(tk, 'monto'))}</b></td><td></td>`)
-          : `<div class="empty">Sin tickets de diésel del ${fechaCorta(f)}</div>`}
+    body.innerHTML = `${vistasHtml('Diario.verVista', [['capturar', 'Capturar'], ['ver', 'Ver el día']], vista)}
+      ${saltado === masDias(f, 1) ? `<div class="banner-dr">El domingo ${fechaCorta(saltado)} no hubo notas, diésel ni recorridos: se muestra el sábado.
+        <button class="ftb" onclick="document.getElementById('dr-dia').value='${saltado}';Diario.cargar()">Ver el domingo</button></div>` : ''}
+      <div class="vista-c" data-v="capturar" ${vista === 'capturar' ? '' : 'hidden'}>
+        <div class="avance">${pasos.map(p => `<i class="${p[2] ? 'ok' : ''}"></i>`).join('')}<b>${listos} de ${pasos.length} pasos listos</b><span>· ${titulo}</span></div>
+        ${pasos.map(paso).join('')}
+        ${ajustes}
       </div>
+      <div class="vista-c" data-v="ver" ${vista === 'ver' ? '' : 'hidden'}>${ver}</div>`;
 
-      <div class="pn"><div class="pnh"><span>Resumen para el grupo</span><button class="ftb p" onclick="Diario.copiar()">Copiar resumen</button></div>
-        <div style="padding:12px 16px"><textarea id="dr-resumen" readonly></textarea></div></div>`;
-
+    body.querySelectorAll('details.paso').forEach(d => d.addEventListener('toggle', () => abiertos[d.dataset.p] = d.open));
     $d('dr-resumen').value = resumen();
     const tb = $d('dr-cam');
     if (tb) {
@@ -1356,7 +1492,7 @@ const Diario = (() => {
     }
   }
 
-  return { cargar, ir, mover, guardar, subirKm, asignar, papel, explicar, confirmar, copiar, olvidar };
+  return { cargar, ir, mover, guardar, subirKm, asignar, papel, explicar, confirmar, copiar, olvidar, verVista };
 })();
 const DIAS_PAPEL_VER = 14;     // igual que DIAS_PAPEL de Diario.gs
 
@@ -1526,6 +1662,7 @@ function periodoDs(dia) {
   return { desde:txtFecha(new Date(d.getFullYear(), d.getMonth(), 1)), hasta:txtFecha(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
 }
 const queDs = () => porMesDs() ? 'mes' : 'semana';
+const esteDs = () => porMesDs() ? 'este mes' : 'esta semana';
 const tituloDs = () => porMesDs()
   ? `Mes de ${MESES[+DS.desde.slice(5, 7) - 1].toLowerCase()} ${DS.desde.slice(0, 4)}`
   : `Semana del ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0, 4)}`;
@@ -1544,15 +1681,25 @@ async function cargarDiesel(forzar) {
   if (!forzar && DS_CACHE[k]) { DS = DS_CACHE[k]; return renderDiesel(); }
   body.innerHTML = '<div class="pn"><div class="empty">Leyendo los tickets de diésel…</div></div>';
   bar(true);
-  try { DS = DS_CACHE[k] = await api({ action:'diesel_semana', desde, hasta }); renderDiesel(); }
+  try {
+    const r = DS_CACHE[k] = await api({ action:'diesel_semana', desde, hasta });
+    const ahora = periodoDs(inp.value);
+    if (ahora.desde + '|' + ahora.hasta === k) { DS = r; renderDiesel(); }     // mientras tanto se pidió otro periodo
+  }
   catch(e) { body.innerHTML = `<div class="pn"><div class="empty">No se pudieron leer los tickets: ${esc(e.message)}</div></div>`; }
   finally { bar(false); }
 }
 
-// Tickets ordenados, con el filtro de unidad y los avisos de cada uno
+// Filtros (como los de Fletes) y vistas: Tickets (lo administrativo) y Rendimiento (km por litro)
+const FD = { chofer:'', unidad:'' };
+let VISTA_DS = vistaGuardada('ds-vista', 'tickets', ['tickets', 'rendimiento']), FIL_DS_ABIERTO = false;
+function vistaDs(v) { VISTA_DS = v; guardarVista('ds-vista', v); mostrarVista(document.getElementById('ds-body'), v); }
+function filtrarDs(k, v) { FD[k] = v; renderDiesel(); }
+
+// Tickets ordenados, con los filtros de chofer y unidad y los avisos de cada uno
 function datosDiesel() {
   const cat = {}; (DS.placas||[]).forEach(p => cat[p.placa] = p);
-  const uni = document.getElementById('ds-uni').value;
+  const uni = FD.unidad, ch = FD.chofer;
   const todos = (DS.tickets||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || a.hora.localeCompare(b.hora) || a.fila - b.fila);
   const rep = {};
   todos.forEach(t => { const x = `${t.placa}|${t.fecha}|${t.monto.toFixed(2)}`; rep[x] = (rep[x]||0) + 1; });
@@ -1562,7 +1709,7 @@ function datosDiesel() {
     if (!cat[t.placa]) t.avisos.push('Unidad no está en el catálogo');
     if (t.sin_fecha_ticket) t.avisos.push('Sin fecha del ticket (se usó la de registro)');
   });
-  return { cat, todos, lista: uni ? todos.filter(t => t.placa === uni) : todos };
+  return { cat, todos, lista: todos.filter(t => (!uni || t.placa === uni) && (!ch || claveVj(t.chofer) === ch)) };
 }
 const sumaDs = (lista, k) => lista.reduce((s, t) => s + t[k], 0);
 const precioProm = lista => { const L = sumaDs(lista, 'litros'); return L ? sumaDs(lista, 'monto') / L : 0; };
@@ -1570,19 +1717,35 @@ const precioProm = lista => { const L = sumaDs(lista, 'litros'); return L ? suma
 function renderDiesel() {
   if (!DS) return;
   const body = document.getElementById('ds-body');
-  const sel = document.getElementById('ds-uni'), antes = sel.value;
-  const unidades = agruparVj(DS.tickets||[], t => t.placa).sort((a,b) => a.k.localeCompare(b.k));
-  sel.innerHTML = '<option value="">Todas las unidades</option>' + unidades.map(x => `<option value="${esc(x.k)}">${esc(x.items[0].unidad)}</option>`).join('');
-  sel.value = unidades.some(x => x.k === antes) ? antes : '';
-
-  const { lista } = datosDiesel();
+  const { todos, lista } = datosDiesel();
   const titulo = tituloDs();
-  if (!lista.length) {
+  if (!todos.length && !(DS.rendimiento?.km || []).length) {
     const ult = DS.ultima && DS.ultima < DS.desde
-      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ese ${queDs()}</button>` : '';
-    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel este ${queDs()}${ult}</div></div>`;
+      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ${porMesDs() ? 'ese mes' : 'esa semana'}</button>` : '';
+    body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel ${esteDs()}${ult}</div></div>`;
     return;
   }
+  // Filtros de chofer y unidad (cada lista muestra lo que hay con el otro filtro puesto)
+  const opsDs = (k, get, txt) => {
+    const otro = k === 'chofer' ? t => !FD.unidad || t.placa === FD.unidad : t => !FD.chofer || claveVj(t.chofer) === FD.chofer;
+    const m = new Map();
+    todos.filter(otro).forEach(t => { const c = get(t); if (!c) return; if (!m.has(c)) m.set(c, { c, t:txt(t), n:0 }); m.get(c).n++; });
+    if (FD[k] && !m.has(FD[k])) m.set(FD[k], { c:FD[k], t:FD[k], n:0 });
+    return [...m.values()].sort((a, b) => a.t.localeCompare(b.t, 'es'));
+  };
+  const defs = [['chofer', 'Chofer', t => claveVj(t.chofer), t => t.chofer], ['unidad', 'Unidad', t => t.placa, t => t.unidad]];
+  const puestos = defs.filter(([k]) => FD[k]);
+  const txtPuesto = ([k, , get, txt]) => { const t = todos.find(x => get(x) === FD[k]); return t ? txt(t) : FD[k]; };
+  const filtros = `<details class="pn fil" ${FIL_DS_ABIERTO ? 'open' : ''} ontoggle="FIL_DS_ABIERTO = this.open">
+      <summary class="pnh"><span>Filtros${puestos.length ? ` (${puestos.length})` : ''} · chofer, unidad</span><span class="fl"></span></summary>
+      <div class="vj-fil">${defs.map(([k, n, get, txt]) => `<label>${n}<select class="${FD[k] ? 'on' : ''}" onchange="filtrarDs('${k}', this.value)">
+        <option value="">Todos</option>${opsDs(k, get, txt).map(o => `<option value="${esc(o.c)}" ${FD[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}</div>
+    </details>
+    ${puestos.length ? `<div class="vj-chips" style="padding:0">${puestos.map(d => `<button class="chip" onclick="filtrarDs('${d[0]}', '')" title="Quitar este filtro">${d[1]}: ${esc(txtPuesto(d))} ✕</button>`).join('')}
+      <button class="ftb" onclick="FD.chofer = FD.unidad = ''; renderDiesel()">Quitar filtros</button>
+      <span style="color:var(--muted)">${lista.length} de ${todos.length} tickets</span></div>` : ''}`;
+  const vistas = vistasHtml('vistaDs', [['tickets', 'Tickets'], ['rendimiento', 'Rendimiento']], VISTA_DS);
+
   const L = sumaDs(lista, 'litros'), M = sumaDs(lista, 'monto');
   const sinFact = lista.filter(t => !t.facturado).length, sinRec = lista.filter(t => !t.recibido).length;
   const conAviso = lista.filter(t => t.avisos.length);
@@ -1594,34 +1757,16 @@ function renderDiesel() {
     ? `<input type="checkbox" ${t[campo] ? 'checked' : ''} onchange="marcarTicket(${t.fila}, '${campo}', this)" title="${campo === 'facturado' ? 'Ya se tiene la factura' : 'El ticket en papel ya llegó'}">`
     : (t[campo] ? '✓' : '—');
 
-  body.innerHTML = `
+  // ── Vista Tickets: lo administrativo (gasto, facturas, tickets en papel) ──
+  const vTickets = !lista.length ? `<div class="pn"><div class="empty">Sin tickets ${puestos.length ? 'con estos filtros' : esteDs()}</div></div>` : `
     <div class="mg">
       <div class="mc m"><div class="ml">Litros</div><div class="mv">${f0(L)}</div><div class="ms">${titulo}</div></div>
       <div class="mc"><div class="ml">Gasto en diésel</div><div class="mv">${$$(M)}</div><div class="ms">${lista.length} ticket${lista.length!==1?'s':''} · ${$$(precioProm(lista))} por litro</div></div>
       <div class="mc ${sinFact ? 'r' : 'g'}"><div class="ml">Sin facturar</div><div class="mv">${sinFact}</div><div class="ms">${sinRec} sin ticket en papel</div></div>
-      <div class="mc ${conAviso.length ? 'r' : 'g'}"><div class="ml">Con aviso</div><div class="mv">${conAviso.length}</div><div class="ms">Revisa la tabla de abajo</div></div>
+      <div class="mc ${conAviso.length ? 'r' : 'g'}"><div class="ml">Con aviso</div><div class="mv">${conAviso.length}</div><div class="ms">Se marcan en rojo en la lista</div></div>
     </div>
-    ${rendimientoHtml(lista)}
-    <div class="two">
-      <div class="pn"><div class="pnh">Por camión</div>
-        ${tabla('<th>Unidad</th><th>Choferes</th>' + cols,
-          agruparVj(lista, t => t.placa).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
-            <td class="amb">${esc(x.items[0].unidad)}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(t => t.chofer))].join(', '))}</td>${grupo(x)}</tr>`).join(''),
-          `<td colspan="2"><b>Total</b></td>${tot}`)}
-      </div>
-      <div class="pn"><div class="pnh">Por chofer</div>
-        ${tabla('<th>Chofer</th>' + cols,
-          agruparVj(lista, t => claveVj(t.chofer)).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
-            <td>${esc(x.items[0].chofer)}</td>${grupo(x)}</tr>`).join(''),
-          `<td><b>Total</b></td>${tot}`)}
-      </div>
-    </div>
-    <div class="pn"><div class="pnh">Por día</div>
-      ${tabla('<th>Día</th><th>Fecha</th>' + cols,
-        agruparVj(lista, t => t.fecha).map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td>${grupo(x)}</tr>`).join(''),
-        `<td colspan="2"><b>Total</b></td>${tot}`)}
-    </div>
-    <div class="pn"><div class="pnh">Tickets del ${queDs()} <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
+    <div class="pn"><div class="pnh">Tickets ${porMesDs() ? 'del mes' : 'de la semana'} <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
+      ${subTxt('Palomea "Facturado" cuando ya se tenga la factura y "Recibido físico" cuando el ticket en papel llegue a la oficina.')}
       ${tabla('<th>Fecha</th><th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th class="rt">Precio/L</th><th>Gasolinera</th><th>Facturado</th><th>Recibido físico</th><th>Foto</th><th>Avisos</th>',
         lista.map(t => `<tr${t.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td>${t.fecha}</td><td>${t.hora || '—'}</td><td>${esc(t.chofer)}</td><td>${esc(t.unidad)}</td>
@@ -1631,18 +1776,44 @@ function renderDiesel() {
           <td>${/^https:\/\/drive\.google\.com\//.test(t.foto) ? `<a href="${esc(t.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
           <td class="av">${t.avisos.map(esc).join('<br>')}</td></tr>`).join(''),
         `<td colspan="4"><b>Total</b></td><td class="rt"><b>${f0(L)}</b></td><td class="rt"><b>${$$(M)}</b></td><td colspan="6"></td>`)}
+    </div>
+    <div class="two">
+      <div class="pn"><div class="pnh">Por camión</div>
+        ${subTxt('Litros y gasto de cada camión.')}
+        ${tabla('<th>Unidad</th><th>Choferes</th>' + cols,
+          agruparVj(lista, t => t.placa).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
+            <td class="amb">${esc(x.items[0].unidad)}</td><td style="color:var(--muted)">${esc([...new Set(x.items.map(t => t.chofer))].join(', '))}</td>${grupo(x)}</tr>`).join(''),
+          `<td colspan="2"><b>Total</b></td>${tot}`)}
+      </div>
+      <div class="pn"><div class="pnh">Por chofer</div>
+        ${subTxt('Litros y gasto de lo que cargó cada chofer.')}
+        ${tabla('<th>Chofer</th>' + cols,
+          agruparVj(lista, t => claveVj(t.chofer)).sort((a,b) => sumaDs(b.items,'litros') - sumaDs(a.items,'litros')).map(x => `<tr>
+            <td>${esc(x.items[0].chofer)}</td>${grupo(x)}</tr>`).join(''),
+          `<td><b>Total</b></td>${tot}`)}
+      </div>
+    </div>
+    <div class="pn"><div class="pnh">Por día</div>
+      ${subTxt('Cargas, litros y gasto de cada día.')}
+      ${tabla('<th>Día</th><th>Fecha</th>' + cols,
+        agruparVj(lista, t => t.fecha).map(x => `<tr><td>${diaVj(x.k)}</td><td>${x.k}</td>${grupo(x)}</tr>`).join(''),
+        `<td colspan="2"><b>Total</b></td>${tot}`)}
     </div>`;
+
+  const c = (v, html) => `<div class="vista-c" data-v="${v}" ${VISTA_DS === v ? '' : 'hidden'}>${html}</div>`;
+  body.innerHTML = vistas + filtros + c('tickets', vTickets) + c('rendimiento', rendimientoHtml(lista));
 }
 
 // Km por litro de la semana: km de ProTrack (Diario) entre los litros de los tickets.
 // Si hay cm del día anterior al lunes y del último día con cm, y medidas del tanque, se corrige con lo que quedó en el tanque.
 function rendimientoHtml(lista) {
-  const R = DS.rendimiento, pn = (c, t) => `<div class="pn"><div class="pnh"><span>Rendimiento · km por litro${t ? ' · ' + t : ''}</span></div>${c}</div>`;
+  const R = DS.rendimiento, pn = (c, t) => `<div class="pn"><div class="pnh"><span>Rendimiento · km por litro${t ? ' · ' + t : ''}</span></div>
+    ${subTxt(t === 'por chofer' ? 'Cuánto rinde cada chofer: km que manejó entre los litros que cargó.' : 'Cuánto rinde cada camión: km que recorrió según ProTrack entre los litros que cargó.')}${c}</div>`;
   if (!R || R.error) return pn(`<div class="empty">No se pudo calcular el rendimiento${R?.error ? ': ' + esc(R.error) : ''}</div>`);
   const kmP = kmPorPlaca(R.km, R.dispositivos);
-  if (!Object.keys(kmP).length) return pn(`<div class="empty">Sin km de ProTrack este ${queDs()}. Sube los informes de kilometraje en
+  if (!Object.keys(kmP).length) return pn(`<div class="empty">Sin km de ProTrack ${esteDs()}. Sube los informes de kilometraje en
     <a href="#" onclick="event.preventDefault();irSeccion('diario')">Diario</a>${R.km?.length ? ' y escoge qué camión es cada dispositivo' : ''}.</div>`);
-  const uni = document.getElementById('ds-uni').value;
+  const uni = FD.unidad;
   const dias = [];
   for (let f = DS.desde; f <= DS.hasta; f = masDias(f, 1)) dias.push(f);
   // Excesos de velocidad de cada placa cada día (de los dispositivos que ya tienen camión)
@@ -1665,7 +1836,7 @@ function rendimientoHtml(lista) {
   }).filter(x => x.km > 0 || x.L > 0).sort((a, b) => b.km - a.km);
   const conAmbos = filas.filter(x => x.r != null), prom = kml(conAmbos.reduce((s, x) => s + x.km, 0), conAmbos.reduce((s, x) => s + x.L, 0));
   const aviso = x => x.L > 0 && x.km < 5 ? (R.km.length ? 'Cargó y casi no se movió (o no tiene GPS)' : '')
-    : x.r != null && prom && x.r < prom * 0.6 ? 'Rinde mucho menos que los demás' : x.km > 0 && !x.L ? `Sin cargas este ${queDs()}` : '';
+    : x.r != null && prom && x.r < prom * 0.6 ? 'Rinde mucho menos que los demás' : x.km > 0 && !x.L ? `Sin cargas ${esteDs()}` : '';
   const nomPlaca = x => { const c = (DS.placas || []).find(y => y.placa === x.p); return x.unidad || (c?.descripcion ? `${x.p} — ${c.descripcion}` : x.p); };
   const kmlTxt = v => v == null ? '—' : v.toFixed(2);
   // Por chofer: los km de cada camión cada día van al chofer que lo traía (Camiones del día); los litros, al chofer del ticket
@@ -1678,7 +1849,8 @@ function rendimientoHtml(lista) {
     excCh[ch] = (excCh[ch] || 0) + (excPF[k] || 0);
   });
   DS.tickets.forEach(t => { if (t.chofer) LCh[t.chofer] = (LCh[t.chofer] || 0) + t.litros; });
-  const nomCh = [...new Set([...Object.keys(kmCh), ...Object.keys(LCh)])].sort((a, b) => (kmCh[b] || 0) - (kmCh[a] || 0));
+  const nomCh = [...new Set([...Object.keys(kmCh), ...Object.keys(LCh)])].filter(c => !FD.chofer || claveVj(c) === FD.chofer)
+    .sort((a, b) => (kmCh[b] || 0) - (kmCh[a] || 0));
   const tabla = (enc, filas) => `<div class="tw"><table><thead><tr>${enc}</tr></thead><tbody>${filas}</tbody></table></div>`;
   return `
     ${pn(tabla('<th>Camión</th><th class="rt">Km</th><th class="rt">Litros cargados</th><th class="rt">km/L</th><th class="rt">$ por km</th><th class="rt" title="Corregido con los cm del tanque al empezar y al terminar">km/L con cm</th><th class="rt">Excesos de velocidad</th><th>Aviso</th>',
@@ -1711,7 +1883,7 @@ async function marcarTicket(fila, campo, chk) {
 async function excelDiesel(btn) {
   if (!DS) return;
   const { lista } = datosDiesel();
-  if (!lista.length) return alert(`No hay tickets en este ${queDs()}`);
+  if (!lista.length) return alert(`No hay tickets en ${esteDs()}`);
   btn.disabled = true;
   try {
     if (!window.XLSX) await cargarScript(XLSX_URL);
@@ -1738,7 +1910,7 @@ async function excelDiesel(btn) {
 function whatsDiesel() {
   if (!DS) return;
   const { lista } = datosDiesel();
-  if (!lista.length) return alert(`No hay tickets en este ${queDs()}`);
+  if (!lista.length) return alert(`No hay tickets en ${esteDs()}`);
   const sinFact = lista.filter(t => !t.facturado).length, avisos = lista.filter(t => t.avisos.length).length;
   const texto = [
     `*Diésel — ${tituloDs()}*`,
@@ -1762,7 +1934,7 @@ Sesion.requerir('viajes').then(s => {
   // El Diario abre en ayer (el resumen de cada mañana); el lunes, en el sábado si el domingo no hubo nada
   // Tarjetas del inicio: viajes.html#fletes, #subir, #diesel, #tickets abren esa pestaña
   const pestana = document.querySelector(`nav a[data-s="${location.hash.slice(1)}"]`);
-  if (pestana) pestana.click(); else Diario.ir(-1);
+  if (pestana && pestana.dataset.s !== 'diario') pestana.click(); else Diario.ir(-1);
 }).catch(e => alert('No se pudo revisar la sesión: ' + e.message));
 </script>
 </body>
