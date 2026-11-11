@@ -153,6 +153,17 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 .dlg-t{font-size:14px;line-height:1.5;white-space:pre-line;margin-bottom:18px}
 .dlg-b{display:flex;justify-content:flex-end;gap:8px}
 .dlg-b .ftb{font-size:12px;padding:8px 16px}
+/* Editar una nota ya registrada */
+.dlg-c.ed{max-width:560px;max-height:calc(100vh - 32px);overflow:auto}
+.ed-g{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-bottom:16px}
+.ed-g label{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted)}
+.ed-g label.w2{grid-column:1/-1}
+.ed-g .ci.cambio{border-color:var(--amb)}
+.ed-info{font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.5}
+.dlg-b .ed-anular{margin-right:auto}
+.btn-ed{background:none;border:1px solid var(--bd);color:var(--muted);cursor:pointer;padding:2px 7px;font-size:12px}
+.btn-ed:hover{border-color:var(--amb);color:var(--amb)}
+@media(max-width:520px){.ed-g{grid-template-columns:1fr}}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
 #modal-foto.on{display:flex}
 #modal-foto img{max-width:95vw;max-height:92vh}
@@ -571,9 +582,16 @@ function renderViajes() {
       <div class="nota-pn">En el Sheets de precios: CLIENTE y MATERIAL escritos igual que en las notas (no importan mayúsculas ni acentos). OBRA vacía = todas las obras del cliente.</div></details>` : '';
 
   const vistas = vistasHtml('vistaVj', [['viajes', 'Viajes'], ['resumenes', 'Resúmenes'], ['acumulado', 'Acumulado']], VISTA_VJ);
+  // Notas anuladas del periodo (no cuentan en nada): para ver cuáles son y poder restaurarlas
+  const anul = VJ.anuladas || [];
+  const anuladasHtml = anul.length ? `<details class="pn"><summary class="pnh"><span>Notas anuladas (${anul.length})</span><span class="fl"></span></summary>
+      ${subTxt('No cuentan en Fletes ni en el Diario. Con ✏ se pueden restaurar.')}
+      <div class="tw"><table><thead><tr><th>Fecha</th><th>Folio</th><th>Chofer</th><th>Placa</th><th>Obra</th><th class="rt">m³</th><th></th></tr></thead><tbody>
+      ${anul.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
+        <td class="rt">${f0(v.m3)}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join('')}</tbody></table></div></details>` : '';
   if (!lista.length) {
     body.innerHTML = vistas + filtros + `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Ningún viaje con estos filtros
-      <br><button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button></div></div>`;
+      <br><button class="ftb" onclick="quitarFiltrosVj()">Quitar filtros</button></div></div>` + anuladasHtml;
     return;
   }
   const tot = agruparVj(lista, () => 'x')[0];
@@ -610,21 +628,24 @@ function renderViajes() {
   const vViajes = `
     ${conAviso.length ? `<div class="pn"><div class="pnh">Notas con aviso (${conAviso.length})</div>
       ${subTxt('Notas que hay que revisar: folio repetido, placa que no está en el catálogo, obra sin cliente o sin m³.')}
-      ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th>',
+      ${tabla('<th>Fecha</th><th>Folio</th><th>Placa</th><th>Obra</th><th>Aviso</th><th></th>',
         conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
-          <td class="neg">${v.avisos.join(' · ')}</td></tr>`).join(''))}</div>` : ''}
+          <td class="neg">${v.avisos.join(' · ')}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))}</div>` : ''}
     <div class="pn"><div class="pnh">Viajes <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
       ${subTxt('Todas las notas del periodo, una por renglón (en rojo las que tienen aviso).')}
-      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">$/m³</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th>`,
+      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">$/m³</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th><th></th>`,
         lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
           <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
           ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
           <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
           <td><span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}</td>
-          <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td></tr>`).join(''),
-        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="4"></td>`)}
-    </div>`;
+          <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+          <td>${EditNota.boton(v.fila)}</td></tr>`).join(''),
+        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="5"></td>`)}
+      <div class="nota-pn">Con ✏ se corrige una nota ya registrada (folio, fecha, chofer, obra, material, m³, placa) o se anula si quedó repetida.</div>
+    </div>
+    ${anuladasHtml}`;
 
   // ── Vista Resúmenes: por día, por cliente y obra, por camión ──
   const vResumenes = `
@@ -732,6 +753,130 @@ function whatsViajes() {
   ].join('\n');
   window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
 }
+
+// ══════════════════════════════════════════
+//  EDITAR UNA NOTA YA REGISTRADA (botón ✏ en Fletes › Viajes y en el Diario)
+//  El servidor revisa que en esa fila siga la misma nota y solo escribe lo que cambió.
+//  Anular no borra: la nota deja de contar y se puede restaurar desde Fletes › Viajes.
+// ══════════════════════════════════════════
+const EditNota = (() => {
+  let cat = null;
+  // [campo, texto, tipo, ocupa los dos lados]
+  const CAMPOS = [['folio', 'Folio', 'text'], ['fecha', 'Fecha de la nota', 'date'], ['chofer', 'Chofer', 'sel'], ['placa', 'Placa', 'sel'],
+    ['obra', 'Obra', 'sel', true], ['material', 'Material', 'sel'], ['m3', 'm³', 'number'], ['observaciones', 'Observaciones', 'text', true]];
+  const NOMBRE = Object.fromEntries(CAMPOS.map(([k, t]) => [k, t === 'Fecha de la nota' ? 'Fecha' : t]));
+  const valorDe = (v, k) => k === 'observaciones' ? String(v.obs ?? '') : k === 'm3' ? (v.m3 ? String(v.m3) : '') : String(v[k] ?? '');
+  // De lo que está en pantalla (Diario o Fletes), que es lo más reciente que se leyó
+  const buscar = fila => {
+    if (document.getElementById('sec-diario')?.classList.contains('on')) return Diario.notaFila(fila);
+    const a = (VJ?.anuladas || []).find(v => v.fila === fila);
+    return a ? { ...a, anulada:true } : (VJ?.viajes || []).find(v => v.fila === fila);
+  };
+  const boton = fila => `<button class="btn-ed" onclick="EditNota.abrir(${Number(fila)})" title="Editar o anular esta nota">✏</button>`;
+  // Opciones de un desplegable; si lo que tiene la nota no está en el catálogo, se agrega para no perderlo
+  function opciones(lista, actual) {
+    const ops = lista.map(o => typeof o === 'object' ? o : { v:o, t:o });
+    if (actual && !ops.some(o => claveVj(o.v) === claveVj(actual))) ops.unshift({ v:actual, t:actual + ' (no está en el catálogo)' });
+    return `<option value="">—</option>` + ops.map(o => `<option value="${esc(o.v)}" ${actual && claveVj(o.v) === claveVj(actual) ? 'selected' : ''}>${esc(o.t)}</option>`).join('');
+  }
+  function listaDe(k, v) {
+    if (k === 'chofer') return cat.choferes || [];
+    if (k === 'placa') return opsPlacas(cat);
+    if (k === 'obra') return (cat.obras || []).map(o => o.obra);
+    // Material: primero los que ya se han llevado a esa obra
+    const us = usadosEnObra(v.obra, cat);
+    return [...us, ...(cat.materiales || []).filter(m => !us.includes(m))];
+  }
+
+  async function abrir(fila) {
+    const v = buscar(fila);
+    if (!v) return alert('No encontré esa nota. Toca Actualizar y vuelve a intentarlo.');
+    if (!cat) cat = SUB.nt?.catalogo?.() || null;
+    if (!cat) {
+      bar(true);
+      try { cat = await api({ action:'notas_catalogos' }); }
+      catch(e) { return alert('No se pudieron cargar los catálogos: ' + e.message); }
+      finally { bar(false); }
+    }
+    const campo = ([k, t, tipo, ancho]) => {
+      const x = valorDe(v, k);
+      const ctl = tipo === 'sel' ? `<select class="ci" data-k="${k}">${opciones(listaDe(k, v), x)}</select>`
+        : `<input class="ci" data-k="${k}" type="${tipo}" value="${esc(x)}" ${tipo === 'number' ? 'step="0.5" min="0"' : ''} ${k === 'observaciones' ? 'maxlength="300"' : ''}>`;
+      return `<label${ancho ? ' class="w2"' : ''}>${t}${ctl}</label>`;
+    };
+    const ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c ed" role="dialog">
+      <div class="dlg-t" style="margin-bottom:8px"><b>${v.anulada ? 'Nota anulada' : 'Editar nota'} ${esc(v.folio) || 's/folio'}</b> · ${esc(v.fecha)}</div>
+      <div class="ed-info">A nombre de: <b data-cli>${esc(v.cliente) || '—'}</b>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? ` · <a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver foto</a>` : ' · sin foto'}
+        <br>Cambia lo que haga falta y toca Guardar. En la nota queda anotado quién la cambió y qué.</div>
+      <div class="ed-g">${CAMPOS.map(campo).join('')}</div>
+      <div class="dlg-b"><button class="ftb ed-anular" data-a="anular">${v.anulada ? 'Restaurar nota' : 'Anular nota'}</button>
+        <button class="ftb" data-a="no">Cancelar</button><button class="ftb p" data-a="si">Guardar cambios</button></div></div>`;
+    const cerrar = () => { ov.remove(); removeEventListener('keydown', tecla, true); };
+    const tecla = e => { if (e.key === 'Escape' && document.querySelectorAll('.dlg').length === 1) { e.preventDefault(); cerrar(); } };
+    const leer = () => {
+      const cambios = {};
+      ov.querySelectorAll('[data-k]').forEach(el => {
+        const k = el.dataset.k, orig = valorDe(v, k);
+        let x = el.value.trim();
+        if (k === 'placa') x = placaK(x);
+        const igual = k === 'm3' ? Number(x || 0) === Number(orig || 0) : x === orig;
+        el.classList.toggle('cambio', !igual);
+        if (!igual) cambios[k] = x;
+      });
+      return cambios;
+    };
+    ov.addEventListener('input', e => {
+      leer();
+      if (e.target.dataset.k === 'obra') ov.querySelector('[data-cli]').textContent = clienteDeObra(e.target.value, cat) || '— (obra sin cliente)';
+    });
+    ov.addEventListener('change', () => leer());
+    ov.addEventListener('click', async e => {
+      const a = e.target.dataset?.a;
+      if (a === 'no') return cerrar();
+      if (a === 'si') {
+        const cambios = leer(), ks = Object.keys(cambios);
+        if (!ks.length) return alert('No cambiaste nada.');
+        if ('chofer' in cambios && !cambios.chofer) return alert('Escoge el chofer.');
+        if ('fecha' in cambios && !cambios.fecha) return alert('Escribe la fecha de la nota.');
+        if ('m3' in cambios && !(Number(cambios.m3) > 0 && Number(cambios.m3) < 100)) return alert('Los m³ deben ser un número entre 0 y 100.');
+        const txt = x => x === '' || x == null ? '(vacío)' : x;
+        if (!(await preguntar(`Nota ${v.folio || 's/folio'} del ${v.fecha}:\n\n` + ks.map(k => `${NOMBRE[k]}: ${txt(valorDe(v, k))} → ${txt(cambios[k])}`).join('\n') + '\n\n¿Guardar?', 'Sí, guardar'))) return;
+        return enviar(e.target, { cambios });
+      }
+      if (a === 'anular') {
+        const msg = v.anulada ? `¿Restaurar la nota ${v.folio || 's/folio'} del ${v.fecha}? Vuelve a contar en Fletes y en el Diario.`
+          : `¿Anular la nota ${v.folio || 's/folio'} del ${v.fecha}?\n\nDeja de contar en Fletes y en el Diario (por ejemplo si quedó repetida). No se borra: se puede restaurar desde Fletes › Viajes, en "Notas anuladas".`;
+        if (!(await preguntar(msg, v.anulada ? 'Sí, restaurar' : 'Sí, anular'))) return;
+        return enviar(e.target, { anular:!v.anulada });
+      }
+    });
+    async function enviar(btn, extra) {
+      ov.querySelectorAll('button').forEach(b => b.disabled = true);
+      const txt = btn.textContent; btn.textContent = 'Guardando…'; bar(true);
+      try {
+        await Sesion.api({ action:'nota_editar', fila:v.fila, folio:v.folio, fecha:v.fecha, ...extra }, 60000);
+        cerrar();
+        refrescar();
+      } catch(e) {
+        ov.querySelectorAll('button').forEach(b => b.disabled = false); btn.textContent = txt;
+        alert('No se guardó: ' + e.message);
+      } finally { bar(false); }
+    }
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-k="m3"]').focus();
+  }
+  // Lo que ya se había leído quedó viejo: se vuelve a leer lo que está en pantalla
+  function refrescar() {
+    Object.keys(VJ_CACHE).forEach(x => delete VJ_CACHE[x]);
+    Diario.olvidar();
+    if (document.getElementById('sec-fletes')?.classList.contains('on')) cargarViajes(true);
+    if (document.getElementById('sec-diario')?.classList.contains('on')) Diario.cargar(true);
+  }
+  return { abrir, boton };
+})();
 
 // ══════════════════════════════════════════
 //  SUBIR FOTOS POR LOTE (notas de viaje y tickets de diésel)
@@ -1188,7 +1333,7 @@ const Diario = (() => {
     const conf = D.confirmado
       ? `<span class="tag tb">✓ Confirmado</span><span>marcado por ${esc(D.confirmado.guardo)}${D.confirmado.cuando?.length > 11 ? ' el ' + fechaCorta(D.confirmado.cuando.slice(0, 10)) + ' a las ' + D.confirmado.cuando.slice(11, 16) : ''}</span>
          <button class="ftb" onclick="Diario.confirmar(false)">Quitar</button>`
-      : `<span>Cuando tu tío conteste en el grupo que está bien:</span><button class="ftb p" onclick="Diario.confirmar(true)">Confirmado</button>`;
+      : `<span>Cuando tu tío conteste que está bien:</span><button class="ftb p" onclick="Diario.confirmar(true)">Confirmado</button>`;
     const sinMedidas = conCamion.filter(x => !(D.tanques?.[x.placa]?.diametro && D.tanques?.[x.placa]?.largo)).length;
     const dispTodos = Object.keys(D.dispositivos || {}).sort();
     const sn = sinNotas(), snSin = sn.filter(x => !x.expl && x.motivo !== '—');
@@ -1221,10 +1366,10 @@ const Diario = (() => {
           : n.length ? 'Todas llegaron en papel' : 'Sin notas este día',
         'Palomea cada nota cuyo papel ya llegó a la oficina. La fila no se quita hasta que toques Actualizar o cambies de día.',
         `<div class="pn sub"><div class="pnh"><span>Notas del día · ${n.length}</span></div>
-          ${n.length ? tabla('<th>Folio</th><th>Chofer</th><th>Obra</th><th>Material</th><th class="rt">m³</th><th>Foto</th><th>Llegó en papel</th>',
+          ${n.length ? tabla('<th>Folio</th><th>Chofer</th><th>Obra</th><th>Material</th><th class="rt">m³</th><th>Foto</th><th>Llegó en papel</th><th></th>',
             n.slice().sort((a, b) => a.chofer.localeCompare(b.chofer) || (Number(a.folio) || 0) - (Number(b.folio) || 0)).map(v => `<tr>
               <td>${esc(v.folio) || '—'}</td><td>${esc(v.chofer)}</td><td>${esc(v.obra)}</td><td>${esc(v.material)}</td><td class="rt">${f0(v.m3)}</td>
-              <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td></tr>`).join(''))
+              <td>${linkFoto(v)}</td><td style="text-align:center">${casillaPapel(v)}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))
             : `<div class="empty">Sin notas registradas del ${fechaCorta(f)}</div>`}</div>
          ${D.pendPapel.length ? `<div class="pn sub"><div class="pnh"><span>Días anteriores: con foto y todavía sin llegar en papel (últimos ${DIAS_PAPEL_VER} días)</span></div>
           ${tabla('<th>Fecha</th><th>Folio</th><th>Chofer</th><th>Obra</th><th>Foto</th><th>Llegó en papel</th>',
@@ -1244,9 +1389,9 @@ const Diario = (() => {
           + `<datalist id="dr-expl"><option value="Llevó material a la planta de asfalto"><option value="Fue al taller"><option value="Fue a cargar diésel"><option value="Movimiento dentro de la obra"></datalist>`
           : `<div class="empty">Ningún camión trabajó sin notas este día</div>`],
 
-      ['grupo', 'Resumen para el grupo', !!D.confirmado,
+      ['grupo', 'Resumen para tu tío', !!D.confirmado,
         D.confirmado ? 'Confirmado' : 'Falta mandarlo y marcar Confirmado',
-        'Cópialo y pégalo en el grupo de WhatsApp. Cuando tu tío conteste que está bien, toca Confirmado.',
+        'Cópialo y mándaselo a tu tío por WhatsApp. Cuando conteste que está bien, toca Confirmado.',
         `<div class="bar-paso"><button class="ftb p" onclick="Diario.copiar()">Copiar resumen</button></div>
          <div style="padding:0 16px 12px"><textarea id="dr-resumen" readonly></textarea></div>
          <div class="nota-pn conf" style="border-top:1px solid var(--bd)">${conf}</div>`],
@@ -1496,15 +1641,16 @@ const Diario = (() => {
     if (hayCambios()) return alert('Hay camiones o cm sin guardar. Toca "Guardar" primero.');
     const txt = resumen(), t = $d('dr-resumen');
     t.value = txt;
-    try { await navigator.clipboard.writeText(txt); alert('Resumen copiado. Pégalo en el grupo de WhatsApp.'); }
+    try { await navigator.clipboard.writeText(txt); alert('Resumen copiado. Mándaselo a tu tío por WhatsApp.'); }
     catch(e) {
       t.focus(); t.select();
       let ok = false; try { ok = document.execCommand('copy'); } catch(_) {}
-      alert(ok ? 'Resumen copiado. Pégalo en el grupo de WhatsApp.' : 'No se pudo copiar solo: el texto quedó seleccionado abajo, cópialo con Ctrl+C.');
+      alert(ok ? 'Resumen copiado. Mándaselo a tu tío por WhatsApp.' : 'No se pudo copiar solo: el texto quedó seleccionado abajo, cópialo con Ctrl+C.');
     }
   }
 
-  return { cargar, ir, mover, guardar, subirKm, asignar, papel, explicar, confirmar, copiar, olvidar, verVista };
+  const notaFila = fila => (D?.notas || []).find(v => v.fila === fila);
+  return { cargar, ir, mover, guardar, subirKm, asignar, papel, explicar, confirmar, copiar, olvidar, verVista, notaFila };
 })();
 const DIAS_PAPEL_VER = 14;     // igual que DIAS_PAPEL de Diario.gs
 
