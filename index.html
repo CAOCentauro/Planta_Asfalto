@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#F7931E">
 <link rel="manifest" href="manifest.json">
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
 <title>CAO Centauro</title>
 <style>
 :root{--bg:#f3f3f0;--card:#fff;--bd:#d9d9d3;--text:#1a1a1a;--muted:#66665f;--amb:#d97706;--amb-bg:#fff6e5;
@@ -15,7 +17,8 @@
 html,body{min-height:100%;background:var(--bg)}
 body{color:var(--text);font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-size:16px;line-height:1.4;padding:16px}
 .wrap{max-width:440px;margin:6vh auto 0}
-.marca{margin-bottom:18px}
+.marca{margin-bottom:18px;display:flex;align-items:center;gap:12px}
+.marca .logo{width:58px;height:58px;flex:none;object-fit:contain;background:#fff;border:1px solid var(--bd);border-radius:6px;padding:2px}
 .marca span{display:block;font-size:11px;color:var(--amb);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .marca strong{display:block;font-size:22px;margin-top:2px}
 .card{background:var(--card);border:1px solid var(--bd);border-top:3px solid var(--amb);border-radius:10px;padding:20px}
@@ -61,7 +64,8 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 </head>
 <body>
 <div class="wrap">
-  <div class="marca"><span>CAO Centauro</span><strong id="m-tit">Sistema</strong></div>
+  <div class="marca"><img class="logo" src="logo.png" alt="CAO Construcción" width="58" height="58">
+    <div><span>CAO Centauro</span><strong id="m-tit">Sistema</strong></div></div>
 
   <!-- ENTRAR -->
   <form class="card oculto" id="v-login" onsubmit="entrar(event)">
@@ -100,7 +104,6 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
     <div class="pie">
       <button class="lnk" onclick="abrirCambio()">Cambiar mi contraseña</button>
       <button class="lnk oculto" id="b-pin" onclick="cambiarPin()">Cambiar mi PIN</button>
-      <button class="lnk" onclick="Sesion.salir()">Salir</button>
     </div>
     <div class="res" id="r-menu"></div>
   </div>
@@ -112,6 +115,8 @@ input:focus{outline:2px solid var(--amb);outline-offset:0;border-color:var(--amb
 const PANTALLAS = {
   dashboard: { t:'Panel de control',   d:'Producción, finanzas, reportes del operador',    href:'dashboard.html' },
   registro:  { t:'Registro de planta', d:'Captura diaria de producción y tanques',          href:'registro.html'  },
+  // Misma pantalla que Registro, abierta en su pestaña Corregir (solo con ese permiso)
+  registro_corregir: { t:'Corregir registros', d:'Lo que se registró hace menos de 4 días, con motivo', href:'registro.html?tab=corregir', de:'registro', perm:'corregir_planta' },
   pagos:     { t:'Pagos de clientes',  d:'Registrar lo que pagan los clientes y ver cuánto deben', href:'pagos.html' },
   viajes:    { t:'Fletes de la semana', d:'Viajes por día, cliente y camión, con las notas de viaje', href:'viajes.html' },
   // Misma pantalla que Fletes, abierta en su pestaña de subir notas
@@ -123,7 +128,7 @@ const PANTALLAS = {
 };
 // Primero se elige el negocio y luego sus pantallas. "General" es de todos los negocios (la nómina se ve junta).
 const NEGOCIOS = [
-  { clave:'planta',  t:'Planta de asfalto', d:'Producción, reportes del operador y pagos de clientes', pantallas:['dashboard','registro','pagos'] },
+  { clave:'planta',  t:'Planta de asfalto', d:'Producción, reportes del operador y pagos de clientes', pantallas:['dashboard','registro','registro_corregir','pagos'] },
   { clave:'viajes',  t:'Viajes locales',    d:'Acarreos de material: fletes, notas de viaje y diésel', pantallas:['viajes','viajes_subir','viajes_diesel','viajes_tickets'] },
   { clave:'general', t:'General',           d:'Nómina y usuarios',                                     pantallas:['nomina','usuarios'] },
 ];
@@ -139,6 +144,7 @@ const ICONOS = {
   // users-group un poco más chico, con un billete encima en la esquina
   nomina:    svg('<g transform="translate(-.6 -.8) scale(.86)"><path d="M10 13a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M8 21v-1a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v1"/><path d="M15 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M17 10h2a2 2 0 0 1 2 2v1"/><path d="M5 5a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M3 13v-1a2 2 0 0 1 2 -2h2"/></g>'
              + '<rect x="13.2" y="15.2" width="9.6" height="6.6" rx="1.2" style="fill:var(--amb-bg)" stroke-width="1.7"/><circle cx="18" cy="18.5" r="1.3" stroke-width="1.5"/>'),
+  registro_corregir: svg('<path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/>'),   // pencil
   candado:   svg('<path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/>'),   // lock
   viajes:    svg('<path d="M7 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M5 17h-2v-11a1 1 0 0 1 1 -1h9v12m-4 0h6m4 0h2v-6h-8m0 -5h5l3 5"/>'),   // truck
   viajes_subir: svg('<path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/>'),   // photo
@@ -206,7 +212,8 @@ function mostrarMenu() {
   $('#m-nombre').textContent = s.nombre;
   $('#m-perfil').textContent = s.perfil_nombre || s.perfil;
   // Una tarjeta con "de" se ve si el perfil tiene esa pantalla (p. ej. Subir notas va dentro de viajes)
-  const ps = Object.keys(PANTALLAS).filter(p => (s.pantallas || []).includes(PANTALLAS[p].de || p));
+  const ps = Object.keys(PANTALLAS).filter(p => (s.pantallas || []).includes(PANTALLAS[p].de || p)
+                                             && (!PANTALLAS[p].perm || (s.permisos || []).includes(PANTALLAS[p].perm)));
   const negs = NEGOCIOS.filter(n => n.pantallas.some(p => ps.includes(p)));
   const neg = negs.length === 1 ? negs[0] : negs.find(n => n.clave === NEG);   // con un solo negocio se entra directo
   $('#m-tit').textContent = neg ? neg.t : 'Sistema';

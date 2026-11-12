@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Viajes locales — CAO Centauro</title>
-<script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<script>try{const t=localStorage.getItem('tema');if(t==='light'||(!t&&matchMedia('(prefers-color-scheme: light)').matches))document.documentElement.dataset.theme='light'}catch(e){}</script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 /* Mismo aspecto que el panel de la planta (dashboard.html) */
-:root{--bg:#0b1116;--s1:#141d24;--s2:#1b2731;--bd:#26333d;--amb:#F7931E;--green:#16a34a;--red:#dc2626;--text:#e8eef2;--muted:#8796a1;--sw:210px;
+:root{--bg:#0b1116;--s1:#141d24;--s2:#1b2731;--bd:#26333d;--amb:#5B9BE8;--ink:#fff;--green:#16a34a;--red:#dc2626;--text:#e8eef2;--muted:#8796a1;--sw:210px;
   --pos:#5fd18e;--neg:#f28b82;--warn:#f2b45c;color-scheme:dark;--f-tit:'Outfit',system-ui,sans-serif}
-:root[data-theme="light"]{--bg:#F3F7FA;--s1:#ffffff;--s2:#eef3f6;--bd:#dce3e9;--amb:#E07F0F;--text:#0d141a;--muted:#5d6d78;
+:root[data-theme="light"]{--bg:#F3F7FA;--s1:#ffffff;--s2:#eef3f6;--bd:#dce3e9;--amb:#1F64B5;--ink:#fff;--text:#0d141a;--muted:#5d6d78;
   --pos:#1b7a43;--neg:#b42318;--warn:#a65300;color-scheme:light}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;font-size:14px}
@@ -22,7 +22,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Inter'
 nav{padding:10px 0;flex:1}
 nav a{display:block;padding:9px 16px;color:var(--muted);text-decoration:none;font-size:13px;border-left:2px solid transparent}
 nav a:hover{color:var(--text)}
-nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(247,147,30,.05)}
+nav a.active{color:var(--amb);border-left-color:var(--amb);background:rgba(56,128,214,.05)}
 nav a.pronto{opacity:.55;cursor:default}
 nav a small{font-size:10px;margin-left:4px}
 .nav-g{padding:14px 16px 4px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;opacity:.75}
@@ -32,7 +32,7 @@ nav a small{font-size:10px;margin-left:4px}
 .btn-r:hover{border-color:var(--amb);color:var(--amb)}
 .btn-r + .btn-r{margin-top:6px}
 .theme-btn{background:var(--text);border-color:var(--text);color:var(--bg);font-weight:600}
-.theme-btn:hover{background:var(--amb);border-color:var(--amb);color:#000}
+.theme-btn:hover{background:var(--amb);border-color:var(--amb);color:var(--ink)}
 .btn-r.casa{display:flex;align-items:center;justify-content:center;padding:5px 10px}
 .btn-r.casa svg{width:18px;height:18px}
 #main{flex:1;overflow:hidden;display:flex;flex-direction:column}
@@ -67,9 +67,9 @@ select:focus,input:focus{border-color:var(--amb)}
 .ftb:hover{border-color:var(--amb);color:var(--amb)}
 .ftb:disabled{opacity:.5;cursor:default}
 a.ftb{display:inline-block;text-decoration:none}
-.ftb.active{background:rgba(247,147,30,.12);border-color:var(--amb);color:var(--amb)}
-.ftb.p{background:var(--amb);border-color:var(--amb);color:#000}
-.ftb.p:hover{background:#d97706;color:#000}
+.ftb.active{background:rgba(56,128,214,.12);border-color:var(--amb);color:var(--amb)}
+.ftb.p{background:var(--amb);border-color:var(--amb);color:var(--ink)}
+.ftb.p:hover{filter:brightness(.9);color:var(--ink)}
 /* SUBIR NOTAS */
 .ci{background:var(--s2);border:1px solid var(--bd);color:var(--text);padding:5px 7px;font-family:inherit;font-size:12px;outline:none;width:100%}
 .ci:focus{border-color:var(--amb)}
@@ -94,7 +94,7 @@ a.ftb{display:inline-block;text-decoration:none}
 .nota-pn{font-size:12px;color:var(--muted);padding:10px 16px;line-height:1.6;white-space:normal}
 #dr-resumen{width:100%;min-height:260px;background:var(--s2);border:1px solid var(--bd);color:var(--text);font-family:inherit;font-size:13px;line-height:1.5;padding:12px;resize:vertical}
 .conf{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.banner-dr{font-size:12px;padding:10px 14px;border-left:3px solid var(--amb);background:rgba(247,147,30,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.banner-dr{font-size:12px;padding:10px 14px;border-left:3px solid var(--warn);background:rgba(247,147,30,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 summary.pnh{cursor:pointer;list-style:none}
 summary.pnh::-webkit-details-marker{display:none}
 /* Barra de arriba igual en Diario, Fletes y Diésel: a la izquierda qué día/periodo; a la derecha Actualizar y el botón principal */
@@ -141,8 +141,8 @@ details.fil:not([open]) > summary{border-bottom:none}
 .vj-fil select{min-width:120px;max-width:200px}
 .vj-fil select.on{border-color:var(--amb);color:var(--amb)}
 .vj-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:0 16px 12px;font-size:12px}
-.chip{border:1px solid var(--amb);color:var(--amb);background:rgba(247,147,30,.08);padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit}
-.chip:hover{background:rgba(247,147,30,.2)}
+.chip{border:1px solid var(--amb);color:var(--amb);background:rgba(56,128,214,.08);padding:3px 8px;font-size:11px;cursor:pointer;font-family:inherit}
+.chip:hover{background:rgba(56,128,214,.2)}
 .vista{display:flex;gap:0}
 .vista .ftb{font-size:11px;padding:5px 12px}
 .sinp{color:var(--warn)}
@@ -190,7 +190,7 @@ a{color:var(--amb)}
 
 <!-- Se muestra cuando la sesión es válida; el acceso está en index.html -->
 <div id="app">
-<button id="menu-btn" onclick="toggleMenu()">Menú</button>
+<button id="menu-btn" onclick="toggleMenu()">Secciones</button>
 <div id="overlay" onclick="closeMenu()"></div>
 <div id="sidebar">
   <div class="sb-logo"><span>CAO Centauro</span><strong>Viajes locales</strong></div>
@@ -206,8 +206,6 @@ a{color:var(--amb)}
   <div class="sb-foot">
     <span id="sb-user" style="display:block;margin:0 0 8px;font-weight:600;color:var(--text)">—</span>
     <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
-    <button class="btn-r casa" onclick="location.href='index.html?n=viajes'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
-    <button class="btn-r" onclick="Sesion.salir()">Salir</button>
   </div>
 </div>
 
@@ -332,10 +330,10 @@ function closeMenu() {
   document.getElementById('sidebar').classList.remove('open');
   document.getElementById('overlay').classList.remove('on');
 }
-function setTheme(t) {
+function setTheme(t, guardar = true) {   // sin guardar: sigue el modo del teléfono
   if (t === 'light') document.documentElement.dataset.theme = 'light';
   else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem('theme', t); } catch(e) {}
+  if (guardar) try { localStorage.setItem('tema', t); } catch(e) {}
   document.querySelectorAll('.theme-btn').forEach(b => b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
 }
 function toggleTheme() { setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light'); }
@@ -1468,7 +1466,7 @@ const Diario = (() => {
     const listos = pasos.filter(p => p[2]).length;
     const paso = ([k, t, listo, estado, para, contenido], i) => `<details class="paso${listo ? ' ok' : ''}" data-p="${k}" ${(abiertos[k] ?? !listo) ? 'open' : ''}>
         <summary><span class="paso-n">${listo ? '✓' : i + 1}</span><span class="paso-t">${t}</span>
-          <span class="paso-e${listo ? '' : ' mal'}">${esc(estado)}</span><span class="fl"></span></summary>
+          <span class="paso-e tag ${listo ? 'tb' : 'tm'}">${esc(estado)}</span><span class="fl"></span></summary>
         ${subTxt(para)}${contenido}</details>`;
     const ajustes = `<details class="paso aj" data-p="aj" ${abiertos.aj ? 'open' : ''}>
         <summary><span class="paso-n">⚙</span><span class="paso-t">Ajustes</span>
@@ -2279,7 +2277,7 @@ function whatsDiesel() {
   window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
 }
 
-setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
+setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark', false);   // etiqueta inicial del botón
 
 // Sin permiso de viajes regresa a index.html
 Sesion.requerir('viajes').then(s => {

@@ -173,17 +173,30 @@ const Sesion = (() => {
   };
   const NEG_DE = { dashboard:'planta', registro:'planta', pagos:'planta', viajes:'viajes', nomina:'general', usuarios:'general' };
   const PREFIJO = { dashboard:'Panel' };
-  const CSS_FRANJA = `:root{--franja:32px}
-#franja{position:fixed;top:0;left:0;right:0;height:var(--franja);z-index:150;display:flex;align-items:center;gap:8px;padding:0 14px;
-  font:600 12px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25)}
-#franja a{color:inherit;text-decoration:none}
-#franja a:hover{text-decoration:underline}
-#franja b{font-size:14px;letter-spacing:.06em}
-#franja .fr-s{opacity:.85;overflow:hidden;text-overflow:ellipsis;min-width:0}
-#franja .fr-sep{opacity:.6}
-#franja i{margin-left:auto;padding-left:10px;font-style:normal;font-weight:500;opacity:.7;font-size:11px}
-@media(max-width:640px){#franja i{display:none}#franja{padding:0 10px}}
+  // Barra de arriba de TODAS las pantallas: [Inicio] › [Negocio] › sección ……… [Salir]
+  // (Inicio = menú principal; el negocio = su menú). Va aquí para que sea la misma en todas partes.
+  const CSS_FRANJA = `:root{--franja:42px}
+#franja{position:fixed;top:0;left:0;right:0;height:var(--franja);z-index:150;display:flex;align-items:center;gap:6px;padding:0 10px;
+  font:600 13px/1 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;white-space:nowrap;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+#franja .fr-b{color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 10px;border-radius:4px;
+  background:rgba(255,255,255,.18);font:inherit;border:none;cursor:pointer;flex:none}
+#franja.osc .fr-b{background:rgba(0,0,0,.10)}
+#franja .fr-b:hover,#franja .fr-b:focus-visible{background:rgba(255,255,255,.32);outline:none}
+#franja.osc .fr-b:hover,#franja.osc .fr-b:focus-visible{background:rgba(0,0,0,.18)}
+#franja .fr-b svg{width:16px;height:16px;flex:none}
+#franja .fr-neg{font-weight:700}
+#franja .fr-s{opacity:.9;overflow:hidden;text-overflow:ellipsis;min-width:0;font-weight:500}
+#franja .fr-sep{opacity:.6;flex:none}
+#franja .fr-salir{margin-left:auto;font-weight:500}
+@media(max-width:640px){#franja .fr-s,#franja .fr-sep2{display:none}#franja .fr-ini span{display:none}}
 body{padding-top:var(--franja)!important}
+/* Etiquetas de estado, iguales en todas las pantallas: verde = listo, ámbar = falta / pendiente, rojo = error */
+.tag.tb,.tag.tm,.tag.ta,.tag.ok,.tag.warn,.tag.err{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;
+  font-size:11px;font-weight:600;line-height:1.5;white-space:nowrap;vertical-align:1px}
+.tag.tb::before,.tag.tm::before,.tag.ta::before,.tag.ok::before,.tag.warn::before,.tag.err::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.tag.tb,.tag.ok{background:rgba(34,160,90,.15);color:var(--pos,var(--ok,#1b7a43))}
+.tag.tm,.tag.warn{background:rgba(247,147,30,.17);color:var(--warn,#a65300)}
+.tag.ta,.tag.err{background:rgba(220,38,38,.15);color:var(--neg,var(--err,#b42318))}
 header{top:var(--franja)!important}
 #app{height:calc(100vh - var(--franja))!important}
 .theme-fab{top:calc(16px + var(--franja))!important}
@@ -199,13 +212,18 @@ header{top:var(--franja)!important}
     if (!document.getElementById('franja-css')) {
       const st = document.createElement('style'); st.id = 'franja-css'; st.textContent = CSS_FRANJA; document.head.appendChild(st);
     }
-    if (!f) { f = document.createElement('div'); f.id = 'franja'; document.body.prepend(f); }
+    // div y no <nav>: franjaDe vigila los <nav> de la página
+    if (!f) { f = document.createElement('div'); f.id = 'franja'; f.setAttribute('role', 'navigation'); document.body.prepend(f); }
     f.style.background = n.c; f.style.color = n.ink;
-    const sep = '<span class="fr-sep">›</span>';
+    f.classList.toggle('osc', n.ink !== '#fff');                  // en la franja naranja los botones van oscuros
+    const sep = (x = '') => `<span class="fr-sep${x}">›</span>`;
+    const casa = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>';
+    const salir = leer()?.token ? '<button type="button" class="fr-b fr-salir" onclick="Sesion.salir()">Salir</button>' : '';
     f.innerHTML = (neg === 'inicio'
-      ? `<b>Inicio</b>${sep}<span class="fr-s">Elige el negocio</span>`
-      : `<a href="index.html">Inicio</a>${sep}<a href="index.html?n=${neg}"><b>${n.t}</b></a>${seccion ? sep + `<span class="fr-s">${escF(seccion)}</span>` : ''}`)
-      + '<i>CAO Centauro</i>';
+      ? `<a class="fr-b fr-ini" href="index.html" aria-label="Menú principal">${casa}<span>Menú principal</span></a>`
+      : `<a class="fr-b fr-ini" href="index.html" aria-label="Menú principal">${casa}<span>Inicio</span></a>${sep()}`
+        + `<a class="fr-b fr-neg" href="index.html?n=${neg}">${n.t}</a>${seccion ? sep(' fr-sep2') + `<span class="fr-s">${escF(seccion)}</span>` : ''}`)
+      + salir;
     let m = document.querySelector('meta[name=theme-color]');
     if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); }
     m.content = n.c;

@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Planta de Asfalto — Panel</title>
-<script>try{if(localStorage.getItem('theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<script>try{const t=localStorage.getItem('tema');if(t==='light'||(!t&&matchMedia('(prefers-color-scheme: light)').matches))document.documentElement.dataset.theme='light'}catch(e){}</script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
@@ -182,7 +182,7 @@ select:focus,input:focus{border-color:var(--amb)}
 
 <!-- APP (se muestra cuando la sesión es válida; el acceso está en index.html) -->
 <div id="app">
-<button id="menu-btn" onclick="toggleMenu()">Menú</button>
+<button id="menu-btn" onclick="toggleMenu()">Secciones</button>
 <div id="overlay" onclick="closeMenu()"></div>
 <div id="sidebar">
   <div class="sb-logo">
@@ -206,8 +206,6 @@ select:focus,input:focus{border-color:var(--amb)}
     <span id="lu">—</span>
     <button class="btn-r" onclick="reload()">Actualizar</button>
     <button class="btn-r theme-btn" onclick="toggleTheme()">Modo claro</button>
-    <button class="btn-r casa" onclick="location.href='index.html?n=planta'" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></button>
-    <button class="btn-r" onclick="Sesion.salir()">Salir</button>
   </div>
 </div>
 
@@ -592,10 +590,10 @@ function chartColors() {
   const s = getComputedStyle(document.documentElement), v = k => s.getPropertyValue(k).trim();
   return { grid:v('--grid'), tick:v('--tick'), leg:v('--leg') };
 }
-function setTheme(t) {
+function setTheme(t, guardar = true) {   // sin guardar: sigue el modo del teléfono
   if (t === 'light') document.documentElement.dataset.theme = 'light';
   else delete document.documentElement.dataset.theme;
-  try { localStorage.setItem('theme', t); } catch(e) {}
+  if (guardar) try { localStorage.setItem('tema', t); } catch(e) {}
   document.querySelectorAll('.theme-btn').forEach(b =>
     b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
   // Repinta las gráficas existentes sin volver a calcularlas
@@ -2596,7 +2594,7 @@ function renderHist() {
     :'<div class="empty">Sin registros con esos filtros</div>';
 }
 
-setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark');   // etiqueta inicial del botón
+setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark', false);   // etiqueta inicial del botón
 
 // Sin sesión de administrador regresa a index.html
 Sesion.requerir('dashboard').then(s => {
