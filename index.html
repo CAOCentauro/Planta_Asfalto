@@ -222,7 +222,7 @@ function mostrarMenu() {
     // Las que tienen candado van al final, aparte
     const del = neg.pantallas.filter(p => ps.includes(p));
     const libres = del.filter(p => !Sesion.conCandado(p)), conCdo = del.filter(p => Sesion.conCandado(p));
-    $('#menu').innerHTML = (negs.length > 1 ? `<button class="lnk" style="align-self:flex-start" onclick="abrirNegocio(null)">← Todos los negocios</button>` : '')
+    $('#menu').innerHTML = (negs.length > 1 ? `<button class="lnk" style="align-self:flex-start" onclick="abrirNegocio(null)">← Menú principal</button>` : '')
       + libres.map(p => tile(p, s)).join('')
       + (conCdo.length ? `<div class="sep">Con candado · piden tu PIN</div>` + conCdo.map(p => tile(p, s)).join('') : '');
   }

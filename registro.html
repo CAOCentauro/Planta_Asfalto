@@ -85,6 +85,17 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
 .vrow{display:grid;grid-template-columns:1fr 80px 44px;gap:8px;align-items:end}
 .vrow2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
 .vrango{display:grid;grid-template-columns:1fr 1fr auto;gap:8px}
+/* CORREGIR */
+.kit{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.kit:first-of-type{border-top:none;padding-top:0}
+.kit .t{min-width:0}
+.kit .t b{display:block;font-size:15px;overflow-wrap:anywhere}
+.kit .t small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.kbtn{display:inline-flex;align-items:center;gap:6px;flex:none}
+.kfondo{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:flex;align-items:flex-end;justify-content:center;padding:12px}
+.kdlg{background:var(--card);border-radius:12px;padding:16px;width:100%;max-width:520px;max-height:calc(100vh - 24px);overflow:auto}
+.kdlg h2{font-size:17px;margin-bottom:2px}
+@media (min-width:600px){.kfondo{align-items:center}}
 </style>
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -93,16 +104,17 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
 <header><div class="in">
   <div><h1 id="h-tit">Registro de planta</h1><small id="h-op">—</small></div>
   <div style="display:flex;gap:6px">
-    <button class="btn sm" onclick="nuevoActual()" title="Borrar todo y empezar de nuevo">Nuevo</button>
+    <button class="btn sm" id="b-nuevo" onclick="nuevoActual()" title="Borrar todo y empezar de nuevo">Nuevo</button>
     <a class="btn sm casa" href="index.html?n=planta" title="Menú de inicio" aria-label="Menú de inicio"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></a>
     <button class="btn sm" onclick="Sesion.salir()">Salir</button>
   </div>
 </div></header>
 
-<!-- Pestañas: se muestran solo si el perfil tiene los dos permisos -->
+<!-- Pestañas: se muestran solo si el perfil tiene más de una -->
 <nav class="tabs oculto" id="tabs">
   <button data-t="registro" onclick="verTab('registro')">Registro diario</button>
   <button data-t="compras" onclick="verTab('compras')">Compras</button>
+  <button data-t="corregir" onclick="verTab('corregir')">Corregir</button>
 </nav>
 
 <main id="t-registro" class="oculto">
@@ -220,6 +232,31 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
     <div class="hist" id="c-hist"></div>
   </div>
 </main>
+
+<!-- CORREGIR: lo registrado hace menos de 4 días (Corregir.gs) -->
+<main id="t-corregir" class="oculto">
+  <div class="card">
+    <h2>Corregir registros <span class="u" id="k-sub">Solo lo que se registró hace menos de 4 días. Cada cambio pide el motivo y queda anotado.</span></h2>
+    <button class="btn sm" type="button" onclick="Corregir.cargar()">Actualizar</button>
+    <div class="res" id="k-estado"></div>
+  </div>
+  <div id="k-lista" style="display:flex;flex-direction:column;gap:12px"></div>
+</main>
+
+<div class="kfondo oculto" id="k-dlg" onclick="if (event.target === this) Corregir.cerrar()">
+  <div class="kdlg" role="dialog" aria-modal="true" aria-labelledby="k-dtit">
+    <h2 id="k-dtit">Corregir</h2>
+    <div class="hint" id="k-dsub"></div>
+    <div id="k-campos"></div>
+    <div class="f"><label for="k-motivo">Motivo del cambio</label>
+      <textarea id="k-motivo" class="nota" placeholder="Ej. el operador puso mal las toneladas; según la báscula fueron 148.55"></textarea></div>
+    <div class="res" id="k-derr"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" type="button" onclick="Corregir.cerrar()">Cancelar</button>
+      <button class="btn p" type="button" id="k-guardar" onclick="Corregir.guardar()">Guardar cambio</button>
+    </div>
+  </div>
+</div>
 
 <div class="msg" id="msg"></div>
 
@@ -951,19 +988,122 @@ const Compras = (() => {
 })();
 
 // ══════════════════════════════════════════
+//  CORREGIR (Corregir.gs): lo registrado hace menos de 4 días, con motivo
+// ══════════════════════════════════════════
+const Corregir = (() => {
+  let G = [], ACT = null, cargando = false;
+  // Lápiz (Tabler Icons, MIT): dibujado aquí para que se vea igual en todos los teléfonos
+  const LAPIZ = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
+  const fHora = s => new Date(s).toLocaleString('es-MX', { weekday:'long', day:'numeric', month:'short', hour:'numeric', minute:'2-digit' });
+  const fDia = f => f ? new Date(f + 'T12:00:00').toLocaleDateString('es-MX', { weekday:'short', day:'numeric', month:'short', year:'numeric' }) : '';
+  const estado = (txt, tipo) => { const el = $('#k-estado'); el.className = 'res ' + (txt ? tipo || '' : ''); el.innerHTML = txt || ''; };
+
+  async function cargar() {
+    if (cargando) return;
+    cargando = true;
+    estado('Cargando…');
+    try {
+      const j = await Sesion.api({ action:'corregir_lista' }, 60000);
+      G = j.grupos || [];
+      $('#k-sub').textContent = `Solo lo que se registró hace menos de ${j.dias} días. Cada cambio pide el motivo y queda anotado.`;
+      pintar(j);
+      estado(G.length ? '' : `No hay registros de los últimos ${j.dias} días para corregir.`, G.length ? '' : 'warn');
+    } catch(e) {
+      estado('No se pudo cargar: ' + esc(e.message), 'err');
+    } finally { cargando = false; }
+  }
+
+  function pintar(j) {
+    const pagos = j.pagos_cerrados ? `<div class="card"><h2>Pagos de clientes <span class="u">Tienen candado: para verlos pon tu PIN</span></h2>
+      <button class="btn sm" type="button" onclick="Corregir.abrirPagos()">Abrir con mi PIN</button></div>` : '';
+    $('#k-lista').innerHTML = G.map((g, gi) => `<div class="card"><h2>${esc(g.nombre)}</h2>` +
+      g.items.map((it, ii) => `<div class="kit"><div class="t"><b>${esc(it.titulo)}</b>
+        <small>${esc(fDia(it.fecha))}${it.id ? ' · ' + esc(it.id) : ''}</small>
+        <small>Se puede corregir hasta el ${esc(fHora(it.vence))}</small></div>
+        <button class="btn sm kbtn" type="button" onclick="Corregir.abrir(${gi},${ii})">${LAPIZ}Corregir</button></div>`).join('') + '</div>').join('') + pagos;
+  }
+
+  async function abrirPagos() {
+    if (await Sesion.pedirPin()) cargar();
+  }
+
+  function abrir(gi, ii) {
+    const g = G[gi], it = g.items[ii];
+    ACT = { g, it };
+    $('#k-dtit').textContent = 'Corregir · ' + g.nombre;
+    $('#k-dsub').innerHTML = esc(it.titulo) + ' · ' + esc(fDia(it.fecha)) + (it.ver && it.ver.length
+      ? '<br>' + it.ver.map(v => `${esc(v.n)}: <b>${esc(typeof v.v === 'number' ? fmt(v.v, 2) : v.v)}</b>`).join(' · ') + ' (lo calcula el Sheets)' : '');
+    $('#k-campos').innerHTML = it.campos.map((c, i) => {
+      const v = c.v == null ? '' : String(c.v), id = 'k-c' + i;
+      const lab = `<label for="${id}">${esc(c.n)}${c.req ? '' : ' <span style="opacity:.7">(opcional)</span>'}</label>`;
+      if (c.t === 'sel') return `<div class="f">${lab}<select id="${id}">${c.o.map(o =>
+        `<option value="${esc(o)}"${String(o) === v ? ' selected' : ''}>${esc(o === '' ? '—' : o === '0.16' ? '16%' : o === '0' ? 'Sin IVA' : o)}</option>`).join('')}</select></div>`;
+      if (c.t === 'fecha') return `<div class="f">${lab}<input id="${id}" type="date" value="${esc(v)}" max="${hoy()}"></div>`;
+      if (c.t === 'num') return `<div class="f">${lab}<input id="${id}" inputmode="decimal" value="${esc(v)}"></div>`;
+      return `<div class="f">${lab}<input id="${id}" value="${esc(v)}"></div>`;
+    }).join('');
+    $('#k-motivo').value = '';
+    $('#k-derr').className = 'res'; $('#k-derr').textContent = '';
+    $('#k-dlg').classList.remove('oculto');
+    const pri = $('#k-c0'); if (pri) pri.focus();
+  }
+
+  function cerrar() { $('#k-dlg').classList.add('oculto'); ACT = null; }
+
+  // Solo lo que cambió (los números se comparan como número: "10" = "10.0")
+  function cambios() {
+    const out = {};
+    ACT.it.campos.forEach((c, i) => {
+      let x = $('#k-c' + i).value.trim();
+      const antes = c.v == null ? '' : String(c.v);
+      if (c.t === 'num') {
+        x = x.replace(/[\s,$]/g, '');
+        if (x === '' && antes === '') return;
+        if (x !== '' && antes !== '' && Number(x) === Number(antes)) return;
+      } else if (x === antes) return;
+      out[c.k] = x;
+    });
+    return out;
+  }
+
+  async function guardar() {
+    if (!ACT) return;
+    const err = t => { $('#k-derr').className = 'res err'; $('#k-derr').textContent = t; };
+    const ch = cambios(), motivo = $('#k-motivo').value.trim();
+    if (!Object.keys(ch).length) return err('No cambiaste ningún dato.');
+    if (!motivo) { $('#k-motivo').focus(); return err('Escribe el motivo del cambio.'); }
+    const b = $('#k-guardar'); b.disabled = true; b.textContent = 'Guardando…';
+    try {
+      const { g, it } = ACT;
+      const j = await Sesion.api({ action:'corregir_guardar', tipo:g.tipo, fila:it.fila, id:it.id, fecha:it.fecha, cambios:ch, motivo }, 60000);
+      cerrar();
+      aviso(`✓ Guardado (${j.cambios} dato${j.cambios === 1 ? '' : 's'})`, 'ok', 4000);
+      cargar();
+    } catch(e) {
+      err('No se guardó: ' + e.message);
+    } finally { b.disabled = false; b.textContent = 'Guardar cambio'; }
+  }
+
+  return { cargar, abrir, cerrar, guardar, abrirPagos };
+})();
+
+// ══════════════════════════════════════════
 //  PESTAÑAS
 // ══════════════════════════════════════════
 let TAB = '';
+const TITULOS = { registro:'Registro de planta', compras:'Compras', corregir:'Corregir registros' };
 function verTab(t) {
   TAB = t;
-  ['registro', 'compras'].forEach(k => {
+  ['registro', 'compras', 'corregir'].forEach(k => {
     $('#t-' + k).classList.toggle('oculto', k !== t);
-    $('#bar-' + k).classList.toggle('oculto', k !== t);
+    const bar = $('#bar-' + k); if (bar) bar.classList.toggle('oculto', k !== t);
   });
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === t));
-  $('#h-tit').textContent = document.title = t === 'compras' ? 'Compras' : 'Registro de planta';
-  try { history.replaceState(null, '', t === 'compras' ? '?tab=compras' : location.pathname); } catch(e) {}
+  $('#h-tit').textContent = document.title = TITULOS[t];
+  $('#b-nuevo').classList.toggle('oculto', t === 'corregir');
+  try { history.replaceState(null, '', t === 'registro' ? location.pathname : '?tab=' + t); } catch(e) {}
   window.scrollTo(0, 0);
+  if (t === 'corregir') Corregir.cargar();
 }
 function nuevoActual() { TAB === 'compras' ? Compras.limpiar(true) : nuevoReporte(true); }
 
@@ -984,7 +1124,7 @@ Sesion.requerir('registro').then(async s => {
   SES = s;
   $('#h-op').textContent = s.nombre;
   const per = s.permisos || ['registro'];
-  const puedeR = per.includes('registro'), puedeC = per.includes('compras');
+  const puedeR = per.includes('registro'), puedeC = per.includes('compras'), puedeK = per.includes('corregir_planta');
   await cargarCatalogoAgr();
   if (puedeR) {
     construir();
@@ -994,9 +1134,11 @@ Sesion.requerir('registro').then(async s => {
     window.addEventListener('online', reintentarPendientes);
   }
   if (puedeC) Compras.init();
-  $('#tabs').classList.toggle('oculto', !(puedeR && puedeC));
+  const tabs = { registro:puedeR, compras:puedeC, corregir:puedeK };
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('oculto', !tabs[b.dataset.t]));
+  $('#tabs').classList.toggle('oculto', Object.values(tabs).filter(Boolean).length < 2);
   const pedida = new URLSearchParams(location.search).get('tab');
-  verTab(puedeC && (!puedeR || pedida === 'compras') ? 'compras' : 'registro');
+  verTab(tabs[pedida] ? pedida : ['registro', 'compras', 'corregir'].find(k => tabs[k]) || 'registro');
 }).catch(e => aviso('No se pudo revisar la sesión: ' + e.message, 'err', 10000));
 </script>
 </body>
