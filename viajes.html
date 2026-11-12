@@ -965,6 +965,8 @@ function Subidor(cfg) {
   const cola = [];
   const el = s => document.getElementById(k + '-' + s);
   const porGuardar = () => items.filter(n => n.estado === 'pendiente' || n.estado === 'error');
+  // Mientras la IA lee alguna foto no se edita nada (si no, "Aplicar" no alcanzaría a las que faltan)
+  const ocupado = () => leyendo > 0 || cola.length > 0 || items.some(n => n.estado === 'leyendo');
   const campos = () => cfg.campos(cat);
   // Opciones de un desplegable: lista de textos o de {v, t}, o grupos [{t, ops}] (p. ej. "Usados en esta obra")
   const normOp = o => typeof o === 'object' ? o : { v:o, t:o };
@@ -990,7 +992,7 @@ function Subidor(cfg) {
     <div class="sb">
       <div id="${k}-arriba" style="display:contents"></div>
       <div class="pn" id="${k}-bulk" style="display:none"><div class="pnh">Aplicar a todas las que falta registrar</div>
-        <div class="bulk"><span id="${k}-bulkc" style="display:contents"></span><button class="ftb" onclick="SUB.${k}.aplicar()">Aplicar</button>
+        <div class="bulk"><span id="${k}-bulkc" style="display:contents"></span><button class="ftb" id="${k}-aplicar" onclick="SUB.${k}.aplicar()">Aplicar</button>
           <span id="${k}-cont" style="margin-left:auto;font-size:12px;color:var(--muted)"></span></div></div>
       <div class="pn"><div id="${k}-lista"></div></div>
     </div>`;
@@ -1018,7 +1020,7 @@ function Subidor(cfg) {
   // Los avisos también ven las demás de la lista (p. ej. el mismo folio dos veces)
   const avisos = n => cfg.avisos(n.d, cat, porGuardar().filter(x => x !== n).map(x => x.d));
   function fila(n, i) {
-    const d = n.d, dis = ['pendiente','error'].includes(n.estado) ? '' : 'disabled';
+    const d = n.d, dis = ['pendiente','error'].includes(n.estado) && !ocupado() ? '' : 'disabled';
     const celda = c => {
       if (c.tipo === 'calc') return `<td data-calc="${c.f}" style="color:var(--muted)">${esc(c.calc(d, cat)) || '—'}</td>`;
       if (c.tipo === 'chk') return c.soloSinFoto && n.foto ? '<td style="color:var(--muted);text-align:center">—</td>'
@@ -1040,7 +1042,10 @@ function Subidor(cfg) {
   }
   function cabecera() {
     const faltan = porGuardar().length, hechas = items.filter(n => n.estado === 'ok' || n.estado === 'dup').length;
-    el('guardar').disabled = !faltan || leyendo > 0;
+    const oc = ocupado();
+    el('guardar').disabled = !faltan || oc;
+    el('aplicar').disabled = oc;
+    el('aplicar').textContent = oc ? 'Espera, leyendo fotos…' : 'Aplicar';
     el('limpiar').style.display = hechas ? '' : 'none';
     el('bulk').style.display = items.length ? '' : 'none';
     document.getElementById(k + '-badge').textContent = faltan ? ` (${faltan})` : '';
@@ -1132,6 +1137,7 @@ function Subidor(cfg) {
   }
 
   function aplicar() {
+    if (ocupado()) return alert('Espera a que la IA termine de leer todas las fotos');
     const vals = {};
     el('bulkc').querySelectorAll('[data-b]').forEach(x => { if (x.value) vals[x.dataset.b] = x.value; });
     if (!Object.keys(vals).length) return alert('Escoge al menos un dato para aplicar');
@@ -1874,7 +1880,7 @@ SUB.nt = Subidor({
     // (vuelve a la que leyó la IA, o vacía para escogerla)
     else if (d._auto && !d._cam?.placa) { d.placa = d.placaIA || ''; d._auto = false; }
   },
-  bulk: ['chofer', 'obra', 'fecha', 'm3'],
+  bulk: ['chofer', 'obra', 'fecha', 'material', 'm3'],
   requeridos: [['chofer', 'sin chofer'], ['fecha', 'sin fecha'], ['folio', 'sin folio (las que no tienen foto)', n => !n.foto]],
   alCargar: (cat, caja) => {
     const ops = (lista, vacio) => `<option value="">${vacio}</option>` + lista.map(x => `<option value="${esc(x)}">${esc(x)}</option>`).join('');
