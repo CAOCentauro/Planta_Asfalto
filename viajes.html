@@ -501,7 +501,7 @@ function precioVj(v, precios) {
 function datosViajes() {
   const cat = {}; (VJ.placas||[]).forEach(p => cat[p.placa] = p);
   const todos = (VJ.viajes||[]).slice().sort((a,b) => a.fecha.localeCompare(b.fecha) || claveVj(a.cliente).localeCompare(claveVj(b.cliente))
-    || a.obra.localeCompare(b.obra) || a.placa.localeCompare(b.placa) || (Number(a.folio)||0) - (Number(b.folio)||0) || a.fila - b.fila);
+    || a.obra.localeCompare(b.obra) || a.placa.localeCompare(b.placa) || (Number(a.folio)||0) - (Number(b.folio)||0) || (a.fila||0) - (b.fila||0));
   const rep = {};
   todos.forEach(v => { if (v.folio) { const k = claveVj(v.obra) + '|' + v.folio; rep[k] = (rep[k]||0) + 1; } });
   const hayPrecios = Array.isArray(VJ.precios);
@@ -511,7 +511,8 @@ function datosViajes() {
     if (!cat[v.placa]) v.avisos.push('Placa no está en el catálogo');
     if (!v.cliente) v.avisos.push('Sin cliente (la obra no está en el catálogo)');
     if (!v.m3) v.avisos.push('Sin m³');
-    v.precio = hayPrecios ? precioVj(v, VJ.precios) : null;
+    // Viajes a la planta: si no tienen precio en el Sheets van en $0 (son de la casa), sin aviso de "sin precio"
+    v.precio = hayPrecios ? (precioVj(v, VJ.precios) ?? (v.planta ? 0 : null)) : null;
     v.importe = v.precio == null ? null : v.precio * v.m3;
   });
   return { cat, todos, lista:todos.filter(v => pasaVj(v)), hayPrecios };
@@ -640,11 +641,14 @@ function renderViajes() {
           <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
           ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
           <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
-          <td><span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}</td>
+          <td>${v.planta ? '<span class="tag tb" title="Capturado en Registro › Compras; se corrige ahí">A la planta</span>'
+            : `<span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}`}</td>
           <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
           <td>${EditNota.boton(v.fila)}</td></tr>`).join(''),
         `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="5"></td>`)}
-      <div class="nota-pn">Con ✏ se corrige una nota ya registrada (folio, fecha, chofer, obra, material, m³, placa) o se anula si quedó repetida.</div>
+      <div class="nota-pn">Con ✏ se corrige una nota ya registrada (folio, fecha, chofer, obra, material, m³, placa) o se anula si quedó repetida.
+        Los viajes "A la planta" (arena y grava para la planta de asfalto) se capturan y se corrigen en Registro de planta › Compras.</div>
+      ${VJ.errPlanta ? `<div class="banner-dr">No se pudieron leer los viajes a la planta: ${esc(VJ.errPlanta)}</div>` : ''}
     </div>
     ${anuladasHtml}`;
 
@@ -771,7 +775,8 @@ function EditorRegistro(cfg) {
     if (actual && !ops.some(o => claveVj(o.v) === claveVj(actual))) ops.unshift({ v:actual, t:actual + ' (no está en el catálogo)' });
     return `<option value="">—</option>` + ops.map(o => `<option value="${esc(o.v)}" ${actual && claveVj(o.v) === claveVj(actual) ? 'selected' : ''}>${esc(o.t)}</option>`).join('');
   }
-  const boton = fila => `<button class="btn-ed" onclick="${cfg.nombre}.abrir(${Number(fila)})" title="${cfg.ayuda}">✏</button>`;
+  // Sin fila (p. ej. viajes a la planta, que se corrigen en Registro) no hay ✏
+  const boton = fila => Number(fila) ? `<button class="btn-ed" onclick="${cfg.nombre}.abrir(${Number(fila)})" title="${cfg.ayuda}">✏</button>` : '';
 
   async function abrir(fila) {
     const v = cfg.buscar(fila);
@@ -1298,12 +1303,15 @@ const Diario = (() => {
   }
   function calcular() {
     D.notasDia = (D.notas || []).filter(v => v.fecha === D.fecha);
+    D.plantaDia = (D.planta || []).filter(v => v.fecha === D.fecha);     // viajes de material a la planta (Registro › Compras)
     // Las que se palomean aquí no se quitan de la lista hasta Actualizar o cambiar de día (que no se mueva mientras se palomea)
     D.marcadas = D.marcadas || new Set();
     D.pendPapel = (D.notas || []).filter(v => v.fecha < D.fecha && v.foto && (!v.entregado || D.marcadas.has(v.fila)));
     D.kmPlaca = kmPorPlaca(D.km, D.dispositivos);
   }
   const notasDe = ch => D.notasDia.filter(v => claveVj(v.chofer) === claveVj(ch));
+  const plantaDe = x => (D.plantaDia || []).filter(v => (x.placa && v.placa === x.placa) || claveVj(v.chofer) === claveVj(x.chofer));
+  const plantaTxt = l => `${l.length} a la planta · ${f0(l.reduce((a, v) => a + v.m3, 0))} m³`;
   // Reparto guardado: ese día ya tiene camiones guardados. Desde ahí cada cambio pide el motivo.
   const bloqueado = () => (D?.camiones || []).some(a => a.fecha === D.fecha);
   // A ese camión se le miden los cm (en la hoja Tanques, tanques 0 = no se miden)
@@ -1317,7 +1325,7 @@ const Diario = (() => {
   const KM_MOVIO = 5;
   function sinNotas() {
     const f = D.fecha, hayNotas = D.notasDia.length > 0, out = new Map();
-    const conNotas = (placa, chofer) => D.notasDia.some(v => v.placa === placa || (chofer && claveVj(v.chofer) === claveVj(chofer)));
+    const conNotas = (placa, chofer) => [...D.notasDia, ...(D.plantaDia || [])].some(v => v.placa === placa || (chofer && claveVj(v.chofer) === claveVj(chofer)));
     const choferDe = placa => D.filas.find(x => x.placa === placa)?.chofer || '';
     Object.entries(D.kmPlaca).forEach(([k, km]) => {
       const [placa, fecha] = k.split('|');
@@ -1480,7 +1488,7 @@ const Diario = (() => {
       </details>`;
 
     // ── Ver: lo del día para leer ──
-    const activos = D.filas.filter(x => x.placa || notasDe(x.chofer).length);
+    const activos = D.filas.filter(x => x.placa || notasDe(x.chofer).length || plantaDe(x).length);
     const ver = `
       <div class="mg">
         <div class="mc m"><div class="ml">Camiones trabajando</div><div class="mv">${conCamion.length}</div><div class="ms">${titulo}</div></div>
@@ -1497,7 +1505,8 @@ const Diario = (() => {
           activos.map(x => { const nv = notasDe(x.chofer), km = x.placa ? D.kmPlaca[x.placa + '|' + f] : null, s = sn.find(y => y.placa === x.placa);
             return `<tr><td>${esc(x.chofer)}</td><td>${x.placa ? esc(placaTxt(x.placa)) : '<span style="color:var(--muted)">sin camión</span>'}</td>
               <td class="rt">${vacioCm(x.cm1) ? '—' : esc(x.cm1) + (vacioCm(x.cm2) ? '' : ' / ' + esc(x.cm2))}</td><td class="rt">${litrosTxt(x)}</td>
-              <td class="rt">${km == null ? '—' : f0(km)}</td><td class="rt">${nv.length ? `${nViajes(nv.length)} · ${f0(nv.reduce((a, v) => a + v.m3, 0))} m³` : '—'}</td>
+              <td class="rt">${km == null ? '—' : f0(km)}</td><td class="rt">${[nv.length ? `${nViajes(nv.length)} · ${f0(nv.reduce((a, v) => a + v.m3, 0))} m³` : '',
+                plantaDe(x).length ? plantaTxt(plantaDe(x)) : ''].filter(Boolean).join('<br>') || '—'}</td>
               <td>${!s ? '' : s.expl ? `<span class="pos" title="${esc(s.expl.nota)}">✓ Explicado</span>` : `<span class="neg" title="${esc(s.motivo)}">Sin explicar</span>`}</td></tr>`; }).join(''))
           : `<div class="empty">Sin camiones registrados del ${fechaCorta(f)}</div>`}
       </div>
@@ -1732,13 +1741,14 @@ const Diario = (() => {
 
   function resumen() {
     const f = D.fecha, L = [`*Resumen del ${diaNombre(f).toLowerCase()} ${fechaCorta(f)}*`];
-    const activos = D.filas.filter(x => x.placa || notasDe(x.chofer).length);
+    const activos = D.filas.filter(x => x.placa || notasDe(x.chofer).length || plantaDe(x).length);
     const placaTxt = p => { const x = (D.placas || []).find(y => y.placa === p); return x?.descripcion ? `${p} ${x.descripcion}` : p; };
     L.push('', '*Camiones* (¿está bien?)');
     activos.forEach(x => {
-      const nv = notasDe(x.chofer), km = x.placa ? D.kmPlaca[x.placa + '|' + f] : 0;
+      const nv = notasDe(x.chofer), pl = plantaDe(x), km = x.placa ? D.kmPlaca[x.placa + '|' + f] : 0;
       const partes = [x.chofer, x.placa ? placaTxt(x.placa) : 'sin camión'];
       if (nv.length) partes.push(`${nViajes(nv.length)} · ${f0(nv.reduce((s, v) => s + v.m3, 0))} m³`);
+      if (pl.length) partes.push(plantaTxt(pl));
       if (km) partes.push(`${Math.round(km)} km`);
       L.push('• ' + partes.join(' – '));
     });

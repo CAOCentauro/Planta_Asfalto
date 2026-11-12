@@ -176,19 +176,26 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
     <h2>¿Qué se compró?</h2>
     <div class="ops" id="c-insumos"></div>
   </div>
+  <!-- Viajes de arena / grava desde un Excel (como el control de agregados) → Agregados_Movimientos -->
+  <div class="card">
+    <h2>Viajes de arena y grava en Excel <span class="u">columnas FOLIO, FECHA, MATERIAL, PLACA, M3 y CHOFER, como el control de agregados. Se puede subir el mismo archivo otra vez: los folios que ya estaban no se repiten.</span></h2>
+    <input type="file" id="c-xls" accept=".xlsx,.xls" class="oculto" onchange="Compras.leerExcel(this.files[0]); this.value = ''">
+    <button class="btn sm" type="button" onclick="document.getElementById('c-xls').click()">Subir Excel</button>
+    <div id="c-xls-res"></div>
+  </div>
   <!-- Viajes de arena / grava (uno por folio) → Agregados_Movimientos -->
   <div class="card oculto" id="c-viajes-card">
-    <h2>Viajes <span class="u">uno por folio del ticket · si todos son de 14 m³ no hay que cambiar nada</span></h2>
+    <h2>Viajes <span class="u">uno por folio del ticket · escribe el folio y presiona Enter para el siguiente: la placa, el chofer y los m³ se copian del renglón de arriba</span></h2>
     <div class="g2 f">
       <div><label>Fecha en que llegaron</label><input type="date" id="c-vfecha"></div>
       <div><label>Procedencia / proveedor</label><input id="c-vproc" placeholder="opcional"></div>
     </div>
-    <label>Folios seguidos (opcional)</label>
-    <div class="vrango f">
+    <details class="f"><summary style="font-size:13px;color:var(--muted);cursor:pointer">Si los folios van seguidos, agrégalos de una vez</summary>
+    <div class="vrango" style="margin-top:6px">
       <input id="c-vdel" inputmode="numeric" placeholder="Del folio">
       <input id="c-val" inputmode="numeric" placeholder="Al folio">
       <button class="btn sm" type="button" onclick="Compras.rangoViajes()">Agregar</button>
-    </div>
+    </div></details>
     <div id="c-vlista"></div>
     <button class="btn add" type="button" onclick="Compras.addViaje()">+ Agregar viaje</button>
     <div class="f" style="margin-top:10px"><label>Notas</label><textarea id="c-vnota" placeholder="opcional"></textarea></div>
@@ -789,6 +796,14 @@ const Compras = (() => {
       const b = e.target.closest('.btn.x'); if (!b) return;
       b.closest('.item').remove(); calcular();
     });
+    // Enter en el folio: al siguiente renglón (o uno nuevo con la placa, chofer y m³ de este)
+    q('vlista').addEventListener('keydown', e => {
+      if (e.key !== 'Enter' || e.target.dataset.k !== 'folio') return;
+      e.preventDefault();
+      const items = $$('#c-vlista .item'), i = items.indexOf(e.target.closest('.item'));
+      const sig = items[i + 1] || addViaje();
+      sig.querySelector('[data-k=folio]').focus();
+    });
     limpiar(false);
     pintarHist();
   }
@@ -822,7 +837,9 @@ const Compras = (() => {
       </div>`;
     const m3 = el.querySelector('[data-k=m3]');
     el.querySelector('[data-k=folio]').value  = v.folio ?? '';
-    m3.value = v.m3 ?? AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje ?? 14;
+    const m3Ant = ant?.querySelector('[data-k=m3]');
+    m3.value = v.m3 ?? (m3Ant?.dataset.tocado ? m3Ant.value : AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje ?? 14);
+    if (v.m3 == null && m3Ant?.dataset.tocado) m3.dataset.tocado = '1';
     m3.addEventListener('input', () => m3.dataset.tocado = '1');
     el.querySelector('[data-k=placa]').value  = v.placa ?? ant?.querySelector('[data-k=placa]').value ?? '';
     el.querySelector('[data-k=chofer]').value = v.chofer ?? ant?.querySelector('[data-k=chofer]').value ?? '';
@@ -889,6 +906,111 @@ const Compras = (() => {
     } finally {
       btn.disabled = false; pintarInsumo();
     }
+  }
+
+  // ── Viajes desde un Excel (como "control agregados"): uno o varios bloques con encabezado
+  //    N° · FOLIO · FECHA · MATERIAL · PLACA · M3 · CHOFER; los renglones de totales se saltan ──
+  let XLS = null;                                     // { nombre, grupos:[{fecha, material, viajes:[...]}] }
+  const XLSX_URL = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  const cargarXlsx = () => window.XLSX ? Promise.resolve() : new Promise((ok, mal) => {
+    const s = document.createElement('script'); s.src = XLSX_URL; s.onload = ok;
+    s.onerror = () => mal(new Error('No se pudo cargar el lector de Excel (¿hay internet?)')); document.head.appendChild(s);
+  });
+  const sinAc = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+  // Fecha de una celda: número de Excel, "24/10/2026" o "2026-10-24"
+  function fechaXls(v) {
+    if (typeof v === 'number' && v > 20000) {
+      const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 864e5);
+      return d.toISOString().slice(0, 10);
+    }
+    const s = String(v ?? '').trim();
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+    if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+    return '';
+  }
+  // "GRAVA" → "GRAVA 3/4" si es el único que empieza así
+  function materialXls(t) {
+    const k = sinAc(t);
+    if (!k) return null;
+    const exacto = AGR_CAT.find(m => sinAc(m.material) === k);
+    if (exacto) return exacto.material;
+    const c = AGR_CAT.filter(m => sinAc(m.material).startsWith(k + ' ') || sinAc(m.material).split(' ')[0] === k);
+    return c.length === 1 ? c[0].material : null;
+  }
+
+  async function leerExcel(file) {
+    const res = q('xls-res');
+    if (!file) return;
+    XLS = null;
+    res.innerHTML = '<div class="res">Leyendo el archivo…</div>';
+    try {
+      await cargarXlsx();
+      const wb = XLSX.read(await file.arrayBuffer(), { type:'array' });
+      const filas = [], errores = [];
+      wb.SheetNames.forEach(hoja => {
+        let col = null;
+        XLSX.utils.sheet_to_json(wb.Sheets[hoja], { header:1, raw:true, defval:'' }).forEach((r, i) => {
+          const enc = r.map(c => sinAc(c).replace('³', '3'));
+          if (enc.includes('FOLIO') && enc.includes('FECHA')) {        // encabezado (puede repetirse por bloque)
+            const p = n => enc.indexOf(n);
+            col = { folio:p('FOLIO'), fecha:p('FECHA'), material:p('MATERIAL'), placa:p('PLACA'), m3:p('M3'), chofer:p('CHOFER') };
+            return;
+          }
+          if (!col) return;
+          const v = k => col[k] >= 0 ? r[col[k]] : '';
+          const folio = String(v('folio')).trim(), fechaCelda = v('fecha');
+          if (!folio && fechaCelda === '') return;                     // totales o renglón vacío
+          const donde = `${wb.SheetNames.length > 1 ? hoja + ' ' : ''}renglón ${i + 1}`;
+          const fecha = fechaXls(fechaCelda), material = materialXls(v('material')), m3 = num(v('m3'));
+          if (!fecha) errores.push(`${donde}: la fecha no se entiende`);
+          else if (fecha > hoy()) errores.push(`${donde}: la fecha ${fecha} todavía no pasa`);
+          if (!material) errores.push(`${donde}: el material "${v('material')}" no está en la lista (${AGR_CAT.map(m => m.material).join(', ')})`);
+          if (!(m3 > 0 && m3 <= 60)) errores.push(`${donde}: revisa los m³`);
+          if (!folio) errores.push(`${donde}: falta el folio`);
+          filas.push({ fecha, material, folio, m3, placa:String(v('placa')).toUpperCase().replace(/[^A-Z0-9]/g, ''), chofer:String(v('chofer')).trim().toUpperCase() });
+        });
+      });
+      if (!filas.length) throw new Error('No encontré viajes. El archivo debe tener un encabezado con FOLIO y FECHA (y MATERIAL, PLACA, M3, CHOFER).');
+      const vistos = new Map();
+      filas.forEach(f => { const k = f.material + '|' + f.folio; if (f.folio && vistos.has(k)) errores.push(`Folio ${f.folio} de ${f.material} está dos veces`); vistos.set(k, 1); });
+      const g = new Map();
+      filas.forEach(f => { const k = f.fecha + '|' + f.material; if (!g.has(k)) g.set(k, { fecha:f.fecha, material:f.material, viajes:[] }); g.get(k).viajes.push(f); });
+      const grupos = [...g.values()].sort((a, b) => a.fecha.localeCompare(b.fecha) || String(a.material).localeCompare(String(b.material)));
+      const m3 = l => l.reduce((s, v) => s + v.m3, 0);
+      res.innerHTML = `<div class="hist" style="margin-top:10px">${grupos.map(x => `<div><span><b>${esc(fLarga(x.fecha) || '¿fecha?')}</b> · ${esc(x.material || '¿material?')}<br>
+          <span style="color:var(--muted)">${esc([...new Set(x.viajes.map(v => v.placa || 'sin placa'))].join(', '))}</span></span>
+          <span>${x.viajes.length} viaje${x.viajes.length === 1 ? '' : 's'} · ${fmt(m3(x.viajes))} m³</span></div>`).join('')}</div>
+        <div class="res ${errores.length ? 'err' : 'ok'}">${errores.length
+          ? `Corrige el Excel y vuelve a subirlo:<br>• ${errores.slice(0, 10).map(esc).join('<br>• ')}${errores.length > 10 ? `<br>…y ${errores.length - 10} más` : ''}`
+          : `<b>${filas.length} viajes · ${fmt(m3(filas))} m³</b> en ${grupos.length} día${grupos.length === 1 ? '' : 's'} y material. Revisa y guarda.`}</div>
+        ${errores.length ? '' : '<button class="btn p" type="button" id="c-xls-ok" style="width:100%;margin-top:10px" onclick="Compras.guardarExcel()">Guardar estos viajes</button>'}`;
+      if (!errores.length) XLS = { nombre:file.name, grupos };
+    } catch(e) {
+      res.innerHTML = `<div class="res err">${esc(e.message)}</div>`;
+    }
+  }
+
+  async function guardarExcel() {
+    if (!XLS) return;
+    const b = q('xls-ok'); b.disabled = true; b.textContent = 'Guardando…';
+    let guardados = 0, m3 = 0, omitidos = 0;
+    const malos = [];
+    for (const x of XLS.grupos) {
+      for (let i = 0; i < x.viajes.length; i += 200) {            // de 200 en 200 (límite de una captura)
+        try {
+          const j = await api({ action:'agregados_viajes', captura:{ id:nuevoId(), fecha:x.fecha, material:x.material, procedencia:'',
+            nota:'Excel ' + XLS.nombre, omitirRepetidos:true,
+            viajes:x.viajes.slice(i, i + 200).map(v => ({ folio:v.folio, m3:v.m3, placa:v.placa, chofer:v.chofer })) } });
+          guardados += j.viajes; m3 += j.m3; omitidos += (j.omitidos || []).length;
+        } catch(e) { malos.push(`${fLarga(x.fecha)} · ${x.material}: ${e.message}`); }
+      }
+    }
+    XLS = null;
+    q('xls-res').innerHTML = `<div class="res ${malos.length ? 'err' : 'ok'}">✓ Guardados ${guardados} viaje${guardados === 1 ? '' : 's'} · ${fmt(m3)} m³`
+      + (omitidos ? `<br>${omitidos} ya estaban capturados y no se repitieron` : '')
+      + (malos.length ? `<br>No se guardaron:<br>• ${malos.map(esc).join('<br>• ')}<br>Vuelve a subir el archivo: lo que ya se guardó no se repite.` : '') + '</div>';
   }
 
   // En el formato de Entradas_Material
@@ -984,7 +1106,7 @@ const Compras = (() => {
           <span style="color:var(--muted)">${esc(x.proveedor)} · ${fLarga(x.fecha)}</span></span><span>${money(x.total)}</span></div>`).join('');
   }
 
-  return { init, enviar, limpiar, calcular, costos, recolectar, addViaje, rangoViajes };
+  return { init, enviar, limpiar, calcular, costos, recolectar, addViaje, rangoViajes, leerExcel, guardarExcel };
 })();
 
 // ══════════════════════════════════════════
