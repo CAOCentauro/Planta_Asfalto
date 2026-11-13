@@ -852,8 +852,12 @@ const Compras = (() => {
     m3.value = v.m3 ?? (m3Ant?.dataset.tocado ? m3Ant.value : AGR_CAT.find(m => m.material === INSUMO)?.m3_por_viaje ?? 14);
     if (v.m3 == null && m3Ant?.dataset.tocado) m3.dataset.tocado = '1';
     m3.addEventListener('input', () => m3.dataset.tocado = '1');
-    el.querySelector('[data-k=placa]').value  = v.placa ?? ant?.querySelector('[data-k=placa]').value ?? '';
-    el.querySelector('[data-k=chofer]').value = v.chofer ?? ant?.querySelector('[data-k=chofer]').value ?? '';
+    // Lo copiado de arriba cuenta como puesto solo: si en este renglón se cambia la placa, cambia el chofer (y al revés)
+    ['placa', 'chofer'].forEach(k => {
+      const x = el.querySelector(`[data-k=${k}]`), arriba = ant?.querySelector(`[data-k=${k}]`).value ?? '';
+      x.value = v[k] ?? arriba;
+      if (v[k] == null && arriba) x.dataset.auto = '1';
+    });
     q('vlista').appendChild(el);
     calcular();
     return el;
@@ -862,8 +866,8 @@ const Compras = (() => {
     const dia = q('vfecha').value || hoy();
     const pl = it.querySelector('[data-k=placa]'), ch = it.querySelector('[data-k=chofer]');
     const [de, a, buscar] = cambio === 'chofer' ? [ch, pl, placaDeChofer] : [pl, ch, choferDePlaca];
-    // La placa siempre sigue al chofer; el chofer sigue a la placa solo si está vacío o se puso solo
-    if (cambio === 'placa' && a.value.trim() && !a.dataset.auto) return;
+    // Manda lo último que se cambió: la placa pone a su chofer y el chofer pone su camión. Si no se sabe,
+    // lo que se había puesto solo (o copiado de arriba) se quita; lo escrito a mano se deja.
     const v = buscar(de.value, dia);
     if (v) { a.value = v; a.dataset.auto = '1'; }
     else if (a.dataset.auto) { a.value = ''; delete a.dataset.auto; }
