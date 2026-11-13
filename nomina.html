@@ -334,10 +334,24 @@ function saldoHasta(w, lun) {
 }
 const saldoHoy = w => saldoHasta(w, lunes(HOY));
 const estado = s => s > 0.5 ? 'debe' : s < -0.5 ? 'prestamo' : 'ok';
-function pill(s) {
-  const e = estado(s);
-  return e === 'debe' ? `<span class="pill p-debe">Por pagar ${money(s)}</span>`
-       : e === 'prestamo' ? `<span class="pill p-loan">Préstamo ${money(-s)}</span>`
+// Cuántas semanas de sueldo son lo que se le debe (o lo que cubre su préstamo), en medias semanas
+function semanasDe(w, s, lun = lunes(HOY)) {
+  const sal = w ? tarifa(w, lun).salario : 0;
+  if (!(sal > 0) || Math.abs(s) <= 0.5) return null;
+  return Math.max(0.5, Math.round(Math.abs(s) / sal * 2) / 2);
+}
+const txtSem = n => n == null ? '' : `${n === 0.5 ? 'media' : fdias(n).replace('.5', '½')} semana${n > 1 ? 's' : ''}`;
+// Con préstamo: el sábado en que vuelve a cobrar (si trabaja completas las semanas que siguen) y cuánto
+function vuelveACobrar(w, s) {
+  const sal = tarifa(w, lunes(HOY)).salario;
+  if (!(sal > 0) || s >= -0.5) return null;
+  const n = Math.floor(-s / sal + 1e-9) + 1;
+  return { sabado: addDays(lunes(HOY), 7 * n + DIA_PAGO - 1), monto: n * sal + s };
+}
+function pill(s, w, lun) {
+  const e = estado(s), n = semanasDe(w, s, lun), sem = n == null ? '' : ` · ${fdias(n).replace('.5', '½')} sem`;
+  return e === 'debe' ? `<span class="pill p-debe">Por pagar ${money(s)}${sem}</span>`
+       : e === 'prestamo' ? `<span class="pill p-loan">Préstamo ${money(-s)}${sem}</span>`
        : `<span class="pill p-ok">Al corriente</span>`;
 }
 // Calcula algo como si el movimiento ya estuviera guardado (para "Así queda")
@@ -381,7 +395,7 @@ function vRegistrar() {
         <div class="grp"><span>${esc(g.l)}</span><span>${g.ws.length}</span></div>
         <div class="wgrid">${g.ws.map(w => `
           <button class="wt" data-act="pickW" data-id="${w.id}">
-            <b>${esc(w.nombre)}</b><small>${esc(w.puesto)}</small><span class="st">${pill(saldoHoy(w))}</span>
+            <b>${esc(w.nombre)}</b><small>${esc(w.puesto)}</small><span class="st">${pill(saldoHoy(w), w)}</span>
           </button>`).join('')}</div>`).join('') || '<div class="card hint">Nadie coincide con la búsqueda.</div>'}`;
   }
 
@@ -394,6 +408,13 @@ function vRegistrar() {
         <button class="btn sm" data-act="changeW">Cambiar</button>
       </div>
       <div class="saldo"><span>${s < -0.5 ? 'Préstamo por recuperar' : 'Por pagar el sábado'}</span><b class="${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</b></div>
+      ${(() => {
+        const n = semanasDe(w, s), v = vuelveACobrar(w, s), sal = money(tarifa(w, lunes(HOY)).salario);
+        if (n == null) return '';
+        if (!v) return `<div class="hint">${n > 1 ? 'Son' : 'Es'} ${txtSem(n)} de sueldo (${sal} por semana).</div>`;
+        return `<div class="hint">Cubre ${txtSem(n)} de sueldo (${sal} por semana). Si trabaja completas las semanas que siguen,
+          vuelve a cobrar el <b>sábado ${fCorta(v.sabado)}</b>: ${money(v.monto)}.</div>`;
+      })()}
       <button class="btn okb" style="width:100%;margin-top:10px" data-act="pagar" data-id="${w.id}"><span class="dot d-ok"></span>Pagar nómina</button>
     </div>
 
@@ -760,7 +781,7 @@ function vResumen() {
         <h2 style="display:flex;justify-content:space-between">${esc(g.l)}<span class="num" style="font-size:14px;color:var(--muted)">${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
         <div class="lst">${fs.map(({ w, c, s }) => `<div><button class="rowb" data-act="detalle" data-id="${w.id}">
           <span class="g"><b>${esc(w.nombre)}${w.activo ? '' : ' (baja)'}</b><small>${fdias(c.trabajados)}/${fdias(c.tf.dias)} días · ganó ${money(c.ganado)}${c.prestado ? ' · préstamos ' + money(c.prestado) : ''}</small></span>
-          <span class="r">${pill(s)}</span></button></div>`).join('')}</div>
+          <span class="r">${pill(s, w, lun)}</span></button></div>`).join('')}</div>
       </div>`;
     }).join('') || '<div class="card hint">Nadie en este filtro.</div>'}
     <div class="hint" style="padding:0 4px">El saldo junta todas las semanas: lo ganado menos lo que se le ha dado (préstamos y pagos).</div>`;
