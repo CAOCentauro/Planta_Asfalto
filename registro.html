@@ -797,6 +797,16 @@ const Compras = (() => {
       const b = e.target.closest('.btn.x'); if (!b) return;
       b.closest('.item').remove(); calcular();
     });
+    // Escoger el chofer pone la placa de su camión ese día; escoger la placa pone a su chofer (si el chofer
+    // está vacío o se puso solo). Lo que se escribe a mano se respeta.
+    q('vlista').addEventListener('input', e => {
+      const k = e.target.dataset.k;
+      if (k === 'chofer' || k === 'placa') { delete e.target.dataset.auto; autoVj(e.target.closest('.item'), k); }
+    });
+    q('vfecha').addEventListener('change', () => $$('#c-vlista .item').forEach(it => {
+      if (it.querySelector('[data-k=placa]').dataset.auto) autoVj(it, 'chofer');
+      else if (it.querySelector('[data-k=chofer]').dataset.auto) autoVj(it, 'placa');
+    }));
     // Enter en el folio: al siguiente renglón (o uno nuevo con la placa, chofer y m³ de este)
     q('vlista').addEventListener('keydown', e => {
       if (e.key !== 'Enter' || e.target.dataset.k !== 'folio') return;
@@ -847,6 +857,16 @@ const Compras = (() => {
     q('vlista').appendChild(el);
     calcular();
     return el;
+  }
+  function autoVj(it, cambio) {
+    const dia = q('vfecha').value || hoy();
+    const pl = it.querySelector('[data-k=placa]'), ch = it.querySelector('[data-k=chofer]');
+    const [de, a, buscar] = cambio === 'chofer' ? [ch, pl, placaDeChofer] : [pl, ch, choferDePlaca];
+    // La placa siempre sigue al chofer; el chofer sigue a la placa solo si está vacío o se puso solo
+    if (cambio === 'placa' && a.value.trim() && !a.dataset.auto) return;
+    const v = buscar(de.value, dia);
+    if (v) { a.value = v; a.dataset.auto = '1'; }
+    else if (a.dataset.auto) { a.value = ''; delete a.dataset.auto; }
   }
   // "Del folio 14863 al 14894" → 32 renglones (los vacíos de arriba se reutilizan)
   function rangoViajes() {
@@ -1244,8 +1264,35 @@ async function cargarCatalogoAgr() {
 }
 // Placas y choferes para los desplegables de los viajes de arena y grava (se puede escribir otro).
 // No detiene la página: primero lo guardado, luego lo nuevo cuando llegue.
+let LISTAS_VJ = null;
+const claveCh = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/\s+/g, ' ').trim();
+const clavePl = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+// Lo último de "Camiones del día" de cada chofer, con fecha igual o anterior al día del viaje
+function asignadosAl(dia) {
+  const u = {};
+  (LISTAS_VJ?.camiones || []).forEach(a => { const k = claveCh(a.chofer); if (a.fecha <= dia && (!u[k] || u[k].fecha <= a.fecha)) u[k] = a; });
+  return u;
+}
+// Camión de un chofer ese día: Camiones del día; si nunca se le ha guardado, la placa de su última nota
+function placaDeChofer(chofer, dia) {
+  const k = claveCh(chofer);
+  if (!k || !LISTAS_VJ) return '';
+  const a = asignadosAl(dia)[k];
+  if (a) return a.placa || '';
+  return Object.entries(LISTAS_VJ.ultimaPlaca || {}).find(([n]) => claveCh(n) === k)?.[1].placa || '';
+}
+// Chofer de un camión ese día (solo si es uno solo)
+function choferDePlaca(placa, dia) {
+  const p = clavePl(placa);
+  if (!p || !LISTAS_VJ) return '';
+  const asig = asignadosAl(dia);
+  let t = Object.values(asig).filter(a => clavePl(a.placa) === p).map(a => a.chofer);
+  if (!t.length) t = Object.entries(LISTAS_VJ.ultimaPlaca || {}).filter(([n, u]) => !asig[claveCh(n)] && clavePl(u.placa) === p).map(([n]) => n);
+  return t.length === 1 ? t[0] : '';
+}
 function pintarListasVj(c) {
   if (!c) return;
+  LISTAS_VJ = c;
   const op = (v, t) => `<option value="${esc(v)}"${t ? ` label="${esc(v + ' · ' + t)}"` : ''}></option>`;
   $('#dl-placas').innerHTML = (c.placas || []).map(p => op(p.placa, p.descripcion)).join('');
   $('#dl-choferes').innerHTML = (c.choferes || []).map(ch => op(ch)).join('');
@@ -1254,7 +1301,10 @@ async function cargarListasVj() {
   pintarListasVj(LS.get('agr_vj', null));
   try {
     const j = await Sesion.api({ action:'agregados_catalogo', viajes:true }, 30000);
-    if (Array.isArray(j.placas)) { const c = { placas:j.placas, choferes:j.choferes || [] }; LS.set('agr_vj', c); pintarListasVj(c); }
+    if (Array.isArray(j.placas)) {
+      const c = { placas:j.placas, choferes:j.choferes || [], camiones:j.camiones || [], ultimaPlaca:j.ultimaPlaca || {} };
+      LS.set('agr_vj', c); pintarListasVj(c);
+    }
   } catch(e) {}
 }
 
