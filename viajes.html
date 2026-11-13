@@ -175,6 +175,14 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 .ob-vacio{font-size:12px;color:var(--muted);padding:10px}
 .ob-ok{font-size:12px;border-left:3px solid var(--pos);background:rgba(34,197,94,.1);padding:8px 10px;margin-bottom:12px;line-height:1.5}
 .ob-p{display:grid;grid-template-columns:1fr 120px;gap:6px;margin-bottom:6px}
+.cc-obra{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);margin-bottom:12px}
+.cc-pad{padding:10px;font-size:13px;line-height:1.5}
+.cc-pad small{color:var(--muted)}
+.cc-pad .ed-g{margin-bottom:10px}
+.cc-dif td{font-size:12px;padding-top:0}
+.cc-prev{margin-bottom:10px}
+.cc-prev .btn-ed{margin:3px 0 3px 6px}
+@media(max-width:520px){.cc-m3{display:none}.cc-t th,.cc-t td{padding-left:6px;padding-right:6px}}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
 #modal-foto.on{display:flex}
 #modal-foto img{max-width:95vw;max-height:92vh}
@@ -258,6 +266,7 @@ a{color:var(--amb)}
       </div>
       <div class="acc">
         <button class="ftb" id="vj-obras" onclick="Obras.abrir()" hidden>Obras y precios</button>
+        <button class="ftb" id="vj-conc" onclick="Conc.abrir()" hidden>Conciliaciones</button>
         <button class="ftb s2" onclick="excelViajes(this)">Descargar Excel</button>
         <button class="ftb s2" onclick="whatsViajes()">Enviar por WhatsApp</button>
         <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
@@ -952,6 +961,334 @@ const Obras = (() => {
   const ponerSinPrecio = i => { const x = SINP_VJ[i]; if (x) abrir({ cliente:x.items[0].cliente, obra:x.items[0].obra, material:x.items[0].material,
     desde:x.items.map(v => v.fecha).sort()[0] }); };
   return { abrir, ponerSinPrecio };
+})();
+
+// ══════════════════════════════════════════
+//  CONCILIACIONES POR OBRA (Fletes › Conciliaciones; permiso obras)
+//  Una conciliación = los viajes de una obra entre dos fechas con su precio por m³. Se registra (número que sigue,
+//  viajes, m³ e importe) y se descarga en Excel con el formato de siempre: encabezado de la obra, la tabla, los
+//  totales y las firmas. Si después cambia una nota o un precio de esas fechas, aquí se avisa que ya no cuadra.
+// ══════════════════════════════════════════
+const EXCELJS_URL = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js';
+const Conc = (() => {
+  let D = null, V = null, ov = null, obraK = '', aviso = '', ultimo = null;
+  const DIAS_ATRAS = 365;                 // se leen los viajes del último año
+  const fechaLarga = s => `${fechaCorta(s)} ${s.slice(0, 4)}`;
+  const masDias = (s, n) => { const d = fechaLocal(s); d.setDate(d.getDate() + n); return txtFecha(d); };
+  const r2 = x => Math.round(x * 100) / 100;
+  const obrasOrden = () => (D.obras || []).slice().sort((a, b) => a.obra.localeCompare(b.obra, 'es'));
+  const obraSel = () => (D.obras || []).find(o => claveVj(o.obra) === obraK);
+  const concDe = o => (D.conc || []).filter(c => claveVj(c.obra) === claveVj(o.obra)).sort((a, b) => a.n - b.n);
+  // Viajes de la obra con su precio e importe, en el orden de la conciliación (fecha, folio)
+  function viajesDe(o, desde = '', hasta = '9999') {
+    return (V.viajes || []).filter(v => !v.planta && claveVj(v.obra) === claveVj(o.obra) && v.fecha >= desde && v.fecha <= hasta)
+      .map(v => { const precio = precioVj(v, V.precios); return { ...v, precio, importe:precio == null ? null : precio * N(v.m3) }; })
+      .sort((a, b) => a.fecha.localeCompare(b.fecha) || (Number(a.folio) || 0) - (Number(b.folio) || 0)
+        || String(a.folio).localeCompare(String(b.folio)) || a.placa.localeCompare(b.placa));
+  }
+  const suma = vs => ({ viajes:vs.length, m3:vs.reduce((s, v) => s + N(v.m3), 0), importe:r2(vs.reduce((s, v) => s + (v.importe || 0), 0)),
+                        sinPrecio:vs.filter(v => v.importe == null) });
+  // Cómo suma ahora una conciliación ya registrada (null si es de antes de lo que se leyó)
+  const ahora = (o, c) => c.desde < V.desde ? null : suma(viajesDe(o, c.desde, c.hasta));
+  const cuadra = (c, a) => !a || (a.viajes === c.viajes && Math.abs(a.importe - c.importe) < 0.01 && Math.abs(a.m3 - c.m3) < 0.01);
+  // Encabezado y firmas: lo guardado o, si falta, el nombre de la obra y del cliente
+  const datos = o => ({ enc1:o.enc1 || '', enc2:o.enc2 || '', enc3:o.enc3 || o.obra.toUpperCase(), entrega:o.entrega || '', recibe:o.recibe || (o.cliente || '').toUpperCase() });
+  const sinDatos = o => !o.enc1 && !o.enc2 && !o.enc3 && !o.entrega && !o.recibe;
+  // DEL 09 AL 14 DE NOVIEMBRE · DEL 26 DE OCTUBRE AL 01 DE NOVIEMBRE
+  function periodoTxt(a, b) {
+    const mes = s => MESES[+s.slice(5, 7) - 1], otroAnio = a.slice(0, 4) !== b.slice(0, 4);
+    if (a.slice(0, 7) === b.slice(0, 7)) return `DEL ${a.slice(8)} AL ${b.slice(8)} DE ${mes(b)}`;
+    return `DEL ${a.slice(8)} DE ${mes(a)}${otroAnio ? ' ' + a.slice(0, 4) : ''} AL ${b.slice(8)} DE ${mes(b)}${otroAnio ? ' ' + b.slice(0, 4) : ''}`;
+  }
+  const periodoCorto = c => `${fechaCorta(c.desde)} – ${c.hasta.slice(0, 4) === txtFecha(new Date()).slice(0, 4) ? fechaCorta(c.hasta) : fechaLarga(c.hasta)}`;
+
+  const cuerpo = () => ov.querySelector('.ob-cuerpo');
+  const pintar = html => { cuerpo().innerHTML = html; };
+  const valor = k => cuerpo().querySelector(`[data-k="${k}"]`)?.value.trim() || '';
+
+  // ── La obra escogida: encabezado, sus conciliaciones y la nueva ──
+  function principal() {
+    const obras = obrasOrden(), o = obraSel();
+    if (!o) return pintar(`<div class="ob-vacio">Todavía no hay obras.</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`);
+    const cs = concDe(o), dd = datos(o), todos = viajesDe(o);
+    const ult = cs.length ? cs[cs.length - 1] : null, sigN = ult ? ult.n + 1 : 1;
+    const enAlguna = v => cs.some(c => v.fecha >= c.desde && v.fecha <= c.hasta);
+    const huecos = todos.filter(v => !enAlguna(v) && ult && v.fecha < ult.hasta);   // quedaron fuera, entre conciliaciones
+    const pend = todos.filter(v => !ult || v.fecha > ult.hasta);
+    const desde0 = ult ? masDias(ult.hasta, 1) : (pend[0]?.fecha || txtFecha(new Date()));
+    let hasta0 = pend.length ? pend[pend.length - 1].fecha : txtFecha(new Date());
+    if (hasta0 < desde0) hasta0 = desde0;
+    const tot = cs.reduce((s, c) => ({ viajes:s.viajes + c.viajes, m3:s.m3 + c.m3, importe:s.importe + c.importe }), { viajes:0, m3:0, importe:0 });
+
+    pintar(`${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
+      <label class="cc-obra">Obra<select class="ci" data-k="obra">${obras.map(x => `<option value="${esc(claveVj(x.obra))}" ${claveVj(x.obra) === obraK ? 'selected' : ''}>${esc(x.obra)} · ${esc(x.cliente || 'sin cliente')}</option>`).join('')}</select></label>
+
+      <div class="ob-o"><div class="ob-h"><span><b>Encabezado y firmas</b> <small>· así sale arriba y abajo de cada conciliación</small></span>
+          <button class="ftb" data-a="datos">Cambiar</button></div>
+        <div class="cc-pad">${[dd.enc1, dd.enc2, dd.enc3].filter(Boolean).map(esc).join('<br>')}
+          <br><small>Entrega: ${esc(dd.entrega) || '—'} · Recibe: ${esc(dd.recibe) || '—'}</small>
+          ${sinDatos(o) ? '<div class="sinp">Todavía no se ha puesto: revisa que esté bien antes de sacar la conciliación.</div>' : ''}</div></div>
+
+      <div class="ob-o"><div class="ob-h"><b>Conciliaciones entregadas</b>
+          ${cs.length ? '<button class="ftb" data-a="resumen">Descargar resumen</button>' : ''}</div>
+        ${cs.length ? `<div class="tw"><table class="cc-t"><thead><tr><th>N°</th><th>Periodo</th><th class="rt">Viajes</th><th class="rt cc-m3">m³</th><th class="rt">Importe</th><th></th></tr></thead><tbody>
+          ${cs.map(c => { const a = ahora(o, c); return `<tr><td>${c.n}</td><td>${periodoCorto(c)}</td><td class="rt">${c.viajes}</td><td class="rt cc-m3">${f0(c.m3)}</td><td class="rt">${$$(c.importe)}</td>
+              <td class="rt"><button class="btn-ed" data-a="bajar" data-n="${c.n}" title="Descargar la conciliación ${c.n} en Excel">Excel</button></td></tr>
+            ${cuadra(c, a) ? '' : `<tr class="cc-dif"><td></td><td colspan="5" class="sinp">Ahora suma ${nViajes(a.viajes)}, ${f0(a.m3)} m³, ${$$(a.importe)}: cambió una nota o un precio de esas fechas después de entregarla.</td></tr>`}`; }).join('')}
+          <tr><td></td><td><b>Total</b></td><td class="rt"><b>${tot.viajes}</b></td><td class="rt cc-m3"><b>${f0(tot.m3)}</b></td><td class="rt"><b>${$$(tot.importe)}</b></td><td></td></tr>
+          </tbody></table></div>
+          <div class="cc-pad"><button class="btn-ed" data-a="quitar" data-n="${ult.n}">Quitar la conciliación ${ult.n}</button> <small>(solo la última, si se registró por error)</small></div>`
+        : '<div class="ob-vacio">Todavía no hay conciliaciones de esta obra.</div>'}
+        ${huecos.length ? `<div class="cc-pad sinp">${nViajes(huecos.length)} de esta obra no ${huecos.length === 1 ? 'está' : 'están'} en ninguna conciliación: ${[...new Set(huecos.map(v => fechaCorta(v.fecha)))].join(', ')}.</div>` : ''}
+      </div>
+
+      <div class="ob-o"><div class="ob-h"><b>Nueva: conciliación ${sigN}</b></div>
+        <div class="cc-pad">
+          <div class="ed-g"><label>Desde<input class="ci" type="date" data-k="desde" value="${desde0}"></label>
+            <label>Hasta<input class="ci" type="date" data-k="hasta" value="${hasta0}"></label></div>
+          <div class="cc-prev"></div>
+          <button class="ftb p" data-a="guardar">Guardar y descargar</button>
+        </div></div>
+      <div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`);
+    aviso = '';
+    previa();
+  }
+
+  // Lo que llevaría la nueva, y si hay algo que impide sacarla
+  function revisar() {
+    const o = obraSel(), desde = valor('desde'), hasta = valor('hasta');
+    if (!desde || !hasta) return { error:'Pon las dos fechas.' };
+    if (desde > hasta) return { error:'La fecha "desde" va antes que "hasta".' };
+    if (desde < V.desde) return { error:`Solo se pueden sacar conciliaciones desde el ${fechaLarga(V.desde)}.` };
+    const choca = concDe(o).find(c => !(hasta < c.desde || desde > c.hasta));
+    if (choca) return { error:`Esas fechas se cruzan con la conciliación ${choca.n} (${periodoCorto(choca)}).` };
+    const vs = viajesDe(o, desde, hasta), s = suma(vs);
+    if (!vs.length) return { error:'No hay viajes de esta obra en esas fechas.' };
+    if (s.sinPrecio.length) return { error:`${nViajes(s.sinPrecio.length)} sin precio: ponles precio en Obras y precios antes de sacar la conciliación.`, sinPrecio:s.sinPrecio };
+    return { o, desde, hasta, vs, s };
+  }
+  function previa() {
+    const el = cuerpo().querySelector('.cc-prev'), btn = cuerpo().querySelector('[data-a=guardar]');
+    if (!el) return;
+    const r = revisar();
+    btn.disabled = !!r.error;
+    if (r.error) {
+      const mats = r.sinPrecio ? [...new Map(r.sinPrecio.map(v => [claveVj(v.material), v])).values()] : [];
+      el.innerHTML = `<div class="sinp">${esc(r.error)}</div>` + mats.map(v => `<div>${esc(v.material || '(sin material)')} <button class="btn-ed" data-a="precio" data-m="${esc(v.material)}" data-f="${v.fecha}">Poner precio</button></div>`).join('');
+      return;
+    }
+    const porMat = agruparVj(r.vs, v => v.material || '(sin material)').sort((a, b) => b.importe - a.importe);
+    el.innerHTML = `<div><b>${nViajes(r.s.viajes)} · ${f0(r.s.m3)} m³ · ${$$(r.s.importe)}</b></div>
+      ${porMat.map(g => `<div style="color:var(--muted)">${esc(g.k)}: ${nViajes(g.viajes)}, ${f0(g.m3)} m³, ${$$(g.importe)}</div>`).join('')}`;
+  }
+
+  async function guardar(btn) {
+    const r = revisar();
+    if (r.error) return alert(r.error);
+    const sigN = (concDe(r.o).slice(-1)[0]?.n || 0) + 1;
+    if (!(await preguntar(`Conciliación ${sigN} de ${r.o.obra}\n${periodoTxt(r.desde, r.hasta).toLowerCase()}\n\n${nViajes(r.s.viajes)} · ${f0(r.s.m3)} m³ · ${$$(r.s.importe)}\n\nSe registra con ese número y se descarga el Excel. ¿Continuar?`, 'Sí, guardar y descargar'))) return;
+    const res = await enviar(btn, { action:'conc_guardar', datos:{ obra:r.o.obra, desde:r.desde, hasta:r.hasta, viajes:r.s.viajes, m3:r.s.m3, importe:r.s.importe } });
+    if (!res) return;
+    const o = obraSel(), c = concDe(o).find(x => x.n === res.n);
+    try { await bajar(await excelConc(o, c)); aviso = `Conciliación ${res.n} guardada y descargada.`; }
+    catch(e) { aviso = `Conciliación ${res.n} guardada, pero no se pudo armar el Excel (${esc(e.message)}). Descárgala con su botón.`; }
+    principal();
+  }
+  async function quitar(btn, n) {
+    const o = obraSel(), c = concDe(o).find(x => x.n === n);
+    if (!c || !(await preguntar(`Quitar la conciliación ${n} de ${o.obra} (${periodoCorto(c)}, ${$$(c.importe)}).\n\nSolo hazlo si se registró por error: la siguiente que saques llevará otra vez el número ${n}.`, 'Sí, quitarla'))) return;
+    if (await enviar(btn, { action:'conc_quitar', datos:{ obra:o.obra, n } })) { aviso = `Se quitó la conciliación ${n}.`; principal(); }
+  }
+
+  // ── Encabezado y firmas de la obra ──
+  function formDatos() {
+    const o = obraSel(), dd = datos(o);
+    const campo = (k, t, ph) => `<label class="w2">${t}<input class="ci" data-k="${k}" maxlength="100" value="${esc(dd[k])}" placeholder="${ph}"></label>`;
+    pintar(`<div class="ed-info"><b>Encabezado y firmas de ${esc(o.obra)}</b><br>Los 3 renglones de arriba de cada conciliación y los nombres de quien entrega y quien recibe.</div>
+      <div class="ed-g">${campo('enc1', 'Renglón 1 (el más grande)', 'Ej. nombre del proyecto')}${campo('enc2', 'Renglón 2', 'Ej. sección o tramo')}
+        ${campo('enc3', 'Renglón 3', 'Ej. lugar y calle')}${campo('entrega', 'Entrega (firma)', 'Nombre de quien entrega')}${campo('recibe', 'Recibe (firma)', 'Nombre de quien recibe')}</div>
+      <div class="dlg-b"><button class="ftb" data-a="volver">Cancelar</button><button class="ftb p" data-a="guardarDatos">Guardar</button></div>`);
+    cuerpo().querySelector('[data-k=enc1]').focus();
+  }
+  async function guardarDatos(btn) {
+    const datos = { obra:obraSel().obra };
+    ['enc1', 'enc2', 'enc3', 'entrega', 'recibe'].forEach(k => datos[k] = valor(k));
+    if (!datos.enc1 && !datos.enc2 && !datos.enc3) return alert('Escribe al menos un renglón del encabezado.');
+    if (await enviar(btn, { action:'obra_datos', datos })) { aviso = 'Encabezado y firmas guardados.'; principal(); }
+  }
+
+  async function enviar(btn, body) {
+    ov.querySelectorAll('button').forEach(b => b.disabled = true);
+    const t = btn.textContent; btn.textContent = 'Guardando…'; bar(true);
+    try { const r = await api(body); D = r; return r; }
+    catch(e) {
+      ov.querySelectorAll('button').forEach(b => b.disabled = false); btn.textContent = t;
+      alert('No se guardó: ' + e.message);
+      return null;
+    } finally { bar(false); }
+  }
+
+  // ── Excel con el formato de siempre (ExcelJS: bordes, letras y formato de pesos) ──
+  const MONEDA = '_-"$"* #,##0.00_-;\\-"$"* #,##0.00_-;_-"$"* "-"??_-;_-@_-';
+  const BORDE = { top:{ style:'thin' }, left:{ style:'thin' }, bottom:{ style:'thin' }, right:{ style:'thin' } };
+  const COLS = 'ABCDEFGH';
+  const columnas = (a, b) => COLS.slice(COLS.indexOf(a), COLS.indexOf(b) + 1).split('');
+  // Fecha como día de Excel (ExcelJS la pasa en UTC)
+  const fechaXl = s => { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)); };
+  async function libro() { if (!window.ExcelJS) await cargarScript(EXCELJS_URL); return new ExcelJS.Workbook(); }
+  const hoja = (wb, nombre, horizontal) => wb.addWorksheet(nombre, { views:[{ showGridLines:false }],
+    pageSetup:{ orientation:horizontal ? 'landscape' : 'portrait', fitToPage:true, fitToWidth:1, fitToHeight:0, horizontalCentered:true,
+                margins:{ left:0.5, right:0.5, top:0.6, bottom:0.6, header:0.3, footer:0.3 } } });
+  function celda(ws, ref, value, estilo = {}) {
+    const c = ws.getCell(ref);
+    c.value = value;
+    if (estilo.font) c.font = estilo.font;
+    c.alignment = estilo.alignment || { horizontal:'center', vertical:'middle' };
+    if (estilo.border) c.border = estilo.border;
+    if (estilo.fill) c.fill = estilo.fill;
+    if (estilo.numFmt) c.numFmt = estilo.numFmt;
+    return c;
+  }
+  function encabezado(ws, dd, linea4) {
+    [[1, dd.enc1, 22, 27.75], [2, dd.enc2, 14, 18.75], [3, dd.enc3, 14, 18.75], [4, linea4, 12, 15.75]].forEach(([f, t, sz, alto]) => {
+      ws.mergeCells(`A${f}:H${f}`);
+      celda(ws, `A${f}`, t, { font:{ name:'Times New Roman', size:sz } });
+      ws.getRow(f).height = alto;
+    });
+  }
+  // ENTREGA / RECIBE, espacio para firmar, la línea y el nombre
+  function firmas(ws, f, dd) {
+    [['B', 'D', 'ENTREGA', dd.entrega], ['G', 'H', 'RECIBE', dd.recibe]].forEach(([a, b, t, nombre]) => {
+      ws.mergeCells(`${a}${f}:${b}${f}`); celda(ws, `${a}${f}`, t);
+      columnas(a, b).forEach(col => ws.getCell(`${col}${f + 3}`).border = { bottom:{ style:'thin' } });
+      ws.mergeCells(`${a}${f + 4}:${b}${f + 4}`); celda(ws, `${a}${f + 4}`, nombre);
+    });
+  }
+  const nombreArchivo = s => s.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() + '.xlsx';
+
+  async function excelConc(o, c) {
+    const vs = viajesDe(o, c.desde, c.hasta), s = suma(vs), dd = datos(o), wb = await libro();
+    const ws = hoja(wb, `CONC ${c.n}`);
+    ws.columns = [7.71, 11, 12.5, 18, 11.5, 8, 13.14, 15.43].map(width => ({ width }));
+    encabezado(ws, dd, 'CONCILIACIÓN ' + periodoTxt(c.desde, c.hasta));
+    ws.mergeCells('G5:H5');
+    celda(ws, 'G5', `CONCILIACIÓN ${c.n}`, { font:{ name:'Times New Roman', size:12, bold:true } });
+    ['N°', 'FOLIO', 'FECHA', 'MATERIAL', 'PLACA', 'M3', 'COSTO', 'COSTO FINAL'].forEach((t, i) => celda(ws, COLS[i] + 6, t, { font:{ bold:true }, border:BORDE }));
+    vs.forEach((v, i) => {
+      const f = 7 + i;
+      [i + 1, String(v.folio ?? ''), fechaXl(v.fecha), String(v.material || '').toUpperCase(), v.placa, N(v.m3), v.precio,
+       { formula:`G${f}*F${f}`, result:v.importe }].forEach((x, j) =>
+        celda(ws, COLS[j] + f, x, { border:BORDE, numFmt:j === 1 ? '@' : j === 2 ? 'dd/mm/yyyy' : j >= 6 ? MONEDA : undefined }));
+    });
+    const u = 6 + Math.max(vs.length, 1), t = u + 1, t2 = t + 2;
+    celda(ws, 'E' + t, 'M3', { font:{ bold:true } });
+    celda(ws, 'F' + t, { formula:`SUM(F7:F${u})`, result:s.m3 }, { font:{ bold:true } });
+    celda(ws, 'G' + t, 'SUBTOTAL', { font:{ bold:true } });
+    celda(ws, 'H' + t, { formula:`SUM(H7:H${u})`, result:s.importe }, { font:{ bold:true }, numFmt:MONEDA });
+    celda(ws, 'B' + t2, 'TOTAL VIAJES', { font:{ bold:true } });
+    celda(ws, 'C' + t2, { formula:`COUNT(A7:A${u})`, result:s.viajes }, { font:{ bold:true } });
+    celda(ws, 'E' + t2, 'M3', { font:{ bold:true } });
+    celda(ws, 'F' + t2, { formula:`F${t}`, result:s.m3 }, { font:{ bold:true } });
+    celda(ws, 'G' + t2, 'TOTAL', { font:{ bold:true } });
+    celda(ws, 'H' + t2, { formula:`H${t}`, result:s.importe }, { font:{ bold:true }, numFmt:MONEDA });
+    firmas(ws, t2 + 3, dd);
+    return { wb, nombre:nombreArchivo(`CONC ${c.n} ${o.obra}`) };
+  }
+
+  async function excelResumen(o) {
+    const cs = concDe(o), dd = datos(o), wb = await libro();
+    const ws = hoja(wb, 'RESUMEN', true);
+    ws.columns = [8, 13, 13, 14.71, 19.43, 6, 13, 14].map(width => ({ width }));
+    encabezado(ws, dd, 'RESUMEN DE CONCILIACIONES ' + periodoTxt(cs[0].desde, cs[cs.length - 1].hasta));
+    ws.mergeCells('B6:D6');
+    celda(ws, 'B6', (o.cliente || '').toUpperCase(), { font:{ bold:true, size:12 } });
+    const azul = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF4472C4' } }, blanca = { bold:true, size:14, color:{ argb:'FFFFFFFF' } };
+    ['A', 'B', 'C', 'D', 'E'].forEach(col => ws.getCell(col + 7).border = BORDE);
+    ws.mergeCells('B7:D7');
+    celda(ws, 'A7', 'CONC', { font:blanca, fill:azul, border:BORDE });
+    celda(ws, 'B7', 'PERIODO', { font:blanca, fill:azul, border:BORDE });
+    celda(ws, 'E7', 'MONTO', { font:blanca, fill:azul, border:BORDE });
+    ws.getRow(7).height = 21;
+    cs.forEach((c, i) => {
+      const f = 8 + i;
+      ['A', 'B', 'C', 'D', 'E'].forEach(col => ws.getCell(col + f).border = BORDE);
+      celda(ws, 'A' + f, c.n, { border:BORDE });
+      ws.mergeCells(`B${f}:D${f}`);
+      celda(ws, 'B' + f, periodoTxt(c.desde, c.hasta), { border:BORDE });
+      celda(ws, 'E' + f, c.importe, { border:BORDE, numFmt:MONEDA });
+    });
+    const u = 7 + cs.length, t = u + 1, amarillo = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFF00' } };
+    celda(ws, 'D' + t, 'TOTAL', { font:{ bold:true }, fill:amarillo, border:BORDE });
+    celda(ws, 'E' + t, { formula:`SUM(E8:E${u})`, result:r2(cs.reduce((x, c) => x + c.importe, 0)) }, { font:{ bold:true }, fill:amarillo, border:BORDE, numFmt:MONEDA });
+    firmas(ws, t + 4, dd);
+    return { wb, nombre:nombreArchivo(`RESUMEN ${o.cliente || ''} ${o.obra}`) };
+  }
+
+  async function bajar({ wb, nombre }) {
+    ultimo = { wb, nombre };
+    if (window.SIN_DESCARGAR) return;           // las pruebas revisan el libro sin descargarlo
+    const buf = await wb.xlsx.writeBuffer();
+    const url = URL.createObjectURL(new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+  async function descargar(btn, hacer, aviso) {
+    const t = btn.textContent; btn.disabled = true; btn.textContent = 'Armando…';
+    try { await bajar(await hacer()); }
+    catch(e) { alert('No se pudo armar el Excel: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = t; }
+  }
+  async function bajarConc(btn, n) {
+    const o = obraSel(), c = concDe(o).find(x => x.n === n), a = ahora(o, c);
+    if (!cuadra(c, a) && !(await preguntar(`La conciliación ${n} se entregó con ${nViajes(c.viajes)} y ${$$(c.importe)}; ahora suma ${nViajes(a.viajes)} y ${$$(a.importe)}.\n\nEl Excel sale con los viajes y precios de ahora. ¿Descargar así?`, 'Sí, descargar'))) return;
+    descargar(btn, () => excelConc(o, c));
+  }
+
+  function cerrar() { ov?.remove(); ov = null; removeEventListener('keydown', tecla, true); }
+  function tecla(e) { if (e.key === 'Escape' && document.querySelectorAll('.dlg').length === 1) { e.preventDefault(); cerrar(); } }
+  async function abrir() {
+    cerrar();
+    ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c ed ob" role="dialog"><div class="dlg-t" style="margin-bottom:8px"><b>Conciliaciones</b></div>
+      <div class="ob-cuerpo"><div class="ob-vacio">Leyendo obras y viajes del último año…</div></div></div>`;
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+      const a = b.dataset.a, n = Number(b.dataset.n);
+      if (a === 'cerrar') cerrar();
+      else if (a === 'volver') principal();
+      else if (a === 'datos') formDatos();
+      else if (a === 'guardarDatos') guardarDatos(b);
+      else if (a === 'guardar') guardar(b);
+      else if (a === 'quitar') quitar(b, n);
+      else if (a === 'bajar') bajarConc(b, n);
+      else if (a === 'resumen') descargar(b, () => excelResumen(obraSel()));
+      else if (a === 'precio') { const o = obraSel(); cerrar(); Obras.abrir({ cliente:o.cliente, obra:o.obra, material:b.dataset.m, desde:b.dataset.f }); }
+    });
+    ov.addEventListener('change', e => {
+      if (e.target.dataset.k !== 'obra') return;
+      obraK = e.target.value; try { localStorage.setItem('cc-obra', obraK); } catch(x) {}
+      principal();
+    });
+    ov.addEventListener('input', e => { if (e.target.dataset.k === 'desde' || e.target.dataset.k === 'hasta') previa(); });
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    const hoy = txtFecha(new Date());
+    bar(true);
+    try { [D, V] = await Promise.all([api({ action:'obras_lista' }), api({ action:'viajes_semana', desde:masDias(hoy, -DIAS_ATRAS), hasta:hoy })]); }
+    catch(e) { if (ov) pintar(`<div class="ob-vacio">No se pudo leer: ${esc(e.message)}</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`); return; }
+    finally { bar(false); }
+    if (!ov) return;
+    // Obra: la del filtro de Fletes, la última que se usó, o la del viaje más reciente
+    const hay = k => k && (D.obras || []).some(o => claveVj(o.obra) === k);
+    let guardada = ''; try { guardada = localStorage.getItem('cc-obra') || ''; } catch(x) {}
+    const reciente = (V.viajes || []).filter(v => !v.planta && hay(claveVj(v.obra))).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
+    obraK = [FV.obra, guardada, reciente && claveVj(reciente.obra), obrasOrden()[0] && claveVj(obrasOrden()[0].obra)].find(hay) || '';
+    principal();
+  }
+  return { abrir, get ultimo() { return ultimo; } };
 })();
 
 // ══════════════════════════════════════════
@@ -2497,6 +2834,7 @@ Sesion.requerir('viajes').then(s => {
   document.getElementById('sb-user').textContent = s.nombre;
   PUEDE_OBRAS = (s.permisos || []).includes('obras');
   document.getElementById('vj-obras').hidden = !PUEDE_OBRAS;
+  document.getElementById('vj-conc').hidden = !PUEDE_OBRAS;
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
   // El Diario abre en ayer (el resumen de cada mañana); el lunes, en el sábado si el domingo no hubo nada
