@@ -186,6 +186,7 @@ textarea.nota{min-height:60px;margin-top:8px;font-size:15px}
   <!-- Viajes de arena / grava (uno por folio) → Agregados_Movimientos -->
   <div class="card oculto" id="c-viajes-card">
     <h2>Viajes <span class="u">uno por folio del ticket · escribe el folio y presiona Enter para el siguiente: la placa, el chofer y los m³ se copian del renglón de arriba</span></h2>
+    <datalist id="dl-placas"></datalist><datalist id="dl-choferes"></datalist>
     <div class="g2 f">
       <div><label>Fecha en que llegaron</label><input type="date" id="c-vfecha"></div>
       <div><label>Procedencia / proveedor</label><input id="c-vproc" placeholder="opcional"></div>
@@ -832,8 +833,8 @@ const Compras = (() => {
         <button class="btn x" type="button" title="Quitar">✕</button>
       </div>
       <div class="vrow2">
-        <div><label>Placa</label><input data-k="placa" autocapitalize="characters" placeholder="opcional"></div>
-        <div><label>Chofer</label><input data-k="chofer" autocapitalize="characters" placeholder="opcional"></div>
+        <div><label>Placa</label><input data-k="placa" list="dl-placas" autocomplete="off" autocapitalize="characters" placeholder="escoge o escribe"></div>
+        <div><label>Chofer</label><input data-k="chofer" list="dl-choferes" autocomplete="off" autocapitalize="characters" placeholder="escoge o escribe"></div>
       </div>`;
     const m3 = el.querySelector('[data-k=m3]');
     el.querySelector('[data-k=folio]').value  = v.folio ?? '';
@@ -1241,6 +1242,21 @@ async function cargarCatalogoAgr() {
     if (Array.isArray(j.materiales) && j.materiales.length) { AGR_CAT = j.materiales; LS.set('agr_cat', AGR_CAT); }
   } catch(e) {}
 }
+// Placas y choferes para los desplegables de los viajes de arena y grava (se puede escribir otro).
+// No detiene la página: primero lo guardado, luego lo nuevo cuando llegue.
+function pintarListasVj(c) {
+  if (!c) return;
+  const op = (v, t) => `<option value="${esc(v)}"${t ? ` label="${esc(v + ' · ' + t)}"` : ''}></option>`;
+  $('#dl-placas').innerHTML = (c.placas || []).map(p => op(p.placa, p.descripcion)).join('');
+  $('#dl-choferes').innerHTML = (c.choferes || []).map(ch => op(ch)).join('');
+}
+async function cargarListasVj() {
+  pintarListasVj(LS.get('agr_vj', null));
+  try {
+    const j = await Sesion.api({ action:'agregados_catalogo', viajes:true }, 30000);
+    if (Array.isArray(j.placas)) { const c = { placas:j.placas, choferes:j.choferes || [] }; LS.set('agr_vj', c); pintarListasVj(c); }
+  } catch(e) {}
+}
 
 Sesion.requerir('registro').then(async s => {
   SES = s;
@@ -1255,7 +1271,7 @@ Sesion.requerir('registro').then(async s => {
     reintentarPendientes();
     window.addEventListener('online', reintentarPendientes);
   }
-  if (puedeC) Compras.init();
+  if (puedeC) { Compras.init(); cargarListasVj(); }
   const tabs = { registro:puedeR, compras:puedeC, corregir:puedeK };
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('oculto', !tabs[b.dataset.t]));
   $('#tabs').classList.toggle('oculto', Object.values(tabs).filter(Boolean).length < 2);
