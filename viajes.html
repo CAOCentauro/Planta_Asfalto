@@ -167,6 +167,14 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 .btn-ed{background:none;border:1px solid var(--bd);color:var(--muted);cursor:pointer;padding:2px 7px;font-size:12px}
 .btn-ed:hover{border-color:var(--amb);color:var(--amb)}
 @media(max-width:520px){.ed-g{grid-template-columns:1fr}}
+.dlg-c.ob{max-width:720px}
+.ob-o{border:1px solid var(--bd);margin-bottom:10px}
+.ob-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;background:var(--s2)}
+.ob-h small{color:var(--muted);font-size:12px}
+.ob-o table{width:100%}
+.ob-vacio{font-size:12px;color:var(--muted);padding:10px}
+.ob-ok{font-size:12px;border-left:3px solid var(--pos);background:rgba(34,197,94,.1);padding:8px 10px;margin-bottom:12px;line-height:1.5}
+.ob-p{display:grid;grid-template-columns:1fr 120px;gap:6px;margin-bottom:6px}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
 #modal-foto.on{display:flex}
 #modal-foto img{max-width:95vw;max-height:92vh}
@@ -249,6 +257,7 @@ a{color:var(--amb)}
         </span>
       </div>
       <div class="acc">
+        <button class="ftb" id="vj-obras" onclick="Obras.abrir()" hidden>Obras y precios</button>
         <button class="ftb s2" onclick="excelViajes(this)">Descargar Excel</button>
         <button class="ftb s2" onclick="whatsViajes()">Enviar por WhatsApp</button>
         <button class="ftb" onclick="cargarViajes(true)">Actualizar</button>
@@ -575,13 +584,16 @@ function renderViajes() {
 
   // Precios: si no se pudo leer el Sheets, o hay viajes sin precio
   const sinPrecio = hayPrecios ? agruparVj(lista.filter(v => v.precio == null), v => claveVj(v.cliente) + '|' + claveVj(v.material) + '|' + claveVj(v.obra)) : [];
-  const avisoPrecios = VJ.errPrecios ? `<div class="banner-dr">No se pudo leer el Sheets de precios: ${esc(VJ.errPrecios)}</div>`
+  SINP_VJ = sinPrecio.sort((a, b) => b.viajes - a.viajes);
+  const avisoPrecios = VJ.errPrecios ? `<div class="banner-dr">No se pudieron leer los precios: ${esc(VJ.errPrecios)}</div>`
     : sinPrecio.length ? `<details class="pn"><summary class="pnh"><span class="sinp">${nViajes(sinPrecio.reduce((s, x) => s + x.viajes, 0))} sin precio
-        (${sinPrecio.length} combinación${sinPrecio.length !== 1 ? 'es' : ''} de cliente y material que no está en el Sheets de precios)</span><span class="fl"></span></summary>
-      ${tabla('<th>Cliente</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>',
-        sinPrecio.sort((a, b) => b.viajes - a.viajes).map(x => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra)}</td>
-          <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td></tr>`).join(''))}
-      <div class="nota-pn">En el Sheets de precios: CLIENTE y MATERIAL escritos igual que en las notas (no importan mayúsculas ni acentos). OBRA vacía = todas las obras del cliente.</div></details>` : '';
+        (${sinPrecio.length} combinación${sinPrecio.length !== 1 ? 'es' : ''} de obra y material sin precio)</span><span class="fl"></span></summary>
+      ${tabla(`<th>Cliente</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>${PUEDE_OBRAS ? '<th></th>' : ''}`,
+        SINP_VJ.map((x, i) => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra)}</td>
+          <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td>
+          ${PUEDE_OBRAS ? `<td class="rt"><button class="ftb" onclick="Obras.ponerSinPrecio(${i})">${x.items[0].cliente ? 'Poner precio' : 'Iniciar obra'}</button></td>` : ''}</tr>`).join(''))}
+      <div class="nota-pn">${PUEDE_OBRAS ? 'Con "Poner precio" se guarda el precio por m³ de ese material en esa obra. Si la obra no tiene cliente, primero hay que iniciarla.'
+        : 'Los precios se ponen en Fletes › Obras y precios (pide el permiso "Obras y precios").'}</div></details>` : '';
 
   const vistas = vistasHtml('vistaVj', [['viajes', 'Viajes'], ['resumenes', 'Resúmenes'], ['acumulado', 'Acumulado']], VISTA_VJ);
   // Notas anuladas del periodo (no cuentan en nada): para ver cuáles son y poder restaurarlas
@@ -758,6 +770,189 @@ function whatsViajes() {
   ].join('\n');
   window.open(`https://wa.me/${WA_NUM}?text=` + encodeURIComponent(texto), '_blank');
 }
+
+// ══════════════════════════════════════════
+//  OBRAS Y PRECIOS (Fletes › Obras y precios; permiso obras)
+//  Iniciar una obra (cliente, nombre, inicio y precio por m³ de cada material) y poner o cambiar precios
+//  sin abrir los Sheets. Cambiar un precio no borra el anterior: el nuevo vale desde la fecha que se ponga.
+// ══════════════════════════════════════════
+let PUEDE_OBRAS = false, SINP_VJ = [];
+const Obras = (() => {
+  let D = null, ov = null, aviso = '';
+  const fechaLarga = s => `${fechaCorta(s)} ${s.slice(0, 4)}`;
+  // Precios que aplican a una obra: los suyos y los generales del cliente (obra vacía), por material y por fecha
+  const preciosDe = (cliente, obra) => (D.precios || []).filter(p => claveVj(p.cliente) === claveVj(cliente) && (!p.obra || claveVj(p.obra) === claveVj(obra)));
+  function porMaterial(lista) {
+    const m = new Map();
+    lista.forEach(p => { const k = claveVj(p.material); if (!m.has(k)) m.set(k, []); m.get(k).push(p); });
+    return [...m.values()].map(ps => ps.sort((a, b) => (a.desde || '').localeCompare(b.desde || '') || (a.obra ? 1 : 0) - (b.obra ? 1 : 0)))
+      .sort((a, b) => a[0].material.localeCompare(b[0].material, 'es'));
+  }
+  const obrasOrden = () => (D.obras || []).slice().sort((a, b) => a.cliente.localeCompare(b.cliente, 'es') || a.obra.localeCompare(b.obra, 'es'));
+  const cuerpo = () => ov.querySelector('.ob-cuerpo');
+  const pintar = html => { cuerpo().innerHTML = html; cuerpo().scrollTop = 0; ov.querySelector('.dlg-c').scrollTop = 0; };
+  const listas = () => `<datalist id="ob-cli">${[...new Set((D.obras || []).map(o => o.cliente).filter(Boolean))].sort().map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <datalist id="ob-mat">${(D.materiales || []).map(m => `<option value="${esc(m)}">`).join('')}</datalist>`;
+
+  // ── Lista: cada obra con sus precios ──
+  function lista() {
+    const obras = obrasOrden();
+    const tarjeta = (o, i) => {
+      const mats = porMaterial(preciosDe(o.cliente, o.obra));
+      return `<div class="ob-o"><div class="ob-h"><span><b>${esc(o.obra)}</b> <small>· ${esc(o.cliente) || 'sin cliente'}${o.inicio ? ' · inició el ' + fechaLarga(o.inicio) : ''}</small></span>
+          <button class="ftb" data-a="precio" data-i="${i}">Agregar precio</button></div>
+        ${mats.length ? `<div class="tw"><table><thead><tr><th>Material</th><th>Precio por m³</th><th></th></tr></thead><tbody>
+          ${mats.map(ps => `<tr><td>${esc(ps[0].material)}</td><td>${ps.map(p => `<div>${$$(p.precio)} <span style="color:var(--muted)">· ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}${p.obra ? '' : ' · todas las obras del cliente'}</span></div>`).join('')}</td>
+            <td class="rt"><button class="btn-ed" data-a="cambiar" data-i="${i}" data-m="${esc(ps[0].material)}" title="Cambiar el precio de ${esc(ps[0].material)}">Cambiar</button></td></tr>`).join('')}
+          </tbody></table></div>` : '<div class="ob-vacio">Sin precios: sus viajes salen "sin precio" en Fletes.</div>'}</div>`;
+    };
+    pintar(`${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
+      <div class="ed-info">Cada obra con su cliente y su precio por m³ de cada material. Cambiar un precio no borra el anterior: el nuevo cuenta desde la fecha que pongas.</div>
+      <div style="margin-bottom:12px"><button class="ftb p" data-a="iniciar">Iniciar obra</button></div>
+      ${obras.length ? obras.map(tarjeta).join('') : '<div class="ob-vacio">Todavía no hay obras.</div>'}
+      <div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`);
+    aviso = '';
+  }
+
+  // ── Iniciar obra ──
+  const renglonPrecio = (m = '') => `<div class="ob-p"><input class="ci" data-p="material" list="ob-mat" placeholder="Material" maxlength="60" value="${esc(m)}">
+    <input class="ci" data-p="precio" type="number" step="0.01" min="0" placeholder="$ por m³"></div>`;
+  function iniciar(pre = {}) {
+    pintar(`<div class="ed-info"><b>Iniciar obra</b><br>Con esto la obra sale en la lista al subir notas y sus viajes salen a nombre del cliente.
+        Pon el precio por m³ de los materiales que ya sepas; los demás se pueden poner después.</div>
+      <div class="ed-g">
+        <label>Cliente<input class="ci" data-k="cliente" list="ob-cli" maxlength="60" value="${esc(pre.cliente || '')}" placeholder="Escoge o escribe"></label>
+        <label>Fecha de inicio<input class="ci" data-k="inicio" type="date" value="${esc(pre.inicio || txtFecha(new Date()))}"></label>
+        <label class="w2">Nombre de la obra<input class="ci" data-k="obra" maxlength="80" value="${esc(pre.obra || '')}" placeholder="Ej. Calle Francisco Villa - Tezoyuca"></label>
+      </div>
+      <div class="ed-info" style="margin-bottom:6px">Precio por m³</div>
+      <div id="ob-precios">${(pre.materiales || ['', '', '']).map(m => renglonPrecio(m)).join('')}</div>
+      <div style="margin:4px 0 16px"><button class="ftb" data-a="otro">+ Otro material</button></div>
+      ${listas()}
+      <div class="dlg-b"><button class="ftb" data-a="volver">Cancelar</button><button class="ftb p" data-a="guardarObra">Guardar obra</button></div>`);
+    cuerpo().querySelector(`[data-k="${pre.cliente ? 'obra' : 'cliente'}"]`).focus();
+  }
+  async function guardarObra(btn) {
+    const v = k => cuerpo().querySelector(`[data-k="${k}"]`).value.trim();
+    const datos = { cliente:v('cliente'), obra:v('obra'), inicio:v('inicio'), precios:[] };
+    if (!datos.cliente) return alert('Escribe el cliente.');
+    if (!datos.obra) return alert('Escribe el nombre de la obra.');
+    const ya = (D.obras || []).find(o => claveVj(o.obra) === claveVj(datos.obra));
+    if (ya) return alert(`Ya existe la obra "${ya.obra}" (de ${ya.cliente || 'sin cliente'}). Usa otro nombre, por ejemplo con la calle o la colonia.`);
+    for (const r of cuerpo().querySelectorAll('.ob-p')) {
+      const m = r.querySelector('[data-p=material]').value.trim(), p = r.querySelector('[data-p=precio]').value.trim();
+      if (!m && !p) continue;
+      if (!m) return alert('Falta el material del precio $' + p + '.');
+      if (!(Number(p) > 0)) return alert(`Escribe el precio por m³ de ${m}.`);
+      if (datos.precios.some(x => claveVj(x.material) === claveVj(m))) return alert(`${m} está dos veces.`);
+      datos.precios.push({ material:m, precio:Number(p) });
+    }
+    const txt = `Iniciar la obra "${datos.obra}" de ${datos.cliente}${datos.inicio ? ', desde el ' + fechaLarga(datos.inicio) : ''}.\n\n`
+      + (datos.precios.length ? 'Precios por m³:\n' + datos.precios.map(p => `${p.material}: ${$$(p.precio)}`).join('\n') : 'Sin precios por ahora.') + '\n\n¿Guardar?';
+    if (!(await preguntar(txt, 'Sí, guardar'))) return;
+    await enviar(btn, { action:'obra_guardar', datos }, r => `Obra "${esc(datos.obra)}" iniciada.`
+      + (r.materialesNuevos?.length ? ` Se agregó al catálogo de materiales: ${esc(r.materialesNuevos.join(', '))}.` : '')
+      + ' En la lista de obras al subir notas sale en unos minutos.');
+  }
+
+  // ── Poner o cambiar un precio ──
+  function precio(o, material = '', desde = '') {
+    pintar(`<div class="ed-info"><b>Precio para ${esc(o.obra)}</b> · ${esc(o.cliente)}</div>
+      <div class="ed-g">
+        <label class="w2">Material<input class="ci" data-k="material" list="ob-mat" maxlength="60" value="${esc(material)}" placeholder="Escoge o escribe"></label>
+        <label>Precio por m³ ($)<input class="ci" data-k="precio" type="number" step="0.01" min="0"></label>
+        <label>Vale desde<input class="ci" data-k="desde" type="date"></label>
+      </div>
+      <div class="ed-info ob-hint"></div>
+      ${listas()}
+      <div class="dlg-b"><button class="ftb" data-a="volver">Cancelar</button><button class="ftb p" data-a="guardarPrecio">Guardar precio</button></div>`);
+    cuerpo().dataset.obra = o.obra; cuerpo().dataset.cliente = o.cliente;
+    // Si ya tiene precio, el nuevo lleva fecha (hoy, o la del primer viaje sin precio); si no, vale para todos
+    cuerpo().querySelector('[data-k=desde]').value = existentes(o, material).length ? (desde || txtFecha(new Date())) : '';
+    pista();
+    cuerpo().querySelector(`[data-k="${material ? 'precio' : 'material'}"]`).focus();
+  }
+  const existentes = (o, material) => material ? preciosDe(o.cliente, o.obra).filter(p => claveVj(p.material) === claveVj(material)) : [];
+  const actual = () => ({ obra:cuerpo().dataset.obra, cliente:cuerpo().dataset.cliente });
+  function pista() {
+    const el = cuerpo().querySelector('.ob-hint');
+    if (!el) return;
+    const v = k => cuerpo().querySelector(`[data-k="${k}"]`).value.trim();
+    const o = actual(), m = v('material'), desde = v('desde'), ps = existentes(o, m);
+    const igual = ps.find(p => claveVj(p.obra) === claveVj(o.obra) && (p.desde || '') === desde);
+    el.innerHTML = !m ? 'Escoge el material.'
+      : igual ? `Ya hay un precio de ${esc(m)} ${desde ? 'desde el ' + fechaLarga(desde) : 'para todos los viajes'} (${$$(igual.precio)}): se corrige ese.`
+      : ps.length ? `Ahora: ${ps.map(p => `${$$(p.precio)} ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}`).join(', ')}.
+          ${desde ? `El nuevo cuenta para los viajes desde el ${fechaLarga(desde)}; los de antes siguen con su precio.` : '<span class="sinp">Sin fecha, el nuevo cuenta para todos los viajes de esta obra, también los de antes.</span>'}`
+      : desde ? `Es el primer precio de ${esc(m)} en esta obra. Los viajes de antes del ${fechaLarga(desde)} se quedan sin precio.`
+      : `Es el primer precio de ${esc(m)} en esta obra: cuenta para todos sus viajes, también los de antes. Si solo debe contar desde una fecha, ponla.`;
+  }
+  async function guardarPrecio(btn) {
+    const v = k => cuerpo().querySelector(`[data-k="${k}"]`).value.trim();
+    const o = actual(), datos = { cliente:o.cliente, obra:o.obra, material:v('material'), precio:Number(v('precio')), desde:v('desde') };
+    if (!datos.material) return alert('Escoge o escribe el material.');
+    if (!(datos.precio > 0)) return alert('Escribe el precio por m³.');
+    if (!(await preguntar(`${datos.material} en ${o.obra}: ${$$(datos.precio)} por m³, ${datos.desde ? 'desde el ' + fechaLarga(datos.desde) : 'para todos sus viajes'}.\n\n¿Guardar?`, 'Sí, guardar'))) return;
+    await enviar(btn, { action:'precio_guardar', datos }, r => `${r.como === 'corregido' ? 'Precio corregido' : 'Precio guardado'}: ${esc(datos.material)} en ${esc(o.obra)}, ${$$(datos.precio)} por m³.`
+      + (r.materialesNuevos?.length ? ` Se agregó al catálogo de materiales: ${esc(r.materialesNuevos.join(', '))}.` : ''));
+  }
+
+  async function enviar(btn, body, okTxt) {
+    ov.querySelectorAll('button').forEach(b => b.disabled = true);
+    const t = btn.textContent; btn.textContent = 'Guardando…'; bar(true);
+    try {
+      const r = await api(body);
+      D = r; aviso = okTxt(r);
+      lista();
+      // Fletes vuelve a leer: los precios llegan con los viajes
+      Object.keys(VJ_CACHE).forEach(k => delete VJ_CACHE[k]);
+      if (seccionVisible('fletes')) cargarViajes(true);
+    } catch(e) {
+      ov.querySelectorAll('button').forEach(b => b.disabled = false); btn.textContent = t;
+      alert('No se guardó: ' + e.message);
+    } finally { bar(false); }
+  }
+
+  function cerrar() { ov?.remove(); ov = null; removeEventListener('keydown', tecla, true); }
+  function tecla(e) { if (e.key === 'Escape' && document.querySelectorAll('.dlg').length === 1) { e.preventDefault(); cerrar(); } }
+  // abrir() = la lista; abrir({ cliente, obra, material, desde }) = directo a poner ese precio (desde Fletes, viajes sin precio)
+  async function abrir(ir) {
+    cerrar();
+    ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c ed ob" role="dialog"><div class="dlg-t" style="margin-bottom:8px"><b>Obras y precios</b></div>
+      <div class="ob-cuerpo"><div class="ob-vacio">Leyendo obras y precios…</div></div></div>`;
+    ov.addEventListener('click', e => {
+      const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+      const a = b.dataset.a, o = obrasOrden()[Number(b.dataset.i)];
+      if (a === 'cerrar') cerrar();
+      else if (a === 'volver') lista();
+      else if (a === 'iniciar') iniciar();
+      else if (a === 'otro') cuerpo().querySelector('#ob-precios').insertAdjacentHTML('beforeend', renglonPrecio());
+      else if (a === 'precio') precio(o);
+      else if (a === 'cambiar') precio(o, b.dataset.m);
+      else if (a === 'guardarObra') guardarObra(b);
+      else if (a === 'guardarPrecio') guardarPrecio(b);
+    });
+    ov.addEventListener('input', () => pista());
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    bar(true);
+    try { D = await api({ action:'obras_lista' }); }
+    catch(e) { if (ov) pintar(`<div class="ob-vacio">No se pudieron leer las obras: ${esc(e.message)}</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`); return; }
+    finally { bar(false); }
+    if (!ov) return;
+    if (!ir) return lista();
+    const o = (D.obras || []).find(x => claveVj(x.obra) === claveVj(ir.obra));
+    // Obra que no está en el catálogo (sus viajes salen sin cliente): se inicia con ese nombre
+    if (!o || !ir.cliente) return iniciar({ obra:ir.obra, materiales:[ir.material || ''] });
+    precio(o, ir.material || '', ir.desde);
+  }
+  // Botón "Poner precio" del aviso de viajes sin precio
+  const ponerSinPrecio = i => { const x = SINP_VJ[i]; if (x) abrir({ cliente:x.items[0].cliente, obra:x.items[0].obra, material:x.items[0].material,
+    desde:x.items.map(v => v.fecha).sort()[0] }); };
+  return { abrir, ponerSinPrecio };
+})();
 
 // ══════════════════════════════════════════
 //  EDITAR UN REGISTRO YA GUARDADO (botón ✏): notas de viaje y tickets de diésel
@@ -2300,6 +2495,8 @@ setTheme(document.documentElement.dataset.theme==='light' ? 'light' : 'dark', fa
 // Sin permiso de viajes regresa a index.html
 Sesion.requerir('viajes').then(s => {
   document.getElementById('sb-user').textContent = s.nombre;
+  PUEDE_OBRAS = (s.permisos || []).includes('obras');
+  document.getElementById('vj-obras').hidden = !PUEDE_OBRAS;
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
   // El Diario abre en ayer (el resumen de cada mañana); el lunes, en el sábado si el domingo no hubo nada
