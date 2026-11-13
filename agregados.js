@@ -146,5 +146,54 @@ const Agregados = (() => {
     };
   }
 
-  return { calcular, consumos, param };
+  // Resumen de un periodo (desde y hasta 'yyyy-mm-dd', los dos cuentan) con lo que devuelve calcular():
+  //   por material: con cuánto empezó, cuánto entró, cuánto se usó y con cuánto terminó;
+  //   día por día (solo los días con algo); quién lo trajo (camión / chofer) y de qué proveedor.
+  // El saldo de cualquier día sale del último conteo (o del inventario inicial), contando hacia adelante o hacia atrás.
+  const diaAntes = iso => { const [y, m, d] = iso.split('-').map(Number); const x = new Date(y, m - 1, d - 1);
+    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+  const suma = (arr, f) => arr.reduce((s, x) => s + (f(x) || 0), 0);
+  function resumen(A, desde, hasta) {
+    const enP = f => f >= desde && f <= hasta;
+    const ent = A.movimientos.filter(m => m.cuenta && m.tipo === 'ENTRADA');
+    const materiales = A.materiales.map(m => {
+      const b = m.base.fecha || '0000-00-00';
+      const e = ent.filter(x => x.material === m.material);
+      const c = A.consumos.map(x => ({ fecha:x.fecha, t:x.agregados_t * m.prop, preliminar:!!x.preliminar }));
+      const saldo = d => {
+        const entre = f => d >= b ? f > b && f <= d : f > d && f <= b;
+        const s = suma(e.filter(x => entre(x.fecha)), x => x.ton) - suma(c.filter(x => entre(x.fecha)), x => x.t);
+        return m.base.ton + (d >= b ? s : -s);
+      };
+      const eP = e.filter(x => enP(x.fecha)), cP = c.filter(x => enP(x.fecha));
+      return { material:m.material, inicial:saldo(diaAntes(desde)), final:saldo(hasta),
+               viajes:suma(eP, x => N(x.viajes)), m3:suma(eP, x => N(x.m3)), entro_t:suma(eP, x => x.ton),
+               usado_t:suma(cP, x => x.t), preliminar_t:suma(cP.filter(x => x.preliminar), x => x.t), saldo, e:eP, c:cP };
+    });
+    const fechas = [...new Set(materiales.flatMap(m => [...m.e, ...m.c].filter(x => x.t > 0.0005 || x.ton > 0).map(x => x.fecha)))].sort();
+    const dias = fechas.map(f => ({ fecha:f, mats:materiales.map(m => {
+      const e = m.e.filter(x => x.fecha === f), c = m.c.filter(x => x.fecha === f);
+      return { material:m.material, viajes:suma(e, x => N(x.viajes)), m3:suma(e, x => N(x.m3)), entro_t:suma(e, x => x.ton),
+               usado_t:suma(c, x => x.t), saldo:m.saldo(f) };
+    }) }));
+    // Quién lo trajo: por placa (los avisos del operador no traen placa) y por proveedor
+    const agrupar = (clave, extra) => {
+      const g = {};
+      materiales.forEach(m => m.e.forEach(x => {
+        const k = clave(x), r = g[k] = g[k] || { nombre:k, choferes:{}, mats:{}, viajes:0, m3:0 };
+        r.viajes += N(x.viajes); r.m3 += N(x.m3);
+        const mm = r.mats[m.material] = r.mats[m.material] || { viajes:0, m3:0 };
+        mm.viajes += N(x.viajes); mm.m3 += N(x.m3);
+        if (extra && x.chofer) r.choferes[String(x.chofer).trim()] = (r.choferes[String(x.chofer).trim()] || 0) + N(x.viajes);
+      }));
+      return Object.values(g).map(r => ({ ...r, chofer:Object.entries(r.choferes).sort((a, b) => b[1] - a[1]).map(([c]) => c).join(', ') }))
+        .sort((a, b) => b.viajes - a.viajes || a.nombre.localeCompare(b.nombre));
+    };
+    const camiones = agrupar(x => x.placa ? String(x.placa).trim().toUpperCase()
+      : x.origen === 'OPERADOR' ? 'Aviso del operador (sin placa)' : 'Sin placa', true);
+    const proveedores = agrupar(x => String(x.procedencia || '').trim() || 'Sin proveedor anotado');
+    return { desde, hasta, materiales, dias, camiones, proveedores };
+  }
+
+  return { calcular, consumos, param, resumen };
 })();

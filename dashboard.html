@@ -450,6 +450,14 @@ select:focus,input:focus{border-color:var(--amb)}
           </div>
           <div id="agr-av"></div>
         </div>
+        <div class="sub" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">Resumen
+          <select id="agr-res-per" onchange="renderAgrResumen()" style="font-size:11px;text-transform:none;letter-spacing:0">
+            <option value="semana">Esta semana</option><option value="mes" selected>Este mes</option>
+            <option value="todo">Desde el inicio</option><option value="rango">Otras fechas…</option></select>
+          <span id="agr-res-rango" style="display:none;text-transform:none;letter-spacing:0;font-weight:400">
+            <input type="date" id="agr-res-desde" onchange="renderAgrResumen()"> a <input type="date" id="agr-res-hasta" onchange="renderAgrResumen()"></span>
+          <button class="ftb" style="margin-left:auto;text-transform:none;letter-spacing:0" onclick="copiarAgrResumen()">Copiar resumen</button></div>
+        <div class="pnb" id="agr-res"></div>
         <div class="sub">Movimientos <select id="agr-mov-ver" onchange="renderAgregados()" style="font-size:11px;text-transform:none;letter-spacing:0">
           <option value="30">Últimos 30</option><option value="">Todos</option></select></div>
         <div class="tw" id="agr-mov"></div>
@@ -2007,6 +2015,98 @@ function insumos() {
 //  AGREGADOS (teórico) — cálculo en agregados.js
 // ══════════════════════════════════════════
 const AGR_ORIGEN = { OPERADOR:'Operador', OFICINA:'Oficina (folio)', PANEL:'Conteo' };
+
+// ── Resumen de agregados por periodo (Agregados.resumen) ──
+const MES3 = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const diaCorto = iso => { const [, m, d] = iso.split('-'); return `${+d} ${MES3[+m - 1]}`; };
+const t1 = v => f0(Math.round(v * 10) / 10);
+// Periodo escogido: { desde, hasta } (o null si faltan fechas)
+function periodoAgr(A) {
+  const per = document.getElementById('agr-res-per').value, hoy = isoLocal(new Date()), h = new Date();
+  document.getElementById('agr-res-rango').style.display = per === 'rango' ? '' : 'none';
+  if (per === 'semana') { const l = new Date(h); l.setDate(h.getDate() - ((h.getDay() + 6) % 7)); return { desde:isoLocal(l), hasta:hoy }; }
+  if (per === 'mes') return { desde:hoy.slice(0, 8) + '01', hasta:hoy };
+  if (per === 'todo') {
+    const fs = [...A.movimientos.filter(m => m.cuenta && m.tipo === 'ENTRADA').map(m => m.fecha), ...A.consumos.map(c => c.fecha)].filter(Boolean).sort();
+    return { desde:fs[0] || hoy, hasta:hoy };
+  }
+  const d = document.getElementById('agr-res-desde'), a = document.getElementById('agr-res-hasta');
+  if (!d.value) d.value = hoy.slice(0, 8) + '01';
+  if (!a.value) a.value = hoy;
+  return d.value <= a.value ? { desde:d.value, hasta:a.value } : null;
+}
+function resumenAgr(A) {
+  A = A || Agregados.calcular(D, isoLocal(new Date()));
+  if (!A.materiales.length) return null;
+  const p = periodoAgr(A);
+  return p ? Agregados.resumen(A, p.desde, p.hasta) : null;
+}
+function renderAgrResumen(A) {
+  const box = document.getElementById('agr-res');
+  if (!D) return;
+  A = A || Agregados.calcular(D, isoLocal(new Date()));
+  if (!A.materiales.length) { box.innerHTML = ''; return; }
+  const R = resumenAgr(A);
+  if (!R) { box.innerHTML = '<div class="empty" style="padding:12px">Escoge un periodo válido (la primera fecha no puede ser después de la segunda).</div>'; return; }
+  const mats = R.materiales;
+  const tarjetas = `<div class="mg">${mats.map(m => `<div class="mc">
+      <div class="ml">${esc(m.material)}</div>
+      <div class="mv">${t1(m.final)} ton</div>
+      <div class="ms">Al ${diaCorto(R.hasta)} · empezó con ${t1(m.inicial)} ton el ${diaCorto(R.desde)}</div>
+      <div class="ms">+ Entró: ${f0(m.viajes)} viaje${m.viajes === 1 ? '' : 's'} · ${f0(m.m3)} m³ · ${t1(m.entro_t)} ton</div>
+      <div class="ms">− Se usó en producción: ${t1(m.usado_t)} ton${m.preliminar_t > 0.05 ? ` (${t1(m.preliminar_t)} preliminar)` : ''}</div>
+    </div>`).join('')}</div>`;
+  const dias = R.dias.length ? `<div class="tw" style="margin-top:12px"><table><thead><tr><th>Día</th>
+      ${mats.map(m => `<th class="rt">${esc(m.material)} entró</th><th class="rt">se usó</th><th class="rt">quedó</th>`).join('')}</tr></thead><tbody>
+      ${R.dias.slice().reverse().map(d => `<tr><td>${diaCorto(d.fecha)}</td>${d.mats.map(x => `
+        <td class="rt">${x.viajes ? `${f0(x.viajes)} viaje${x.viajes === 1 ? '' : 's'} · ${f0(x.m3)} m³` : '—'}</td>
+        <td class="rt">${x.usado_t > 0.05 ? t1(x.usado_t) + ' ton' : '—'}</td>
+        <td class="rt amb">${t1(x.saldo)} ton</td>`).join('')}</tr>`).join('')}</tbody></table></div>`
+    : '<div class="empty" style="padding:12px">En ese periodo no entró material ni hubo producción.</div>';
+  const tablaQuien = (titulo, filas, conChofer) => filas.length ? `<div class="tw" style="margin-top:12px"><table><thead><tr>
+      <th>${titulo}</th>${conChofer ? '<th>Chofer</th>' : ''}${mats.map(m => `<th class="rt">${esc(m.material)}</th>`).join('')}<th class="rt">Total</th></tr></thead><tbody>
+      ${filas.map(r => `<tr><td>${esc(r.nombre)}</td>${conChofer ? `<td>${esc(r.chofer || '—')}</td>` : ''}
+        ${mats.map(m => { const x = r.mats[m.material]; return `<td class="rt">${x ? `${f0(x.viajes)} · ${f0(x.m3)} m³` : '—'}</td>`; }).join('')}
+        <td class="rt amb">${f0(r.viajes)} · ${f0(r.m3)} m³</td></tr>`).join('')}</tbody></table></div>` : '';
+  box.innerHTML = tarjetas + dias + tablaQuien('Camión', R.camiones, true) + tablaQuien('Proveedor', R.proveedores, false)
+    + '<div style="font-size:11px;color:var(--muted);margin-top:8px">Viajes · m³. Toneladas = m³ × densidad de cada material. Lo que "quedó" es el saldo teórico al cerrar el día.</div>';
+}
+function textoAgrResumen(R) {
+  const [y] = R.hasta.split('-');
+  const L = ['RESUMEN DE AGREGADOS', `Del ${diaCorto(R.desde)} al ${diaCorto(R.hasta)} de ${y}`, ''];
+  R.materiales.forEach(m => L.push(m.material,
+    `Empezó con: ${t1(m.inicial)} ton`,
+    `Entró: ${f0(m.viajes)} viaje${m.viajes === 1 ? '' : 's'}, ${f0(m.m3)} m³ (${t1(m.entro_t)} ton)`,
+    `Se usó en producción: ${t1(m.usado_t)} ton`,
+    `Terminó con: ${t1(m.final)} ton`, ''));
+  if (R.dias.length) {
+    L.push('DIA POR DIA');
+    R.dias.forEach(d => {
+      const p = d.mats.filter(x => x.viajes || x.usado_t > 0.05).map(x => `${x.material}` +
+        (x.viajes ? ` entró ${f0(x.viajes)} viaje${x.viajes === 1 ? '' : 's'} (${f0(x.m3)} m³)` : '') +
+        (x.usado_t > 0.05 ? `${x.viajes ? ',' : ''} se usó ${t1(x.usado_t)} ton` : ''));
+      L.push(`${diaCorto(d.fecha)}: ${p.join('; ')}`);
+    });
+    L.push('');
+  }
+  const quien = (titulo, filas, conChofer) => {
+    if (!filas.length) return;
+    L.push(titulo);
+    filas.forEach(r => L.push(`${r.nombre}${conChofer && r.chofer ? ' ' + r.chofer : ''}: ` +
+      Object.entries(r.mats).map(([m, x]) => `${m} ${f0(x.viajes)} viaje${x.viajes === 1 ? '' : 's'} (${f0(x.m3)} m³)`).join(', ')));
+    L.push('');
+  };
+  quien('POR CAMION', R.camiones, true);
+  quien('POR PROVEEDOR', R.proveedores, false);
+  return L.join('\n').trim();
+}
+async function copiarAgrResumen() {
+  const R = D && resumenAgr();
+  if (!R) return alert('No hay datos para ese periodo.');
+  const txt = textoAgrResumen(R);
+  try { await navigator.clipboard.writeText(txt); alert('Resumen copiado. Pégalo en WhatsApp.'); }
+  catch(e) { alert('No se pudo copiar solo. Este es el texto:\n\n' + txt); }
+}
 function renderAgregados() {
   const A = Agregados.calcular(D, isoLocal(new Date()));
   const el = id => document.getElementById(id);
@@ -2039,6 +2139,7 @@ function renderAgregados() {
   }).join('');
 
   el('agr-av').innerHTML = A.avisos.map(a => `<div class="agr-av">${esc(a)}</div>`).join('');
+  renderAgrResumen(A);
 
   // Movimientos (más reciente primero)
   const ver = el('agr-mov-ver').value;
