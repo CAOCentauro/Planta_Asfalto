@@ -633,12 +633,40 @@ function desglose(w, lun) {
 }
 
 let P = null;   // pago en captura
+// El sábado de pago más reciente (hoy si hoy es sábado)
+const sabadoPasado = () => { const d = deIso(isoDia(HOY)); return addDays(d, -((d.getDay() - DIA_PAGO + 7) % 7)); };
+const lunPago = () => lunes(deIso(P.fecha));
+const saldoPago = w => saldoHasta(w, lunPago());
 function hojaPagar(id) {
-  const w = wById(id), s = saldoHoy(w);
-  P = { wid: id, clave: nuevaClave(), monto: s > 0.5 ? String(Math.round(s)) : '', forma: w.forma };
+  const w = wById(id);
+  P = { wid: id, clave: nuevaClave(), monto: '', tocado: false, forma: w.forma, fecha: isoDia(HOY) };
+  pintarHojaPago();
+}
+// Cambiar el día del pago: se calcula con la semana de ese día (si el monto no se ha escrito a mano, se pone lo que se debía)
+function fechaPago(iso) {
+  if (!iso || !P) return;
+  P.fecha = iso;
+  pintarHojaPago();
+}
+function pintarHojaPago() {
+  const w = wById(P.wid), s = saldoPago(w), lun = lunPago();
+  if (!P.tocado) P.monto = s > 0.5 ? String(Math.round(s)) : '';
+  const hoyIso = isoDia(HOY), sabIso = isoDia(sabadoPasado());
+  const chip = (iso, txt) => `<button class="chip ${P.fecha === iso && !P.otra ? 'on' : ''}" data-act="pFecha" data-v="${iso}">${txt}</button>`;
   abrirHoja(`
-    <h3>Pagar nómina<small>${esc(w.nombre)} · semana ${wkLabel(lunes(HOY))}</small></h3>
-    <div class="card">${desglose(w, lunes(HOY))}</div>
+    <h3>Pagar nómina<small>${esc(w.nombre)} · semana ${wkLabel(lun)}</small></h3>
+    <div class="card">
+      <label>¿Qué día se le pagó?</label>
+      <div class="chips">
+        ${chip(hoyIso, 'Hoy · ' + fCorta(HOY))}
+        ${sabIso !== hoyIso ? chip(sabIso, 'Sábado · ' + fCorta(sabadoPasado())) : ''}
+        <button class="chip ${P.otra ? 'on' : ''}" data-act="pFecha" data-v="otra">Otro día</button>
+      </div>
+      ${P.otra ? `<input type="date" id="p-fecha" style="margin-top:8px" value="${P.fecha}" min="${isoDia(w.alta || INICIO)}" max="${hoyIso}">` : ''}
+      ${P.fecha !== hoyIso ? `<div class="hint">Se registra el ${cap(DIAS[deIso(P.fecha).getDay()])} ${fCorta(deIso(P.fecha))} y cuenta para la semana ${wkLabel(lun)}.</div>` : ''}
+    </div>
+    ${w.alta && lun < w.alta ? `<div class="card hint c-err">Esa semana todavía no estaba en la nómina (entró la semana del ${fCorta(w.alta)}). Escoge otro día.</div>`
+      : `<div class="card">${desglose(w, lun)}</div>`}
     <div class="card">
       <label>Monto que se le paga</label>
       <div class="money"><span>$</span><input id="p-monto" inputmode="decimal" value="${P.monto}" data-pmodel="monto" autocomplete="off"></div>
@@ -658,7 +686,7 @@ function hojaPagar(id) {
 }
 function pintarPago() {
   const el = $('#p-live'); if (!el || !P) return;
-  const w = wById(P.wid), s = saldoHoy(w), v = num(P.monto) || 0;
+  const w = wById(P.wid), s = saldoPago(w), v = num(P.monto) || 0;
   const d = s - v;
   el.className = 'res f ' + (!v ? '' : d > 0.5 ? 'warn' : d < -0.5 ? 'loan' : 'ok');
   el.innerHTML = !v ? 'Escribe el monto.'
@@ -670,13 +698,17 @@ async function guardarPago() {
   if (guardando) return;
   const w = wById(P.wid), v = num(P.monto);
   if (!v || v <= 0) return aviso('Escribe el monto', 'err');
+  const fecha = deIso(P.fecha), esHoy = P.fecha === isoDia(HOY);
+  if (P.fecha > isoDia(HOY)) return aviso('La fecha es de un día que todavía no pasa', 'err');
+  if (fecha < (w.alta || INICIO)) return aviso('Esa fecha es anterior a que entrara a la nómina', 'err');
   guardando = true;
   const b = $('#p-guardar'); b.disabled = true; b.textContent = 'Guardando…';
   try {
-    const m = { id: '~nuevo', wid: w.id, fecha: deIso(isoDia(HOY)), tipo: 'pago', valor: v, nota: '', forma: P.forma, anulado: null };
+    const m = { id: '~nuevo', wid: w.id, fecha, tipo: 'pago', valor: v, nota: '', forma: P.forma, anulado: null };
     const nuevo = await enviarMov(m, P.clave);
     cerrarHoja(); render();
-    aviso(`✓ Pago de nómina de ${money(v)} · ${esc(w.nombre)}`, 'ok', 6000, () => deshacerMov(nuevo));
+    const dia = esHoy ? '' : ` · ${cap(DIAS[fecha.getDay()])} ${fCorta(fecha)}`;
+    aviso(`✓ Pago de nómina de ${money(v)} · ${esc(w.nombre)}${dia}`, 'ok', 6000, () => deshacerMov(nuevo));
   } catch (e) {
     b.disabled = false; b.textContent = 'Guardar pago';
     aviso('No se pudo guardar: ' + esc(errTxt(e)) + '<br>No se borró nada; vuelve a intentar.', 'err', 8000);
@@ -1032,6 +1064,7 @@ document.addEventListener('click', e => {
     case 'pagar': hojaPagar(id); break;
     case 'pForma': P.forma = v; document.querySelectorAll('[data-act="pForma"]').forEach(x => x.classList.toggle('on', x.dataset.v === v)); break;
     case 'pGuardar': guardarPago(); break;
+    case 'pFecha': if (v === 'otra') { P.otra = true; pintarHojaPago(); } else { P.otra = false; fechaPago(v); } break;
     case 'sem': S.sem = addDays(S.sem, 7 * +v); render(); break;
     case 'estado': S.estado = v; render(); break;
     case 'detalle': hojaDetalle(id); break;
@@ -1050,7 +1083,7 @@ document.addEventListener('click', e => {
 
 document.addEventListener('input', e => {
   const k = e.target.dataset.model, pk = e.target.dataset.pmodel;
-  if (pk) { P[pk] = e.target.value; return pintarPago(); }
+  if (pk) { P[pk] = e.target.value; if (pk === 'monto') P.tocado = true; return pintarPago(); }
   if (!k) return;
   if (k === 'buscar') {
     S.buscar = e.target.value;
@@ -1061,6 +1094,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'e-lugar') $('#e-lugar-nuevo').classList.toggle('oculto', e.target.value !== '__nuevo');
+  if (e.target.id === 'p-fecha') fechaPago(e.target.value);
 });
 
 // Al volver a la app después de un rato, trae lo que registraron los demás
