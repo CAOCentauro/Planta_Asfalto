@@ -617,7 +617,7 @@ function renderViajes() {
   SINP_VJ = sinPrecio.sort((a, b) => b.viajes - a.viajes);
   const avisoPrecios = VJ.errPrecios ? `<div class="banner-dr">No se pudieron leer los precios: ${esc(VJ.errPrecios)}</div>`
     : sinPrecio.length ? `<details class="pn"><summary class="pnh"><span class="sinp">${nViajes(sinPrecio.reduce((s, x) => s + x.viajes, 0))} sin precio
-        (${sinPrecio.length} combinación${sinPrecio.length !== 1 ? 'es' : ''} de obra y material sin precio)</span><span class="fl"></span></summary>
+        (${sinPrecio.length} ${sinPrecio.length !== 1 ? 'combinaciones' : 'combinación'} de obra y material sin precio)</span><span class="fl"></span></summary>
       ${tabla(`<th>Cliente</th><th>Obra</th><th>Material</th><th class="rt">Viajes</th><th class="rt">m³</th>${PUEDE_OBRAS ? '<th></th>' : ''}`,
         SINP_VJ.map((x, i) => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra)}</td>
           <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td>
@@ -1464,7 +1464,7 @@ const Cobr = (() => {
           <span class="flt">${c ? '<button class="ftb s2" onclick="Cobr.excel(this)">Descargar estado de cuenta</button>' : ''}
             <button class="ftb p" onclick="Cobr.pago()">Registrar pago</button></span></div>
         <div class="mg" style="padding:12px 16px">
-          <div class="mc m"><div class="ml">Cobrado (conciliaciones)</div><div class="mv">${$$(c?.producido || 0)}</div><div class="ms">${c ? c.cargos.length + ' conciliación' + (c.cargos.length !== 1 ? 'es' : '') : 'Sin conciliaciones'}</div></div>
+          <div class="mc m"><div class="ml">Cobrado (conciliaciones)</div><div class="mv">${$$(c?.producido || 0)}</div><div class="ms">${c ? c.cargos.length + (c.cargos.length !== 1 ? ' conciliaciones' : ' conciliación') : 'Sin conciliaciones'}</div></div>
           <div class="mc g"><div class="ml">Pagado</div><div class="mv">${$$(c?.pagado || 0)}</div><div class="ms">${c?.ultimoPago ? 'Último pago: ' + fechaLarga(c.ultimoPago) : 'Sin pagos'}</div></div>
           <div class="mc ${c && c.saldo > Cobranza.TOL ? 'r' : 'g'}"><div class="ml">${c && c.saldo < -Cobranza.TOL ? 'Saldo a favor' : 'Debe'}</div><div class="mv">${$$(Math.abs(c?.saldo || 0))}</div><div class="ms">${c ? c.estado.t : ''}</div></div>
         </div>
