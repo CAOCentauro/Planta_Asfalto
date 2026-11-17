@@ -181,6 +181,11 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 .cc-pad .ed-g{margin-bottom:10px}
 .cc-dif td{font-size:12px;padding-top:0}
 .cc-prev{margin-bottom:10px}
+.cb-con{white-space:normal;min-width:220px;vertical-align:top}
+.cb-acc{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
+.cb-acc .btn-ed{white-space:nowrap}
+.cb-cel{display:none;color:var(--muted);font-size:11px;margin-top:2px}
+@media(max-width:520px){.cb-oc{display:none}.cb-cel{display:block}.cb-con{min-width:140px}}
 .cc-prev .btn-ed{margin:3px 0 3px 6px}
 @media(max-width:520px){.cc-m3{display:none}.cc-t th,.cc-t td{padding-left:6px;padding-right:6px}}
 #modal-foto{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out}
@@ -219,6 +224,7 @@ a{color:var(--amb)}
     <a href="#" data-s="tickets">Subir tickets de diésel <span id="tk-badge" style="color:var(--amb)"></span></a>
     <div class="nav-g">Consultar</div>
     <a href="#" data-s="fletes">Fletes</a>
+    <a href="#" data-s="cobranza" id="nav-cobranza" hidden>Cobranza</a>
     <a href="#" data-s="diesel">Diésel y rendimiento</a>
   </nav>
   <div class="sb-foot">
@@ -276,6 +282,18 @@ a{color:var(--amb)}
   </section>
 
   <!-- SUBIR NOTAS y SUBIR TICKETS: las llena Subidor() (como los admin de Notas de Viaje y de Diesel) -->
+  <!-- COBRANZA: lo que debe cada cliente (conciliaciones entregadas − pagos), sus pagos y comprobantes -->
+  <section class="sec" id="sec-cobranza">
+    <div class="ph bar">
+      <h2>Cobranza</h2>
+      <div class="acc">
+        <button class="ftb" onclick="Cobr.cargar(true)">Actualizar</button>
+      </div>
+    </div>
+    <div class="sb" id="cb-body"></div>
+    <input type="file" id="cb-comp" multiple hidden>
+  </section>
+
   <section class="sec" id="sec-subir"></section>
   <section class="sec" id="sec-tickets"></section>
 
@@ -302,6 +320,8 @@ a{color:var(--amb)}
 <div id="modal-foto" onclick="this.classList.remove('on')"><img alt="Foto de la nota"></div>
 
 <script src="sesion.js"></script>
+<script src="cobranza.js"></script>
+<script src="comprobantes.js"></script>
 <script>
 const api = body => Sesion.api(body, 60000);
 const N  = v => v==null ? 0 : parseFloat(v)||0;
@@ -383,6 +403,7 @@ document.querySelectorAll('nav a[data-s]').forEach(a => a.addEventListener('clic
   if (a.dataset.s === 'tickets') SUB.tk.abrir();
   if (a.dataset.s === 'diario')  Diario.cargar();
   if (a.dataset.s === 'fletes')  cargarViajes();           // por si se registraron notas de esta semana
+  if (a.dataset.s === 'cobranza') Cobr.cargar();
   if (a.dataset.s === 'diesel') cargarDiesel();
 }));
 
@@ -1322,7 +1343,308 @@ const Conc = (() => {
     // Si está en el formulario del encabezado no se le quita: se pinta al regresar
     if (cuerpo().querySelector('.cc-prev')) { if (V) principal(); else previa(); }
   }
-  return { abrir, get ultimo() { return ultimo; } };
+  return { abrir, get ultimo() { return ultimo; },
+           // para el estado de cuenta (Cobranza): mismo formato de Excel
+           xl:{ libro, hoja, celda, bajar, nombreArchivo, fechaXl, periodoTxt, MONEDA, BORDE } };
+})();
+
+// ══════════════════════════════════════════
+//  COBRANZA DE VIAJES (pestaña Cobranza; permiso cobranza_viajes)
+//  Lo que se cobra = las conciliaciones entregadas; los abonos = los pagos (hoja Pagos_Viajes). El saldo lo calcula
+//  cobranza.js igual que en la planta: cada pago va a la conciliación que diga o, si no, a la más antigua.
+//  "Por conciliar" = viajes con cliente que todavía no entran en ninguna conciliación de su obra.
+// ══════════════════════════════════════════
+let PUEDE_COBR = false, PUEDE_ANULAR = false;
+const Cobr = (() => {
+  let D = null, V = null, errV = '', sel = '', aviso = '', PAGO_COMP = null, nCarga = 0;
+  const cuerpo = () => document.getElementById('cb-body');
+  const ku = s => String(s || '').trim().toUpperCase();
+  const concId = c => `${c.n}|${c.obra}`;
+  const hoy = () => txtFecha(new Date());
+  const fechaLarga = s => s ? `${fechaCorta(s)} ${s.slice(0, 4)}` : '';
+  const apiLargo = b => Sesion.api(b, 120000);
+  const masDias = (s, n) => { const d = fechaLocal(s); d.setDate(d.getDate() + n); return txtFecha(d); };
+
+  // Cuentas por cliente: las conciliaciones como cargos (con la fecha en que termina su periodo)
+  function cuentas(pagosExtra) {
+    const conc = D.conc || [];
+    const cargos = conc.map(c => ({ id_prod:concId(c), fecha:c.hasta, cliente:c.cliente, tons_real:c.m3, ingreso_total:c.importe }));
+    const cs = Cobranza.calcular(cargos, (D.pagos || []).concat(pagosExtra || []), hoy());
+    cs.forEach(c => c.cargos.forEach(g => g.conc = conc.find(x => concId(x) === g.id_prod)));
+    return cs;
+  }
+  // Viajes que no están en ninguna conciliación de su obra, por cliente (null mientras se leen)
+  function porConciliar() {
+    if (!V) return null;
+    const conc = D.conc || [], m = {};
+    (V.viajes || []).filter(v => !v.planta && v.cliente).forEach(v => {
+      if (conc.some(c => claveVj(c.obra) === claveVj(v.obra) && v.fecha >= c.desde && v.fecha <= c.hasta)) return;
+      const precio = precioVj(v, V.precios), k = ku(v.cliente);
+      const x = m[k] = m[k] || { nombre:String(v.cliente).trim(), viajes:0, m3:0, importe:0, sinPrecio:0, desde:v.fecha, hasta:v.fecha, obras:new Set() };
+      x.viajes++; x.m3 += N(v.m3); x.obras.add(v.obra);
+      if (precio == null) x.sinPrecio++; else x.importe += precio * N(v.m3);
+      if (v.fecha < x.desde) x.desde = v.fecha; if (v.fecha > x.hasta) x.hasta = v.fecha;
+    });
+    return m;
+  }
+  // Nombre como se escribió (las cuentas lo traen en mayúsculas)
+  const nombreDe = k => (D.conc || []).find(c => ku(c.cliente) === k)?.cliente || (D.pagos || []).find(p => ku(p.cliente) === k)?.cliente
+    || porConciliar()?.[k]?.nombre || k;
+
+  async function cargar(forzar) {
+    if (D && !forzar) return pintar();
+    const yo = ++nCarga;
+    cuerpo().innerHTML = '<div class="pn"><div class="empty">Leyendo conciliaciones y pagos…</div></div>';
+    bar(true);
+    try { const r = await api({ action:'cobranza_viajes' }); if (yo !== nCarga) return; D = r; }
+    catch(e) { if (yo === nCarga) cuerpo().innerHTML = `<div class="pn"><div class="empty">No se pudo leer la cobranza: ${esc(e.message)}</div></div>`; return; }
+    finally { bar(false); }
+    pintar();
+    cargarViajes(yo);
+  }
+  // Los viajes van aparte (para "por conciliar"): desde la primera conciliación o 120 días atrás, máximo un año
+  async function cargarViajes(yo = nCarga) {
+    const h = hoy(), primera = (D.conc || []).map(c => c.desde).sort()[0];
+    let desde = masDias(h, -120);
+    if (primera && primera < desde) desde = primera;
+    if (desde < masDias(h, -365)) desde = masDias(h, -365);
+    V = null; errV = '';
+    try { const r = await api({ action:'viajes_semana', desde, hasta:h }); if (yo === nCarga) V = r; }
+    catch(e) { if (yo === nCarga) errV = e.message; }
+    if (yo === nCarga) pintar();
+  }
+
+  function pintar() {
+    if (!D) return;
+    const cs = cuentas(), pc = porConciliar();
+    // Clientes: los que tienen conciliaciones o pagos, y los que solo tienen viajes por conciliar
+    const ks = new Set([...cs.map(c => c.cliente), ...(pc ? Object.keys(pc) : [])]);
+    const filas = [...ks].map(k => ({ k, c:cs.find(x => x.cliente === k), p:pc?.[k] }))
+      .sort((a, b) => (b.c?.saldo || 0) - (a.c?.saldo || 0) || (b.p?.importe || 0) - (a.p?.importe || 0) || a.k.localeCompare(b.k, 'es'));
+    if (sel && !ks.has(sel)) sel = '';
+    return sel ? detalle(filas.find(f => f.k === sel)) : lista(filas, pc);
+  }
+
+  const pcTxt = p => p ? `${$$(p.importe)}${p.sinPrecio ? ` <span class="sinp">+ ${p.sinPrecio} sin precio</span>` : ''}` : '—';
+  function lista(filas, pc) {
+    const debe = filas.reduce((s, f) => s + Math.max(0, f.c?.saldo || 0), 0), nDeben = filas.filter(f => (f.c?.saldo || 0) > Cobranza.TOL).length;
+    const totPc = pc ? filas.reduce((s, f) => s + (f.p?.importe || 0), 0) : null;
+    cuerpo().innerHTML = `${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
+      <div class="mg">
+        <div class="mc ${debe > Cobranza.TOL ? 'r' : 'g'}"><div class="ml">Por cobrar (conciliaciones entregadas)</div><div class="mv">${$$(debe)}</div><div class="ms">${nDeben} cliente${nDeben !== 1 ? 's' : ''} con saldo</div></div>
+        <div class="mc m"><div class="ml">Por conciliar (viajes sin conciliación)</div><div class="mv">${totPc == null ? '…' : $$(totPc)}</div>
+          <div class="ms">${errV ? `<span class="neg">No se pudieron leer los viajes</span> <button class="ftb" onclick="Cobr.reintentar()">Reintentar</button>` : totPc == null ? 'Leyendo los viajes…' : V ? 'Desde el ' + fechaLarga(V.desde) : ''}</div></div>
+      </div>
+      <div class="pn"><div class="pnh">Clientes</div>
+        ${filas.length ? `<div class="tw"><table><thead><tr><th>Cliente</th><th class="rt">Cobrado</th><th class="rt">Pagado</th><th class="rt">Debe</th><th>Más antiguo</th><th class="rt">Por conciliar</th><th></th></tr></thead><tbody>
+          ${filas.map(f => `<tr><td><b>${esc(nombreDe(f.k))}</b></td><td class="rt">${f.c ? $$(f.c.producido) : '—'}</td><td class="rt">${f.c ? $$(f.c.pagado) : '—'}</td>
+            <td class="rt">${f.c ? (f.c.saldo < -Cobranza.TOL ? `<span class="pos">${$$(-f.c.saldo)} a favor</span>` : `<b>${$$(Math.max(0, f.c.saldo))}</b>`) : '—'}</td>
+            <td>${f.c?.pendientes.length ? `<span class="tag ${f.c.estado.cls}">${f.c.masViejo} días</span>` : f.c ? '<span class="tag tb">Al corriente</span>' : ''}</td>
+            <td class="rt">${pc ? pcTxt(f.p) : '…'}</td>
+            <td class="rt"><button class="ftb" data-k="${esc(f.k)}" onclick="Cobr.ver(this.dataset.k)">Estado de cuenta</button></td></tr>`).join('')}
+          </tbody></table></div>` : '<div class="empty">Todavía no hay conciliaciones entregadas ni pagos.</div>'}
+        <div class="nota-pn">Lo que se cobra son las conciliaciones entregadas (Fletes › Conciliaciones). Cada pago se aplica a la conciliación que diga o, si no dice, a la más antigua.</div></div>`;
+    aviso = '';
+  }
+
+  function detalle(f) {
+    const c = f.c, p = f.p, nombre = nombreDe(f.k);
+    const anulados = (D.pagos || []).filter(x => ku(x.cliente) === f.k && x.estado === 'ANULADO');
+    const movs = c ? Cobranza.movimientos(c) : [];
+    const pagoHtml = x => {
+      const cs = x.comprobantes || [];
+      return `${cs.map((cp, i) => `<button class="btn-ed" onclick="Cobr.verComp('${esc(x.id_pago)}', ${i})" title="${esc(cp.nombre)}">Ver comprobante${cs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join(' ')}
+        <button class="btn-ed" onclick="Cobr.masComp('${esc(x.id_pago)}')">+ Comprobante</button>
+        ${PUEDE_ANULAR ? `<button class="btn-ed" onclick="Cobr.anular('${esc(x.id_pago)}')">Anular</button>` : ''}`;
+    };
+    const porObra = c ? Object.values(c.cargos.reduce((m, g) => { const o = g.conc?.obra || '—'; (m[o] = m[o] || { obra:o, importe:0, pendiente:0 }); m[o].importe += g.importe; m[o].pendiente += g.pendiente; return m; }, {})) : [];
+    cuerpo().innerHTML = `${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
+      <div class="flt"><button class="ftb" onclick="Cobr.ver('')">‹ Todos los clientes</button></div>
+      <div class="pn"><div class="pnh"><span>Estado de cuenta · ${esc(nombre)}</span>
+          <span class="flt">${c ? '<button class="ftb s2" onclick="Cobr.excel(this)">Descargar estado de cuenta</button>' : ''}
+            <button class="ftb p" onclick="Cobr.pago()">Registrar pago</button></span></div>
+        <div class="mg" style="padding:12px 16px">
+          <div class="mc m"><div class="ml">Cobrado (conciliaciones)</div><div class="mv">${$$(c?.producido || 0)}</div><div class="ms">${c ? c.cargos.length + ' conciliación' + (c.cargos.length !== 1 ? 'es' : '') : 'Sin conciliaciones'}</div></div>
+          <div class="mc g"><div class="ml">Pagado</div><div class="mv">${$$(c?.pagado || 0)}</div><div class="ms">${c?.ultimoPago ? 'Último pago: ' + fechaLarga(c.ultimoPago) : 'Sin pagos'}</div></div>
+          <div class="mc ${c && c.saldo > Cobranza.TOL ? 'r' : 'g'}"><div class="ml">${c && c.saldo < -Cobranza.TOL ? 'Saldo a favor' : 'Debe'}</div><div class="mv">${$$(Math.abs(c?.saldo || 0))}</div><div class="ms">${c ? c.estado.t : ''}</div></div>
+        </div>
+        ${p ? `<div class="nota-pn">Además, <b>${nViajes(p.viajes)}</b> (${f0(p.m3)} m³, ${pcTxt(p)}) del ${fechaLarga(p.desde)} al ${fechaLarga(p.hasta)} todavía no están en ninguna conciliación (${esc([...p.obras].join(', '))}).</div>` : ''}
+        ${porObra.length > 1 ? `<div class="nota-pn">Por obra: ${porObra.map(o => `${esc(o.obra)} debe ${$$(o.pendiente)}`).join(' · ')}</div>` : ''}
+      </div>
+      ${c?.cargos.length ? `<div class="pn"><div class="pnh">Conciliaciones</div><div class="tw"><table>
+        <thead><tr><th>N°</th><th class="cb-oc">Obra</th><th>Periodo</th><th class="rt cb-oc">Importe</th><th class="rt cb-oc">Pagado</th><th class="rt">Falta</th><th>Estado</th></tr></thead><tbody>
+        ${c.cargos.map(g => `<tr><td>${g.conc?.n ?? ''}</td><td class="cb-oc">${esc(g.conc?.obra || '')}</td><td>${g.conc ? `${fechaCorta(g.conc.desde)} – ${fechaCorta(g.conc.hasta)}` : ''}</td>
+          <td class="rt cb-oc">${$$(g.importe)}</td><td class="rt cb-oc">${$$(g.pagado)}</td><td class="rt">${g.pendiente > Cobranza.TOL ? `<b>${$$(g.pendiente)}</b>` : '—'}</td>
+          <td><span class="tag ${g.estado === 'Pagada' ? 'tb' : g.dias > 30 ? 'ta' : 'tm'}">${g.estado}${g.pendiente > Cobranza.TOL ? ' · ' + g.dias + ' días' : ''}</span></td></tr>`).join('')}
+        </tbody></table></div></div>` : ''}
+      <div class="pn"><div class="pnh">Movimientos</div>
+        ${movs.length ? `<div class="tw"><table><thead><tr><th>Fecha</th><th>Concepto</th><th class="rt cb-oc">Cargo</th><th class="rt cb-oc">Abono</th><th class="rt">Saldo</th></tr></thead><tbody>
+          ${movs.map(m => `<tr><td style="vertical-align:top">${fechaCorta(m.fecha)}${m.fecha.slice(0, 4) !== hoy().slice(0, 4) ? ' ' + m.fecha.slice(0, 4) : ''}</td>
+            <td class="cb-con">${m.tipo === 'cargo' ? `Conciliación ${m.g.conc?.n ?? ''} · ${esc(m.g.conc?.obra || '')}`
+              : `Pago <b>${esc(m.p.id_pago)}</b> · ${esc(m.p.forma)}${m.p.referencia ? ' · ' + esc(m.p.referencia) : ''}${m.p.notas ? `<br><small style="color:var(--muted)">${esc(m.p.notas)}</small>` : ''}`}
+              <div class="cb-cel">${m.cargo ? 'Cargo ' + $$(m.cargo) : 'Abono ' + $$(m.abono)}</div>
+              ${m.tipo === 'pago' ? `<div class="cb-acc">${pagoHtml(m.p)}</div>` : ''}</td>
+            <td class="rt cb-oc" style="vertical-align:top">${m.cargo ? $$(m.cargo) : ''}</td><td class="rt cb-oc" style="vertical-align:top">${m.abono ? $$(m.abono) : ''}</td>
+            <td class="rt" style="vertical-align:top"><b>${$$(m.saldo)}</b></td></tr>`).join('')}
+          </tbody></table></div>` : '<div class="empty">Sin movimientos.</div>'}</div>
+      ${anulados.length ? `<details class="pn"><summary class="pnh"><span>Pagos anulados (${anulados.length})</span><span class="fl"></span></summary><div class="tw"><table><tbody>
+        ${anulados.map(x => `<tr><td>${fechaLarga(x.fecha)}</td><td>${esc(x.id_pago)}</td><td class="rt">${$$(x.monto)}</td><td style="white-space:normal">Anulado por ${esc(x.anulado_por)}: ${esc(x.motivo_anulacion)}</td></tr>`).join('')}
+        </tbody></table></div></details>` : ''}`;
+    aviso = '';
+  }
+
+  // ── Registrar pago ──
+  function pago() {
+    const k = sel, nombre = nombreDe(k), c = cuentas().find(x => x.cliente === k);
+    const ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c ed" role="dialog"><div class="dlg-t" style="margin-bottom:8px"><b>Registrar pago · ${esc(nombre)}</b></div>
+      <div class="ed-g">
+        <label>Fecha del pago<input class="ci" type="date" data-k="fecha" value="${hoy()}" max="${hoy()}"></label>
+        <label>Monto ($)<input class="ci" data-k="monto" inputmode="decimal" placeholder="Ej. 50000"></label>
+        <label>Forma de pago<select class="ci" data-k="forma">${(D.formas || []).map(x => `<option>${esc(x)}</option>`).join('')}</select></label>
+        <label>Referencia / folio<input class="ci" data-k="referencia" maxlength="80" placeholder="opcional"></label>
+        <label class="w2">¿A qué conciliación se aplica?<select class="ci" data-k="aplicado"><option value="">Automático (la más antigua primero)</option>
+          ${(c?.pendientes || []).map(g => `<option value="${esc(g.id_prod)}">Conciliación ${g.conc?.n} · ${esc(g.conc?.obra || '')} · faltan ${$$(g.pendiente)}</option>`).join('')}</select></label>
+        <label class="w2">Notas<input class="ci" data-k="notas" maxlength="500" placeholder="opcional"></label>
+        <label class="w2">Comprobante (foto o PDF, opcional)<input class="ci" type="file" data-k="comp" multiple accept="${Comprobantes.ACEPTA}"></label>
+      </div>
+      <div class="ed-info cb-prev">Escribe el monto.</div>
+      <div class="dlg-b"><button class="ftb" data-a="no">Cancelar</button><button class="ftb p" data-a="si">Guardar pago</button></div></div>`;
+    const v = kk => ov.querySelector(`[data-k="${kk}"]`);
+    const monto = () => { const s = v('monto').value.replace(/[\s$,]/g, ''); const x = parseFloat(s); return isFinite(x) ? Math.round(x * 100) / 100 : 0; };
+    const datos = () => ({ id:'pv-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), fecha:v('fecha').value, cliente:nombre, monto:monto(),
+      forma:v('forma').value, referencia:v('referencia').value.trim(), aplicado_a:v('aplicado').value, notas:v('notas').value.trim(),
+      obra:v('aplicado').value ? v('aplicado').value.split('|').slice(1).join('|') : '' });
+    function previa() {
+      const d = datos(), el = ov.querySelector('.cb-prev');
+      if (!(d.monto > 0)) { el.textContent = 'Escribe el monto.'; return; }
+      const cc = cuentas([{ ...d, id_pago:'~NUEVO', estado:'VIGENTE' }]).find(x => x.cliente === k), nuevo = cc.pagos.find(x => x.id_pago === '~NUEVO');
+      const lineas = nuevo.aplicaciones.map(a => { const g = cc.cargos.find(x => x.id_prod === a.id_prod);
+        return `• Conciliación ${g.conc?.n} · ${esc(g.conc?.obra || '')}: ${$$(a.monto)} → ${g.pendiente <= Cobranza.TOL ? '<b>queda pagada</b>' : `faltan ${$$(g.pendiente)}`}`; });
+      if (nuevo.resto > 0.005) lineas.push(`• ${$$(nuevo.resto)} quedan como saldo a favor`);
+      el.innerHTML = `Con este pago ${cc.saldo < -Cobranza.TOL ? `queda con <b>${$$(-cc.saldo)}</b> a favor` : cc.saldo <= Cobranza.TOL ? 'queda <b>al corriente</b>' : `queda debiendo <b>${$$(cc.saldo)}</b>`}.<br>${lineas.join('<br>')}`;
+    }
+    const cerrar = () => { ov.remove(); removeEventListener('keydown', tecla, true); };
+    const tecla = e => { if (e.key === 'Escape' && document.querySelectorAll('.dlg').length === 1) { e.preventDefault(); cerrar(); } };
+    ov.addEventListener('input', previa); ov.addEventListener('change', previa);
+    ov.addEventListener('click', async e => {
+      const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+      if (b.dataset.a === 'no') return cerrar();
+      const d = datos(), files = [...v('comp').files];
+      if (!(d.monto > 0)) return alert('Escribe el monto.');
+      if (!d.fecha) return alert('Pon la fecha del pago.');
+      if (d.fecha > hoy()) return alert('La fecha es de un día que todavía no pasa.');
+      if (!(await preguntar(`Pago de ${nombre}\n${$$(d.monto)} · ${d.forma}${d.referencia ? ' · ' + d.referencia : ''}\n${fechaLarga(d.fecha)}${files.length ? `\n${files.length} comprobante${files.length > 1 ? 's' : ''}` : ''}\n\n¿Guardar?`, 'Sí, guardar'))) return;
+      ov.querySelectorAll('button').forEach(x => x.disabled = true);
+      b.textContent = 'Guardando…'; bar(true);
+      try {
+        const r = await api({ action:'pv_guardar', pago:d });
+        aviso = `Pago guardado como <b>${esc(r.id_pago)}</b>.`;
+        if (files.length) {
+          const s = await Comprobantes.subir(apiLargo, 'pv_comprobante', r.id_pago, files, (i, n) => b.textContent = `Subiendo comprobante ${i} de ${n}…`);
+          aviso += s.errores.length ? ` <span class="neg">No se pudo subir: ${esc(s.errores.join('; '))}. Agrégalo con "+ Comprobante".</span>`
+            : ` ${s.subidos === 1 ? 'Comprobante guardado' : s.subidos + ' comprobantes guardados'}.`;
+        }
+        cerrar();
+        await recargarCuentas();
+      } catch(e2) {
+        ov.querySelectorAll('button').forEach(x => x.disabled = false); b.textContent = 'Guardar pago';
+        alert('No se guardó: ' + e2.message);
+      } finally { bar(false); }
+    });
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    v('monto').focus();
+  }
+  // Vuelve a leer conciliaciones y pagos (los viajes no cambian)
+  async function recargarCuentas() {
+    try { D = await api({ action:'cobranza_viajes' }); } catch(e) { aviso += ` No se pudo actualizar: ${esc(e.message)}`; }
+    pintar();
+  }
+
+  // ── Comprobantes de un pago ya guardado ──
+  const pagoDe = id => (D.pagos || []).find(x => x.id_pago === id);
+  function verComp(id, i) { const x = pagoDe(id); if (x) Comprobantes.ver(apiLargo, 'pv_comprobante_ver', id, x.comprobantes[i]); }
+  function masComp(id) { PAGO_COMP = id; const inp = document.getElementById('cb-comp'); inp.value = ''; inp.click(); }
+  async function alElegir(files) {
+    const id = PAGO_COMP; PAGO_COMP = null;
+    if (!id || !files.length) return;
+    bar(true);
+    aviso = `Subiendo ${files.length === 1 ? 'el comprobante' : files.length + ' comprobantes'}…`; pintar();
+    const s = await Comprobantes.subir(apiLargo, 'pv_comprobante', id, files);
+    bar(false);
+    const x = pagoDe(id); if (x && s.comprobantes) x.comprobantes = s.comprobantes;
+    aviso = s.errores.length ? `<span class="neg">No se pudo subir: ${esc(s.errores.join('; '))}</span>`
+      : `${s.subidos === 1 ? 'Comprobante guardado' : s.subidos + ' comprobantes guardados'} en ${esc(id)}.`;
+    pintar();
+  }
+
+  // ── Anular un pago (con motivo) ──
+  function anular(id) {
+    const x = pagoDe(id); if (!x) return;
+    const ov = document.createElement('div');
+    ov.className = 'dlg';
+    ov.innerHTML = `<div class="dlg-c ed" role="dialog"><div class="dlg-t" style="margin-bottom:8px"><b>Anular el pago ${esc(id)}</b><br>${$$(x.monto)} · ${esc(x.forma)} · ${fechaLarga(x.fecha)}</div>
+      <div class="ed-info">No se borra: deja de contar en el saldo y queda anotado quién lo anuló y por qué.</div>
+      <div class="ed-g"><label class="w2">Motivo<input class="ci" data-k="motivo" maxlength="300" placeholder="Ej. se capturó dos veces"></label></div>
+      <div class="dlg-b"><button class="ftb" data-a="no">Cancelar</button><button class="ftb p" data-a="si">Anular pago</button></div></div>`;
+    const cerrar = () => { ov.remove(); removeEventListener('keydown', tecla, true); };
+    const tecla = e => { if (e.key === 'Escape' && document.querySelectorAll('.dlg').length === 1) { e.preventDefault(); cerrar(); } };
+    ov.addEventListener('click', async e => {
+      const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+      if (b.dataset.a === 'no') return cerrar();
+      const motivo = ov.querySelector('[data-k=motivo]').value.trim();
+      if (!motivo) return alert('Escribe el motivo.');
+      ov.querySelectorAll('button').forEach(z => z.disabled = true); b.textContent = 'Anulando…';
+      try { await api({ action:'pv_anular', id, motivo }); aviso = `Se anuló el pago ${esc(id)}.`; cerrar(); await recargarCuentas(); }
+      catch(e2) { ov.querySelectorAll('button').forEach(z => z.disabled = false); b.textContent = 'Anular pago'; alert('No se anuló: ' + e2.message); }
+    });
+    addEventListener('keydown', tecla, true);
+    document.body.appendChild(ov);
+    ov.querySelector('[data-k=motivo]').focus();
+  }
+
+  // ── Estado de cuenta en Excel (mismo estilo que las conciliaciones) ──
+  async function armarExcel(k) {
+    const X = Conc.xl, c = cuentas().find(x => x.cliente === k), nombre = nombreDe(k), h = hoy();
+    const wb = await X.libro(), ws = X.hoja(wb, 'ESTADO DE CUENTA');
+    ws.columns = [12, 58, 15, 15, 16].map(width => ({ width }));
+    const titulo = (f, t, sz, alto) => { ws.mergeCells(`A${f}:E${f}`); X.celda(ws, `A${f}`, t, { font:{ name:'Times New Roman', size:sz } }); ws.getRow(f).height = alto; };
+    titulo(1, 'ESTADO DE CUENTA', 20, 26); titulo(2, nombre.toUpperCase(), 14, 19);
+    titulo(3, `VIAJES LOCALES · AL ${h.slice(8)} DE ${MESES[+h.slice(5, 7) - 1]} DE ${h.slice(0, 4)}`, 12, 16);
+    const azul = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF4472C4' } }, blanca = { bold:true, color:{ argb:'FFFFFFFF' } };
+    ['FECHA', 'CONCEPTO', 'CARGO', 'ABONO', 'SALDO'].forEach((t, i) => X.celda(ws, 'ABCDE'[i] + 5, t, { font:blanca, fill:azul, border:X.BORDE }));
+    const movs = Cobranza.movimientos(c);
+    movs.forEach((m, i) => {
+      const f = 6 + i, cc = m.g?.conc;
+      const concepto = m.tipo === 'cargo' ? `CONCILIACIÓN ${cc?.n ?? ''} · ${String(cc?.obra || '').toUpperCase()} (${cc ? X.periodoTxt(cc.desde, cc.hasta) : ''})`
+        : `PAGO ${m.p.id_pago} · ${String(m.p.forma).toUpperCase()}${m.p.referencia ? ' · ' + m.p.referencia : ''}`;
+      X.celda(ws, 'A' + f, X.fechaXl(m.fecha), { border:X.BORDE, numFmt:'dd/mm/yyyy' });
+      X.celda(ws, 'B' + f, concepto, { border:X.BORDE, alignment:{ horizontal:'left', vertical:'middle', wrapText:true } });
+      X.celda(ws, 'C' + f, m.cargo || null, { border:X.BORDE, numFmt:X.MONEDA });
+      X.celda(ws, 'D' + f, m.abono || null, { border:X.BORDE, numFmt:X.MONEDA });
+      X.celda(ws, 'E' + f, { formula:i ? `E${f - 1}+C${f}-D${f}` : `C${f}-D${f}`, result:m.saldo }, { border:X.BORDE, numFmt:X.MONEDA });
+    });
+    const u = 5 + Math.max(movs.length, 1), t = u + 1, amarillo = { type:'pattern', pattern:'solid', fgColor:{ argb:'FFFFFF00' } };
+    X.celda(ws, 'B' + t, 'TOTALES', { font:{ bold:true }, alignment:{ horizontal:'right' } });
+    X.celda(ws, 'C' + t, { formula:`SUM(C6:C${u})`, result:c.producido }, { font:{ bold:true }, border:X.BORDE, numFmt:X.MONEDA });
+    X.celda(ws, 'D' + t, { formula:`SUM(D6:D${u})`, result:c.pagado }, { font:{ bold:true }, border:X.BORDE, numFmt:X.MONEDA });
+    X.celda(ws, 'D' + (t + 2), c.saldo < -Cobranza.TOL ? 'SALDO A FAVOR' : 'SALDO A PAGAR', { font:{ bold:true }, fill:amarillo, border:X.BORDE });
+    X.celda(ws, 'E' + (t + 2), { formula:`C${t}-D${t}`, result:c.saldo }, { font:{ bold:true, size:12 }, fill:amarillo, border:X.BORDE, numFmt:X.MONEDA });
+    return { wb, nombre:X.nombreArchivo(`ESTADO DE CUENTA ${nombre} ${h}`) };
+  }
+  async function excel(btn) {
+    const t = btn.textContent; btn.disabled = true; btn.textContent = 'Armando…';
+    try { await Conc.xl.bajar(await armarExcel(sel)); }
+    catch(e) { alert('No se pudo armar el Excel: ' + e.message); }
+    finally { btn.disabled = false; btn.textContent = t; }
+  }
+
+  document.getElementById('cb-comp').accept = Comprobantes.ACEPTA;
+  document.getElementById('cb-comp').addEventListener('change', e => alElegir([...e.target.files]));
+  return { cargar, ver:k => { sel = k; pintar(); document.getElementById('sec-cobranza').scrollTop = 0; }, reintentar:() => cargarViajes(),
+           pago, verComp, masComp, anular, excel, armarExcel };
 })();
 
 // ══════════════════════════════════════════
@@ -2869,6 +3191,9 @@ Sesion.requerir('viajes').then(s => {
   PUEDE_OBRAS = (s.permisos || []).includes('obras');
   document.getElementById('vj-obras').hidden = !PUEDE_OBRAS;
   document.getElementById('vj-conc').hidden = !PUEDE_OBRAS;
+  PUEDE_COBR = (s.permisos || []).includes('cobranza_viajes');
+  PUEDE_ANULAR = (s.permisos || []).includes('anular_pagos');
+  document.getElementById('nav-cobranza').hidden = !PUEDE_COBR;
   document.getElementById('app').style.display = 'flex';
   document.getElementById('vj-dia').value = txtFecha(new Date());
   // El Diario abre en ayer (el resumen de cada mañana); el lunes, en el sábado si el domingo no hubo nada

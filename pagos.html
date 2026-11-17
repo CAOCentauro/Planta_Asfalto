@@ -55,6 +55,9 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--amb);outline-off
 .msg.on{display:block}
 .msg.ok{background:var(--ok-bg);color:var(--ok)}
 .msg.err{background:var(--err-bg);color:var(--err)}
+.hist .cps{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center;margin-top:4px;padding:0;border:none}
+.btn-cp{font:inherit;font-size:13px;padding:4px 9px;border:1px solid var(--bd);border-radius:6px;background:transparent;color:var(--text);cursor:pointer}
+.hist .anul{opacity:.55;text-decoration:line-through}
 </style>
 <link rel="stylesheet" href="estilo.css">
 </head>
@@ -75,6 +78,13 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--amb);outline-off
     <div id="cuenta"></div>
   </div>
 
+  <!-- PAGOS YA REGISTRADOS DEL CLIENTE (con sus comprobantes) -->
+  <div class="card" id="pagos-card" style="display:none">
+    <h2>Pagos de este cliente<span class="u">Con "+ Comprobante" se agrega la foto o PDF a un pago ya guardado</span></h2>
+    <div class="hist" id="pagos-cli"></div>
+    <input type="file" id="comp-despues" multiple hidden>
+  </div>
+
   <!-- PAGO -->
   <div class="card">
     <h2>Datos del pago</h2>
@@ -89,6 +99,8 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--amb);outline-off
     <div class="f"><label>¿A qué producción se aplica?</label><select id="aplicado"></select>
       <div class="hint">Si no se sabe, déjalo en automático: se paga primero lo más antiguo.</div></div>
     <div class="f"><label>Notas</label><textarea id="notas" placeholder="opcional"></textarea></div>
+    <div class="f"><label>Comprobante (foto o PDF, opcional)</label><input type="file" id="comp" multiple>
+      <div class="hint">Se guarda en Drive junto con el pago. Si llega después, se agrega en "Pagos de este cliente".</div></div>
   </div>
 
   <!-- RESULTADO -->
@@ -114,6 +126,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--amb);outline-off
 
 <script src="sesion.js"></script>
 <script src="cobranza.js"></script>
+<script src="comprobantes.js"></script>
 <script>
 // Lo que deben sale de las producciones; aquí solo se registra el pago (hoja Pagos)
 const LS = {
@@ -171,6 +184,7 @@ function pintarCuenta() {
     (c ? c.pendientes.map(g => `<option value="${esc(g.id_prod)}">${fCorta(g.fecha)} · ${esc(g.id_prod)} · faltan ${money(g.pendiente)}</option>`).join('') : '');
   if ([...sel.options].some(o => o.value === prev)) sel.value = prev;
 
+  pintarPagosCli(nombre);
   if (!nombre) { $('#cuenta').innerHTML = ''; return; }
   if (!c) { $('#cuenta').innerHTML = `<div class="res warn">Este cliente no tiene producciones. Si es un anticipo, quedará como saldo a favor. Revisa que el nombre esté bien escrito.</div>`; return; }
   $('#cuenta').innerHTML = `
@@ -179,6 +193,38 @@ function pintarCuenta() {
         <span>${fCorta(g.fecha)} · ${esc(g.id_prod)}<br><small>${fmt(g.tons)} t · ${money(g.importe)}${g.pagado > Cobranza.TOL ? ` · pagado ${money(g.pagado)}` : ''} · hace ${g.dias} días</small></span>
         <span class="r">faltan<br><b>${money(g.pendiente)}</b></span></div>`).join('')}</div>`
       : '<div class="hint">No tiene producciones pendientes.</div>'}`;
+}
+
+// Pagos ya registrados del cliente (los más nuevos primero) con sus comprobantes
+const apiPagos = body => Sesion.api(body, 120000);
+function pintarPagosCli(nombre) {
+  const ps = nombre ? DATOS.pagos.filter(p => String(p.cliente).trim().toUpperCase() === nombre)
+    .sort((a, b) => String(b.fecha).localeCompare(String(a.fecha)) || String(b.id_pago).localeCompare(String(a.id_pago))).slice(0, 20) : [];
+  $('#pagos-card').style.display = ps.length ? '' : 'none';
+  $('#pagos-cli').innerHTML = ps.map(p => {
+    const cs = p.comprobantes || [], anulado = p.estado === 'ANULADO';
+    return `<div style="display:block"><div style="display:flex;justify-content:space-between;gap:10px;padding:0;border:none" class="${anulado ? 'anul' : ''}">
+        <span><b>${esc(p.id_pago)}</b> · ${fCorta(p.fecha)}<br><small style="color:var(--muted)">${esc(p.forma || '')}${p.referencia ? ' · ' + esc(p.referencia) : ''}${anulado ? ' · ANULADO' : ''}</small></span>
+        <span>${money(p.monto)}</span></div>
+      <div class="cps">${cs.map((c, i) => `<button class="btn-cp" data-ver="${esc(p.id_pago)}" data-i="${i}" title="${esc(c.nombre)}">Ver comprobante${cs.length > 1 ? ' ' + (i + 1) : ''}</button>`).join('')}
+        ${anulado ? '' : `<button class="btn-cp" data-mas="${esc(p.id_pago)}">+ Comprobante</button>`}</div></div>`;
+  }).join('');
+}
+let PAGO_COMP = null;      // pago al que se le está agregando comprobante
+document.addEventListener('click', e => {
+  const v = e.target.closest('[data-ver]'), m = e.target.closest('[data-mas]');
+  if (v) { const p = DATOS.pagos.find(x => x.id_pago === v.dataset.ver); if (p) Comprobantes.ver(apiPagos, 'pago_comprobante_ver', p.id_pago, p.comprobantes[Number(v.dataset.i)]); }
+  if (m) { PAGO_COMP = m.dataset.mas; $('#comp-despues').value = ''; $('#comp-despues').click(); }
+});
+async function subirComprobantes(idPago, files) {
+  if (!files || !files.length) return;
+  const r = await Comprobantes.subir(apiPagos, 'pago_comprobante', idPago, files,
+    (i, n) => aviso(`Subiendo comprobante ${i} de ${n}…`, 'ok', 120000));
+  if (r.errores.length) aviso(`${r.subidos ? `Se subieron ${r.subidos}. ` : ''}No se pudo subir:<br>• ${r.errores.map(esc).join('<br>• ')}`, 'err', 10000);
+  else aviso(`✓ ${r.subidos === 1 ? 'Comprobante guardado' : r.subidos + ' comprobantes guardados'} en ${esc(idPago)}`, 'ok', 5000);
+  const p = DATOS.pagos.find(x => x.id_pago === idPago);
+  if (p && r.comprobantes) { p.comprobantes = r.comprobantes; pintarPagosCli($('#cliente').value.trim().toUpperCase()); }
+  return r;
 }
 
 // Cómo queda la cuenta si se guarda este pago
@@ -205,7 +251,7 @@ function alCambiar(e) {
 function limpiar(preguntar) {
   if (preguntar && !confirm('¿Borrar lo capturado y empezar un pago nuevo?')) return;
   ID = nuevoId();
-  ['cliente','monto','referencia','notas'].forEach(k => $('#'+k).value = '');
+  ['cliente','monto','referencia','notas','comp'].forEach(k => $('#'+k).value = '');
   $('#fecha').value = hoy();
   alCambiar();
   window.scrollTo(0, 0);
@@ -227,6 +273,9 @@ async function enviar() {
     h.unshift({ id:j.id_pago, cliente:p.cliente, monto:p.monto, fecha:p.fecha });
     LS.set('hist', h.slice(0, 15)); pintarHist();
     aviso(`✓ Guardado como <b>${esc(j.id_pago)}</b>`, 'ok', 5000);
+    // Los comprobantes se suben ya con el pago guardado (si alguno falla, el pago queda y se agrega después)
+    const files = [...$('#comp').files];
+    if (files.length) { b.textContent = 'Subiendo comprobante…'; await subirComprobantes(j.id_pago, files); }
     await cargarDatos();
     limpiar(false);
   } catch(e) {
@@ -252,6 +301,13 @@ Sesion.requerir('pagos').then(async s => {
   $('#h-op').textContent = s.nombre;
   document.querySelector('main').addEventListener('input', alCambiar);
   document.querySelector('main').addEventListener('change', alCambiar);
+  $('#comp').accept = $('#comp-despues').accept = Comprobantes.ACEPTA;
+  $('#comp-despues').addEventListener('change', async e => {
+    e.stopPropagation();
+    const files = [...e.target.files];
+    if (PAGO_COMP && files.length) await subirComprobantes(PAGO_COMP, files);
+    PAGO_COMP = null;
+  });
   try { await cargarDatos(); } catch(e) { aviso('No se pudieron cargar las cuentas: ' + esc(e.message), 'err', 10000); }
   limpiar(false);
   pintarHist();
