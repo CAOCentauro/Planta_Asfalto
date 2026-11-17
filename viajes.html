@@ -989,7 +989,7 @@ const Conc = (() => {
   const suma = vs => ({ viajes:vs.length, m3:vs.reduce((s, v) => s + N(v.m3), 0), importe:r2(vs.reduce((s, v) => s + (v.importe || 0), 0)),
                         sinPrecio:vs.filter(v => v.importe == null) });
   // Cómo suma ahora una conciliación ya registrada (null si es de antes de lo que se leyó)
-  const ahora = (o, c) => c.desde < V.desde ? null : suma(viajesDe(o, c.desde, c.hasta));
+  const ahora = (o, c) => !V || c.desde < V.desde ? null : suma(viajesDe(o, c.desde, c.hasta));
   const cuadra = (c, a) => !a || (a.viajes === c.viajes && Math.abs(a.importe - c.importe) < 0.01 && Math.abs(a.m3 - c.m3) < 0.01);
   // Encabezado y firmas: lo guardado o, si falta, el nombre de la obra y del cliente
   const datos = o => ({ enc1:o.enc1 || '', enc2:o.enc2 || '', enc3:o.enc3 || o.obra.toUpperCase(), entrega:o.entrega || '', recibe:o.recibe || (o.cliente || '').toUpperCase() });
@@ -1010,14 +1010,18 @@ const Conc = (() => {
   function principal() {
     const obras = obrasOrden(), o = obraSel();
     if (!o) return pintar(`<div class="ob-vacio">Todavía no hay obras.</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`);
-    const cs = concDe(o), dd = datos(o), todos = viajesDe(o);
+    // Mientras llegan los viajes ya se ve todo lo registrado (y el resumen se puede descargar)
+    const cs = concDe(o), dd = datos(o), todos = V ? viajesDe(o) : [];
     const ult = cs.length ? cs[cs.length - 1] : null, sigN = ult ? ult.n + 1 : 1;
     const enAlguna = v => cs.some(c => v.fecha >= c.desde && v.fecha <= c.hasta);
     const huecos = todos.filter(v => !enAlguna(v) && ult && v.fecha < ult.hasta);   // quedaron fuera, entre conciliaciones
     const pend = todos.filter(v => !ult || v.fecha > ult.hasta);
-    const desde0 = ult ? masDias(ult.hasta, 1) : (pend[0]?.fecha || txtFecha(new Date()));
-    let hasta0 = pend.length ? pend[pend.length - 1].fecha : txtFecha(new Date());
-    if (hasta0 < desde0) hasta0 = desde0;
+    let desde0 = '', hasta0 = '';
+    if (V) {
+      desde0 = ult ? masDias(ult.hasta, 1) : (pend[0]?.fecha || txtFecha(new Date()));
+      hasta0 = pend.length ? pend[pend.length - 1].fecha : txtFecha(new Date());
+      if (hasta0 < desde0) hasta0 = desde0;
+    }
     const tot = cs.reduce((s, c) => ({ viajes:s.viajes + c.viajes, m3:s.m3 + c.m3, importe:s.importe + c.importe }), { viajes:0, m3:0, importe:0 });
 
     pintar(`${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
@@ -1056,6 +1060,7 @@ const Conc = (() => {
 
   // Lo que llevaría la nueva, y si hay algo que impide sacarla
   function revisar() {
+    if (!V) return { error:'Todavía se están leyendo los viajes.' };
     const o = obraSel(), desde = valor('desde'), hasta = valor('hasta');
     if (!desde || !hasta) return { error:'Pon las dos fechas.' };
     if (desde > hasta) return { error:'La fecha "desde" va antes que "hasta".' };
@@ -1070,6 +1075,13 @@ const Conc = (() => {
   function previa() {
     const el = cuerpo().querySelector('.cc-prev'), btn = cuerpo().querySelector('[data-a=guardar]');
     if (!el) return;
+    if (!V) {      // los viajes todavía no llegan (o no se pudieron leer)
+      btn.disabled = true;
+      el.innerHTML = cargaV?.error
+        ? `<div class="sinp">No se pudieron leer los viajes: ${esc(cargaV.error)}</div><button class="btn-ed" data-a="reintentar" style="margin:6px 0 0">Reintentar</button>`
+        : `<div style="color:var(--muted)">Leyendo los viajes de la obra… ${cargaV ? Math.round((Date.now() - cargaV.t0) / 1000) + ' s' : ''}</div>`;
+      return;
+    }
     const r = revisar();
     btn.disabled = !!r.error;
     if (r.error) {
@@ -1241,6 +1253,7 @@ const Conc = (() => {
     finally { btn.disabled = false; btn.textContent = t; }
   }
   async function bajarConc(btn, n) {
+    if (!V) return alert('Espera a que terminen de leerse los viajes (abajo, en "Nueva") y vuelve a intentarlo.');
     const o = obraSel(), c = concDe(o).find(x => x.n === n), a = ahora(o, c);
     if (!cuadra(c, a) && !(await preguntar(`La conciliación ${n} se entregó con ${nViajes(c.viajes)} y ${$$(c.importe)}; ahora suma ${nViajes(a.viajes)} y ${$$(a.importe)}.\n\nEl Excel sale con los viajes y precios de ahora. ¿Descargar así?`, 'Sí, descargar'))) return;
     descargar(btn, () => excelConc(o, c));
@@ -1253,7 +1266,7 @@ const Conc = (() => {
     ov = document.createElement('div');
     ov.className = 'dlg';
     ov.innerHTML = `<div class="dlg-c ed ob" role="dialog"><div class="dlg-t" style="margin-bottom:8px"><b>Conciliaciones</b></div>
-      <div class="ob-cuerpo"><div class="ob-vacio">Leyendo obras y viajes del último año…</div></div></div>`;
+      <div class="ob-cuerpo"><div class="ob-vacio">Leyendo las obras y sus conciliaciones…</div></div></div>`;
     ov.addEventListener('click', e => {
       const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
       const a = b.dataset.a, n = Number(b.dataset.n);
@@ -1265,6 +1278,7 @@ const Conc = (() => {
       else if (a === 'quitar') quitar(b, n);
       else if (a === 'bajar') bajarConc(b, n);
       else if (a === 'resumen') descargar(b, () => excelResumen(obraSel()));
+      else if (a === 'reintentar') cargarViajes();
       else if (a === 'precio') { const o = obraSel(); cerrar(); Obras.abrir({ cliente:o.cliente, obra:o.obra, material:b.dataset.m, desde:b.dataset.f }); }
     });
     ov.addEventListener('change', e => {
@@ -1275,18 +1289,38 @@ const Conc = (() => {
     ov.addEventListener('input', e => { if (e.target.dataset.k === 'desde' || e.target.dataset.k === 'hasta') previa(); });
     addEventListener('keydown', tecla, true);
     document.body.appendChild(ov);
-    const hoy = txtFecha(new Date());
+    V = null; cargaV = null;
     bar(true);
-    try { [D, V] = await Promise.all([api({ action:'obras_lista' }), api({ action:'viajes_semana', desde:masDias(hoy, -DIAS_ATRAS), hasta:hoy })]); }
-    catch(e) { if (ov) pintar(`<div class="ob-vacio">No se pudo leer: ${esc(e.message)}</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`); return; }
+    try { D = await api({ action:'obras_lista' }); }
+    catch(e) { if (ov) pintar(`<div class="ob-vacio">No se pudieron leer las obras: ${esc(e.message)}</div><div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`); return; }
     finally { bar(false); }
     if (!ov) return;
-    // Obra: la del filtro de Fletes, la última que se usó, o la del viaje más reciente
+    // Obra: la del filtro de Fletes, la última que se usó, o la de la última conciliación
     const hay = k => k && (D.obras || []).some(o => claveVj(o.obra) === k);
     let guardada = ''; try { guardada = localStorage.getItem('cc-obra') || ''; } catch(x) {}
-    const reciente = (V.viajes || []).filter(v => !v.planta && hay(claveVj(v.obra))).sort((a, b) => b.fecha.localeCompare(a.fecha))[0];
-    obraK = [FV.obra, guardada, reciente && claveVj(reciente.obra), obrasOrden()[0] && claveVj(obrasOrden()[0].obra)].find(hay) || '';
+    const ultConc = (D.conc || []).slice().sort((a, b) => String(b.cuando).localeCompare(String(a.cuando)))[0];
+    obraK = [FV.obra, guardada, ultConc && claveVj(ultConc.obra), obrasOrden()[0] && claveVj(obrasOrden()[0].obra)].find(hay) || '';
     principal();
+    cargarViajes();
+  }
+  // Los viajes van aparte: desde la primera conciliación registrada (o 120 días atrás), máximo un año
+  let cargaV = null, nCarga = 0;
+  async function cargarViajes() {
+    const yo = ++nCarga, hoy = txtFecha(new Date()), primera = (D.conc || []).map(c => c.desde).sort()[0];
+    let desde = masDias(hoy, -120);
+    if (primera && primera < desde) desde = primera;
+    if (desde < masDias(hoy, -DIAS_ATRAS)) desde = masDias(hoy, -DIAS_ATRAS);
+    V = null; cargaV = { t0:Date.now(), error:'' };
+    previa();
+    const reloj = setInterval(() => { if (ov && yo === nCarga && !V) previa(); else clearInterval(reloj); }, 1000);
+    let r = null;
+    try { r = await api({ action:'viajes_semana', desde, hasta:hoy }); }
+    catch(e) { if (yo === nCarga) cargaV.error = e.message; }
+    finally { clearInterval(reloj); }
+    if (!ov || yo !== nCarga) return;
+    V = r;
+    // Si está en el formulario del encabezado no se le quita: se pinta al regresar
+    if (cuerpo().querySelector('.cc-prev')) { if (V) principal(); else previa(); }
   }
   return { abrir, get ultimo() { return ultimo; } };
 })();
