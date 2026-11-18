@@ -107,6 +107,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
 .p-debe{background:var(--warn-bg);color:var(--warn)}
 .p-ok{background:var(--ok-bg);color:var(--ok)}
 .p-loan{background:var(--loan-bg);color:var(--loan)}
+.p-curso{background:var(--bg);color:var(--muted)}
 .saldo{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:10px 12px;border-radius:var(--r-sm);background:var(--bg);margin-top:10px}
 .saldo b{font-family:var(--f-tit);font-size:24px;font-weight:600;font-variant-numeric:tabular-nums}
 .wtop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -354,6 +355,32 @@ function pill(s, w, lun) {
        : e === 'prestamo' ? `<span class="pill p-loan">Préstamo ${money(-s)}${sem}</span>`
        : `<span class="pill p-ok">Al corriente</span>`;
 }
+// De lunes a jueves la semana actual todavía no se cobra (puede haber faltas): no se muestra "por pagar",
+// solo lo que ya es real (lo de semanas anteriores y lo registrado esta semana). Del viernes en adelante, normal.
+const enCurso = (lun = lunes(HOY)) => mismoDia(lun, lunes(HOY)) && HOY.getDay() >= 1 && HOY.getDay() <= 4;
+// Lo que viene de semanas anteriores: + se le debe, − préstamo por recuperar
+const deAntes = (w, lun) => w.alta && lun <= w.alta ? 0 : lun > INICIO ? saldoHasta(w, addDays(lun, -7)) : 0;
+function pillCurso(w) {
+  const a = deAntes(w, lunes(HOY));
+  return a > 0.5 ? `<span class="pill p-debe">Pendiente de antes ${money(a)}</span>`
+       : a < -0.5 ? `<span class="pill p-loan">Préstamo ${money(-a)}</span>`
+       : `<span class="pill p-curso">Semana en curso</span>`;
+}
+// Lo registrado en la semana, en una línea (faltas, premios, préstamos…)
+function txtEstaSemana(c) {
+  return [c.exacto ? `${fdias(c.exacto.valor)} días exactos` : c.faltas ? `${fdias(c.faltas)} día${c.faltas === 1 ? '' : 's'} de falta` : 'sin faltas',
+    c.premios ? `premios ${money(c.premios)}` : '', c.deducc ? `deducciones ${money(c.deducc)}` : '',
+    c.prestado ? `préstamos ${money(c.prestado)}` : '', c.pagadoNom ? `pagado ${money(c.pagadoNom)}` : ''].filter(Boolean).join(' · ');
+}
+function calcCurso(w) {
+  const lun = lunes(HOY), c = semana(w, lun), a = deAntes(w, lun);
+  return `<div class="calc">
+    ${a > 0.5 ? `<span class="mu">Pendiente de semanas anteriores</span><span class="c-warn">${money(a)}</span>`
+      : a < -0.5 ? `<span class="mu">Préstamo de semanas anteriores</span><span class="c-loan">${money(-a)}</span>` : ''}
+    <span class="mu">Esta semana</span><span>${txtEstaSemana(c)}</span>
+  </div>
+  <div class="hint" style="margin-top:6px">El pago del sábado ${fCorta(addDays(lun, DIA_PAGO - 1))} se calcula a partir del viernes, cuando ya se saben las faltas de la semana.</div>`;
+}
 // Calcula algo como si el movimiento ya estuviera guardado (para "Así queda")
 function conTemporal(m, fn) { MOV.push(m); try { return fn(); } finally { MOV.pop(); } }
 
@@ -395,7 +422,7 @@ function vRegistrar() {
         <div class="grp"><span>${esc(g.l)}</span><span>${g.ws.length}</span></div>
         <div class="wgrid">${g.ws.map(w => `
           <button class="wt" data-act="pickW" data-id="${w.id}">
-            <b>${esc(w.nombre)}</b><small>${esc(w.puesto)}</small><span class="st">${pill(saldoHoy(w), w)}</span>
+            <b>${esc(w.nombre)}</b><small>${esc(w.puesto)}</small><span class="st">${enCurso() ? pillCurso(w) : pill(saldoHoy(w), w)}</span>
           </button>`).join('')}</div>`).join('') || '<div class="card hint">Nadie coincide con la búsqueda.</div>'}`;
   }
 
@@ -407,8 +434,10 @@ function vRegistrar() {
         <div><b>${esc(w.nombre)}</b><small>${esc(w.puesto)} · ${esc(w.lugar)} · ${esc(w.forma)}</small></div>
         <button class="btn sm" data-act="changeW">Cambiar</button>
       </div>
-      <div class="saldo"><span>${s < -0.5 ? 'Préstamo por recuperar' : 'Por pagar el sábado'}</span><b class="${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</b></div>
-      ${(() => {
+      ${enCurso() ? `<div class="saldo"><span>Semana en curso</span><b style="font-size:17px">Se calcula el viernes</b></div>
+        <div style="margin-top:8px">${calcCurso(w)}</div>`
+      : `<div class="saldo"><span>${s < -0.5 ? 'Préstamo por recuperar' : 'Por pagar el sábado'}</span><b class="${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</b></div>`}
+      ${enCurso() ? '' : (() => {
         const n = semanasDe(w, s), v = vuelveACobrar(w, s), sal = money(tarifa(w, lunes(HOY)).salario);
         if (n == null) return '';
         if (!v) return `<div class="hint">${n > 1 ? 'Son' : 'Es'} ${txtSem(n)} de sueldo (${sal} por semana).</div>`;
@@ -573,10 +602,10 @@ function pintarLive() {
       <span class="mu">Semana</span><span>${wkLabel(lun)}</span>
       <span class="mu">Días a pagar</span><span>${fdias(cAntes.trabajados)} → <b>${fdias(cDesp.trabajados)}</b> de ${fdias(cAntes.tf.dias)}</span>
       <span class="mu">Sueldo de esa semana</span><span>${money(cAntes.sueldo)} → <b>${money(cDesp.sueldo)}</b></span>
-      <span class="big">Queda</span><span class="big">${money(despues)}</span></div>`);
+      <span class="big">${enCurso() ? 'Sábado, si trabaja lo que resta' : 'Queda'}</span><span class="big">${money(despues)}</span></div>`);
   }
   let html = `<div class="calc">
-    <span class="mu">${antes < -0.5 ? 'Préstamo pendiente' : 'Por pagar el sábado'}</span><span>${money(Math.abs(antes))}</span>
+    <span class="mu">${antes < -0.5 ? 'Préstamo pendiente' : enCurso() ? 'Sábado, si trabaja completo (estimado)' : 'Por pagar el sábado'}</span><span>${money(Math.abs(antes))}</span>
     <span class="mu">${TIPOS[m.tipo].t}${m.tipo === 'premio' ? ' (+)' : ' (−)'}</span><span class="${colorTipo[m.tipo]}">${m.tipo === 'premio' ? '+' : '−'}${money(m.valor)}</span>
     <span class="big">Queda</span><span class="big">${despues < -0.5 ? `<span class="c-loan">−${money(-despues)}</span>` : money(despues)}</span></div>`;
   if (m.tipo === 'prestamo' && despues < -0.5)
@@ -637,11 +666,12 @@ async function guardar() {
 // PAGAR NÓMINA (desde Registrar o desde Resumen)
 // ════════════════════════════════════════════════════════════════════
 function desglose(w, lun) {
-  const c = semana(w, lun);
-  const ant = w.alta && lun <= w.alta ? 0 : lun > INICIO ? saldoHasta(w, addDays(lun, -7)) : 0;
+  const c = semana(w, lun), cur = enCurso(lun);
+  const ant = deAntes(w, lun);
   const s = saldoHasta(w, lun);
-  return `<div class="calc">
-    <span class="mu">Días trabajados</span><span>${fdias(c.trabajados)} de ${fdias(c.tf.dias)}${c.exacto ? ' (exactos)' : ''}</span>
+  return `${cur ? `<div class="res warn" style="margin-bottom:8px">La semana no ha terminado: el monto supone que trabaja completo lo que resta.</div>` : ''}
+  <div class="calc">
+    <span class="mu">Días trabajados${cur ? ' (si trabaja lo que resta)' : ''}</span><span>${fdias(c.trabajados)} de ${fdias(c.tf.dias)}${c.exacto ? ' (exactos)' : ''}</span>
     <span class="mu">Sueldo (${money(c.pd)} por día)</span><span>${money(c.sueldo)}</span>
     ${c.premios ? `<span class="mu">+ Premios</span><span class="c-ok">+${money(c.premios)}</span>` : ''}
     ${c.deducc ? `<span class="mu">− Deducciones</span><span class="c-err">−${money(c.deducc)}</span>` : ''}
@@ -649,7 +679,7 @@ function desglose(w, lun) {
     ${ant < -0.5 ? `<span class="mu">− Préstamo de semanas anteriores</span><span class="c-loan">−${money(-ant)}</span>` : ''}
     ${c.prestado ? `<span class="mu">− Préstamos de esta semana</span><span class="c-loan">−${money(c.prestado)}</span>` : ''}
     ${c.pagadoNom ? `<span class="mu">− Ya pagado</span><span>−${money(c.pagadoNom)}</span>` : ''}
-    <span class="big">${s < -0.5 ? 'Préstamo por recuperar' : 'Por pagar'}</span><span class="big ${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</span>
+    <span class="big">${s < -0.5 ? 'Préstamo por recuperar' : cur ? 'Por pagar (estimado)' : 'Por pagar'}</span><span class="big ${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</span>
   </div>`;
 }
 
@@ -740,15 +770,18 @@ async function guardarPago() {
 // RESUMEN
 // ════════════════════════════════════════════════════════════════════
 function vResumen() {
-  const lun = S.sem, actual = mismoDia(lun, lunes(HOY));
-  // Activos, y los dados de baja que todavía tienen saldo
+  const lun = S.sem, actual = mismoDia(lun, lunes(HOY)), cur = enCurso(lun);
+  // Activos, y los dados de baja que todavía tienen saldo.
+  // v: lo que se usa para filtrar, ordenar y sumar (de lunes a jueves, solo lo que viene de semanas anteriores)
   const todas = W.filter(w => !w.alta || w.alta <= lun)
-    .map(w => { const c = semana(w, lun), s = saldoHasta(w, lun); return { w, c, s, e: estado(s) }; })
+    .map(w => { const c = semana(w, lun), s = saldoHasta(w, lun), v = cur ? deAntes(w, lun) : s; return { w, c, s, v, e: estado(v) }; })
     .filter(f => f.w.activo || Math.abs(f.s) > 0.5);
   const delLugar = todas.filter(f => S.lugar === 'Todos' || f.w.lugar === S.lugar);
   const vis = delLugar.filter(f => S.estado === 'todos' || f.e === S.estado);
   const sum = (arr, fn) => arr.reduce((a, f) => a + fn(f), 0);
   const porPagar = sum(delLugar, f => Math.max(0, f.s));
+  const chipsEstado = cur ? [['todos','Todos'], ['debe','Pendiente de antes'], ['ok','Sin pendientes'], ['prestamo','Con préstamo']]
+                          : [['todos','Todos'], ['debe','Por pagar'], ['ok','Al corriente'], ['prestamo','Con préstamo']];
   const efectivo = sum(delLugar.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
   const sab = addDays(lun, DIA_PAGO - 1);
   const faltan = Math.round((sab - soloDia(HOY)) / 864e5);
@@ -762,7 +795,17 @@ function vResumen() {
     ${actual ? `<div class="banner"><span class="dot d-brand"></span><span><b>Sábado ${fCorta(sab)}</b> es día de pago${faltan === 1 ? ' · <b>mañana</b>' : faltan === 0 ? ' · <b>hoy</b>' : faltan < 0 ? ' · ya pasó' : ''}</span></div>` : ''}
     <button class="btn" data-act="imprimir" id="b-imprimir">Imprimir reporte de nómina${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</button>
     <div class="card filt">${filtroLugar()}</div>
-    <div class="card kpi-main">
+    ${cur ? `<div class="card kpi-main">
+      <small>Semana en curso${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</small>
+      <div class="v" style="font-size:24px">Se calcula el viernes</div>
+      <small>Todavía puede haber faltas; el monto a pagar sale a partir del viernes.</small>
+    </div>
+    <div class="kpis">
+      <div class="card"><small>Pendiente de semanas anteriores</small><b>${money(sum(delLugar, f => Math.max(0, f.v)))}</b></div>
+      <div class="card"><small>Préstamos por recuperar de antes</small><b class="c-loan">${money(sum(delLugar, f => Math.max(0, -f.v)))}</b></div>
+      <div class="card"><small>Préstamos dados en la semana</small><b class="c-loan">${money(sum(delLugar, f => f.c.prestado))}</b></div>
+      <div class="card"><small>Faltas registradas en la semana</small><b>${fdias(sum(delLugar, f => Math.max(0, f.c.tf.dias - f.c.trabajados)))} días</b></div>
+    </div>` : `<div class="card kpi-main">
       <small>${actual ? 'Por pagar el sábado' : 'Quedó pendiente'}${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</small>
       <div class="v">${money(porPagar)}</div>
       <small>${cnt('debe')} persona${cnt('debe') === 1 ? '' : 's'} · ya incluye préstamos y pendientes de otras semanas</small>
@@ -772,30 +815,33 @@ function vResumen() {
       <div class="card"><small>${actual ? 'Por transferencia' : 'Pendiente por transferencia'}</small><b>${money(porPagar - efectivo)}</b></div>
       <div class="card"><small>Nómina de la semana</small><b>${money(sum(delLugar, f => f.c.ganado))}</b></div>
       <div class="card"><small>Préstamos dados en la semana</small><b class="c-loan">${money(sum(delLugar, f => f.c.prestado))}</b></div>
-    </div>
-    <div class="chips">${[['todos','Todos'], ['debe','Por pagar'], ['ok','Al corriente'], ['prestamo','Con préstamo']].map(([k, l]) =>
+    </div>`}
+    <div class="chips">${chipsEstado.map(([k, l]) =>
       `<button class="chip ${S.estado === k ? 'on' : ''}" data-act="estado" data-v="${k}">${l} <small>${cnt(k)}</small></button>`).join('')}</div>
     ${porLugar(vis.map(f => f.w)).map(g => {
-      const fs = vis.filter(f => f.w.lugar === g.l).sort((a, b) => b.s - a.s);
+      const fs = vis.filter(f => f.w.lugar === g.l).sort((a, b) => b.v - a.v);
+      const tot = sum(fs, f => Math.max(0, f.v));
       return `<div class="card">
-        <h2 style="display:flex;justify-content:space-between">${esc(g.l)}<span class="num" style="font-size:14px;color:var(--muted)">${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
+        <h2 style="display:flex;justify-content:space-between">${esc(g.l)}<span class="num" style="font-size:14px;color:var(--muted)">${cur && tot <= 0.5 ? '' : money(tot)}</span></h2>
         <div class="lst">${fs.map(({ w, c, s }) => `<div><button class="rowb" data-act="detalle" data-id="${w.id}">
-          <span class="g"><b>${esc(w.nombre)}${w.activo ? '' : ' (baja)'}</b><small>${fdias(c.trabajados)}/${fdias(c.tf.dias)} días · ganó ${money(c.ganado)}${c.prestado ? ' · préstamos ' + money(c.prestado) : ''}</small></span>
-          <span class="r">${pill(s, w, lun)}</span></button></div>`).join('')}</div>
+          <span class="g"><b>${esc(w.nombre)}${w.activo ? '' : ' (baja)'}</b><small>${cur ? txtEstaSemana(c)
+            : `${fdias(c.trabajados)}/${fdias(c.tf.dias)} días · ganó ${money(c.ganado)}${c.prestado ? ' · préstamos ' + money(c.prestado) : ''}`}</small></span>
+          <span class="r">${cur ? pillCurso(w) : pill(s, w, lun)}</span></button></div>`).join('')}</div>
       </div>`;
     }).join('') || '<div class="card hint">Nadie en este filtro.</div>'}
-    <div class="hint" style="padding:0 4px">El saldo junta todas las semanas: lo ganado menos lo que se le ha dado (préstamos y pagos).</div>`;
+    <div class="hint" style="padding:0 4px">${cur ? 'De lunes a jueves solo se ve lo que viene de semanas anteriores y lo registrado esta semana; el pago se calcula a partir del viernes.'
+      : 'El saldo junta todas las semanas: lo ganado menos lo que se le ha dado (préstamos y pagos).'}</div>`;
 }
 
 // ── Reporte para imprimir: una hoja para que el dueño vea faltas, bonos, deducciones, préstamos,
 //    lo pagado y lo que falta por pagar a cada quien, y anote a un lado lo que cambie ──
 function reporteNomina(lun) {
-  const actual = mismoDia(lun, lunes(HOY)), sab = addDays(lun, DIA_PAGO - 1), ahora = new Date();
+  const actual = mismoDia(lun, lunes(HOY)), cur = enCurso(lun), sab = addDays(lun, DIA_PAGO - 1), ahora = new Date();
   const filas = W.filter(w => !w.alta || w.alta <= lun)
     .filter(w => S.lugar === 'Todos' || w.lugar === S.lugar)
     .map(w => {
       const c = semana(w, lun), s = saldoHasta(w, lun);
-      const ant = w.alta && lun <= w.alta ? 0 : lun > INICIO ? saldoHasta(w, addDays(lun, -7)) : 0;
+      const ant = deAntes(w, lun);
       return { w, c, s, ant };
     })
     .filter(f => f.w.activo || Math.abs(f.s) > 0.5);
@@ -835,11 +881,11 @@ function reporteNomina(lun) {
   const cols = `<colgroup>${anchos.map(a => `<col style="width:${a}%">`).join('')}</colgroup>`;
   const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Sueldo semanal</th><th class="r">Faltas</th>
     <th class="r">Bonos</th><th class="r">Deducciones</th><th class="r">Préstamos</th>
-    <th class="r">Falta por pagar</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
+    <th class="r">${cur ? 'Estimado por pagar' : 'Falta por pagar'}</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
   let n = 0;
   const grupos = porLugar(filas.map(f => f.w)).map(g => {
     const fs = filas.filter(f => f.w.lugar === g.l).sort((a, b) => a.w.nombre.localeCompare(b.w.nombre, 'es'));
-    return `<h2><span>${esc(g.l)}</span><span>Falta por pagar ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
+    return `<h2><span>${esc(g.l)}</span><span>${cur ? 'Estimado por pagar' : 'Falta por pagar'} ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
       <table>${cols}<thead>${enc}</thead><tbody>${fs.map(f => fila(f, n++)).join('')}</tbody></table>`;
   }).join('');
   const porPagar = sum(filas, f => Math.max(0, f.s)), efectivo = sum(filas.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
@@ -849,13 +895,15 @@ function reporteNomina(lun) {
         <div>CAO Centauro${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''} · Pago: sábado ${fCorta(sab)}</div></div>
       <div class="d">Actualizado: ${DIAS[ahora.getDay()]} ${fCorta(ahora)} ${ahora.getFullYear()}, ${fHora(ahora)}<br>Imprimió: ${esc(SESION.nombre)}</div>
     </div>
-    <div class="rp-nota">${actual
+    <div class="rp-nota">${cur
+      ? '<b style="font-size:11pt">SEMANA EN CURSO · MONTOS ESTIMADOS.</b> La semana no ha terminado y todavía puede haber faltas: supone que todos trabajan completo lo que resta. Ya están descontadas las faltas y préstamos registrados hasta ahora.'
+      : actual
       ? '<b>Supone que todos trabajan completo lo que resta de la semana.</b> Ya están descontadas las faltas y préstamos registrados hasta ahora.'
       : 'Semana cerrada: así quedó con lo registrado.'}
       "Falta por pagar" también incluye lo que quedó pendiente o los préstamos de semanas anteriores (se explica debajo del nombre).</div>
     ${grupos || '<p>No hay trabajadores en este filtro.</p>'}
     <div class="tot">
-      <div><small>Total que falta por pagar</small><b>${money(porPagar)}</b></div>
+      <div><small>${cur ? 'Total estimado por pagar' : 'Total que falta por pagar'}</small><b>${money(porPagar)}</b></div>
       <div><small>En efectivo</small><b>${money(efectivo)}</b></div>
       <div><small>Por transferencia</small><b>${money(porPagar - efectivo)}</b></div>
       <div><small>Préstamos por recuperar</small><b>${money(sum(filas, f => Math.max(0, -f.s)))}</b></div>
@@ -876,7 +924,7 @@ function hojaDetalle(id) {
   const ms = semana(w, lun).ms.slice().sort(ordenMov);
   abrirHoja(`
     <h3>${esc(w.nombre)}<small>${esc(w.puesto)} · ${esc(w.lugar)} · ${esc(w.forma)}${w.cuenta ? ' · ' + esc(w.cuenta) : ''}</small></h3>
-    <div class="card"><h2>Semana ${wkLabel(lun)}</h2>${desglose(w, lun)}</div>
+    <div class="card"><h2>Semana ${wkLabel(lun)}${enCurso(lun) ? ' <span class="u">en curso · se calcula el viernes</span>' : ''}</h2>${enCurso(lun) ? calcCurso(w) : desglose(w, lun)}</div>
     <div class="card"><h2>Movimientos de la semana</h2>
       ${ms.length ? `<div class="lst">${ms.map(m => movRow(m, false)).join('')}</div>` : '<div class="hint">Sin movimientos.</div>'}</div>
     <div class="row2">
