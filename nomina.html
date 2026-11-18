@@ -350,7 +350,7 @@ function vuelveACobrar(w, s) {
   return { sabado: addDays(lunes(HOY), 7 * n + DIA_PAGO - 1), monto: n * sal + s };
 }
 function pill(s, w, lun) {
-  const e = estado(s), n = semanasDe(w, s, lun), sem = n == null ? '' : ` · ${fdias(n).replace('.5', '½')} sem`;
+  const e = estado(s), n = semanasDe(w, s, lun), sem = n == null ? '' : ` · ${n === 0.5 ? '½' : fdias(n).replace('.5', '½')} sem`;
   return e === 'debe' ? `<span class="pill p-debe">Por pagar ${money(s)}${sem}</span>`
        : e === 'prestamo' ? `<span class="pill p-loan">Préstamo ${money(-s)}${sem}</span>`
        : `<span class="pill p-ok">Al corriente</span>`;
@@ -360,11 +360,18 @@ function pill(s, w, lun) {
 const enCurso = (lun = lunes(HOY)) => mismoDia(lun, lunes(HOY)) && HOY.getDay() >= 1 && HOY.getDay() <= 4;
 // Lo que viene de semanas anteriores: + se le debe, − préstamo por recuperar
 const deAntes = (w, lun) => w.alta && lun <= w.alta ? 0 : lun > INICIO ? saldoHasta(w, addDays(lun, -7)) : 0;
+// Lo real a media semana (sin el sueldo de esta semana): lo de semanas anteriores menos lo que ya se le dio esta
+// semana (pagos y préstamos). + todavía se le debe de antes; − ya se le adelantó (o trae préstamo de antes)
+const netoCurso = (w, lun = lunes(HOY)) => deAntes(w, lun) - semana(w, lun).entregado;
+function etiquetaCurso(w) {
+  const lun = lunes(HOY), a = deAntes(w, lun), n = netoCurso(w, lun);
+  return n > 0.5 ? { cls:'p-debe', t:'Pendiente de antes', v:n }
+       : n < -0.5 ? { cls:'p-loan', t:a < -0.5 ? 'Préstamo' : 'Adelantado', v:-n }
+       : null;
+}
 function pillCurso(w) {
-  const a = deAntes(w, lunes(HOY));
-  return a > 0.5 ? `<span class="pill p-debe">Pendiente de antes ${money(a)}</span>`
-       : a < -0.5 ? `<span class="pill p-loan">Préstamo ${money(-a)}</span>`
-       : `<span class="pill p-curso">Semana en curso</span>`;
+  const e = etiquetaCurso(w);
+  return e ? `<span class="pill ${e.cls}">${e.t} ${money(e.v)}</span>` : `<span class="pill p-curso">Semana en curso</span>`;
 }
 // Lo registrado en la semana, en una línea (faltas, premios, préstamos…)
 function txtEstaSemana(c) {
@@ -373,10 +380,12 @@ function txtEstaSemana(c) {
     c.prestado ? `préstamos ${money(c.prestado)}` : '', c.pagadoNom ? `pagado ${money(c.pagadoNom)}` : ''].filter(Boolean).join(' · ');
 }
 function calcCurso(w) {
-  const lun = lunes(HOY), c = semana(w, lun), a = deAntes(w, lun);
+  const lun = lunes(HOY), c = semana(w, lun), a = deAntes(w, lun), e = etiquetaCurso(w);
   return `<div class="calc">
     ${a > 0.5 ? `<span class="mu">Pendiente de semanas anteriores</span><span class="c-warn">${money(a)}</span>`
       : a < -0.5 ? `<span class="mu">Préstamo de semanas anteriores</span><span class="c-loan">${money(-a)}</span>` : ''}
+    ${c.entregado > 0.5 ? `<span class="mu">− Ya se le dio esta semana</span><span>−${money(c.entregado)}</span>` : ''}
+    ${(Math.abs(a) > 0.5 || c.entregado > 0.5) ? `<span class="big">${e ? e.t : 'Al corriente'}</span><span class="big ${e && e.cls === 'p-loan' ? 'c-loan' : ''}">${e ? money(e.v) : '$0'}</span>` : ''}
     <span class="mu">Esta semana</span><span>${txtEstaSemana(c)}</span>
   </div>
   <div class="hint" style="margin-top:6px">El pago del sábado ${fCorta(addDays(lun, DIA_PAGO - 1))} se calcula a partir del viernes, cuando ya se saben las faltas de la semana.</div>`;
@@ -774,13 +783,13 @@ function vResumen() {
   // Activos, y los dados de baja que todavía tienen saldo.
   // v: lo que se usa para filtrar, ordenar y sumar (de lunes a jueves, solo lo que viene de semanas anteriores)
   const todas = W.filter(w => !w.alta || w.alta <= lun)
-    .map(w => { const c = semana(w, lun), s = saldoHasta(w, lun), v = cur ? deAntes(w, lun) : s; return { w, c, s, v, e: estado(v) }; })
+    .map(w => { const c = semana(w, lun), s = saldoHasta(w, lun), v = cur ? netoCurso(w, lun) : s; return { w, c, s, v, e: estado(v) }; })
     .filter(f => f.w.activo || Math.abs(f.s) > 0.5);
   const delLugar = todas.filter(f => S.lugar === 'Todos' || f.w.lugar === S.lugar);
   const vis = delLugar.filter(f => S.estado === 'todos' || f.e === S.estado);
   const sum = (arr, fn) => arr.reduce((a, f) => a + fn(f), 0);
   const porPagar = sum(delLugar, f => Math.max(0, f.s));
-  const chipsEstado = cur ? [['todos','Todos'], ['debe','Pendiente de antes'], ['ok','Sin pendientes'], ['prestamo','Con préstamo']]
+  const chipsEstado = cur ? [['todos','Todos'], ['debe','Pendiente de antes'], ['ok','Sin pendientes'], ['prestamo','Préstamo o adelanto']]
                           : [['todos','Todos'], ['debe','Por pagar'], ['ok','Al corriente'], ['prestamo','Con préstamo']];
   const efectivo = sum(delLugar.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
   const sab = addDays(lun, DIA_PAGO - 1);
@@ -802,7 +811,7 @@ function vResumen() {
     </div>
     <div class="kpis">
       <div class="card"><small>Pendiente de semanas anteriores</small><b>${money(sum(delLugar, f => Math.max(0, f.v)))}</b></div>
-      <div class="card"><small>Préstamos por recuperar de antes</small><b class="c-loan">${money(sum(delLugar, f => Math.max(0, -f.v)))}</b></div>
+      <div class="card"><small>Préstamos y adelantos</small><b class="c-loan">${money(sum(delLugar, f => Math.max(0, -f.v)))}</b></div>
       <div class="card"><small>Préstamos dados en la semana</small><b class="c-loan">${money(sum(delLugar, f => f.c.prestado))}</b></div>
       <div class="card"><small>Faltas registradas en la semana</small><b>${fdias(sum(delLugar, f => Math.max(0, f.c.tf.dias - f.c.trabajados)))} días</b></div>
     </div>` : `<div class="card kpi-main">
