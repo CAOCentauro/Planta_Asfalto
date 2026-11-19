@@ -301,6 +301,7 @@ async function cargar() {
     id: Number(t.id), nombre: String(t.nombre || ''), puesto: String(t.puesto || '') || 'Sin puesto', lugar: String(t.lugar || '') || 'Sin lugar',
     forma: t.forma || 'Efectivo', cuenta: String(t.cuenta || ''), activo: t.activo !== false,
     alta: t.alta ? lunes(deIso(t.alta)) : null,
+    soloDesde: t.solo_desde ? lunes(deIso(t.solo_desde)) : null,   // desde ahí solo gana los días que se le registran
     hist: j.sueldos.filter(s => Number(s.id_trabajador) === Number(t.id))
       .map(s => ({ desde: lunes(deIso(s.desde)), salario: Number(s.salario), dias: Number(s.dias) }))
       .sort((a, b) => a.desde - b.desde),
@@ -322,12 +323,16 @@ function semana(w, lun) {
   const tf = tarifa(w, lun), pd = tf.dias ? tf.salario / tf.dias : 0;
   const exacto = ms.filter(m => m.tipo === 'dias').sort((a, b) => (a.fecha - b.fecha) || (a.registrado - b.registrado)).pop();
   const faltas = sum('falta');
-  const trabajados = exacto ? exacto.valor : Math.max(0, tf.dias - faltas);
+  const solo = soloRegistro(w, lun);       // solo gana los días que se le registran (p. ej. domingos con producción)
+  const trabajados = exacto ? exacto.valor : solo ? 0 : Math.max(0, tf.dias - faltas);
   const premios = sum('premio'), deducc = sum('deduccion');
   const sueldo = trabajados * pd, ganado = sueldo + premios - deducc;
   const prestado = sum('prestamo'), pagadoNom = sum('pago');
-  return { ms, tf, pd, exacto, faltas, trabajados, premios, deducc, sueldo, ganado, prestado, pagadoNom, entregado: prestado + pagadoNom };
+  return { ms, tf, pd, exacto, faltas, trabajados, premios, deducc, sueldo, ganado, prestado, pagadoNom, entregado: prestado + pagadoNom, solo };
 }
+const soloRegistro = (w, lun) => !!(w.soloDesde && lun >= w.soloDesde);
+// Días que le faltaron para la semana completa (no aplica a quien solo gana lo que se le registra)
+const diasFalto = c => c.solo ? 0 : c.tf.dias - c.trabajados;
 function saldoHasta(w, lun) {
   let s = 0;
   for (let l = new Date(w.alta || INICIO); l <= lun; l = addDays(l, 7)) { const c = semana(w, l); s += c.ganado - c.entregado; }
@@ -443,6 +448,8 @@ function vRegistrar() {
         <div><b>${esc(w.nombre)}</b><small>${esc(w.puesto)} · ${esc(w.lugar)} · ${esc(w.forma)}</small></div>
         <button class="btn sm" data-act="changeW">Cambiar</button>
       </div>
+      ${soloRegistro(w, lunes(HOY)) ? `<div class="hint" style="margin-top:8px">Solo se le paga cuando se le registran días: en Falta › <b>Días trabajados exactos</b>
+        pon los días que trabajó esa semana (${money(tarifa(w, lunes(HOY)).salario / (tarifa(w, lunes(HOY)).dias || 1))} por día). Si no se registra nada, esa semana no gana.</div>` : ''}
       ${enCurso() ? `<div class="saldo"><span>Semana en curso</span><b style="font-size:17px">Se calcula el viernes</b></div>
         <div style="margin-top:8px">${calcCurso(w)}</div>`
       : `<div class="saldo"><span>${s < -0.5 ? 'Préstamo por recuperar' : 'Por pagar el sábado'}</span><b class="${s < -0.5 ? 'c-loan' : ''}">${money(Math.abs(s))}</b></div>`}
@@ -813,7 +820,7 @@ function vResumen() {
       <div class="card"><small>Pendiente de semanas anteriores</small><b>${money(sum(delLugar, f => Math.max(0, f.v)))}</b></div>
       <div class="card"><small>Préstamos y adelantos</small><b class="c-loan">${money(sum(delLugar, f => Math.max(0, -f.v)))}</b></div>
       <div class="card"><small>Préstamos dados en la semana</small><b class="c-loan">${money(sum(delLugar, f => f.c.prestado))}</b></div>
-      <div class="card"><small>Faltas registradas en la semana</small><b>${fdias(sum(delLugar, f => Math.max(0, f.c.tf.dias - f.c.trabajados)))} días</b></div>
+      <div class="card"><small>Faltas registradas en la semana</small><b>${fdias(sum(delLugar, f => Math.max(0, diasFalto(f.c))))} días</b></div>
     </div>` : `<div class="card kpi-main">
       <small>${actual ? 'Por pagar el sábado' : 'Quedó pendiente'}${S.lugar !== 'Todos' ? ' · ' + esc(S.lugar) : ''}</small>
       <div class="v">${money(porPagar)}</div>
@@ -870,7 +877,7 @@ function reporteNomina(lun) {
   ].filter(Boolean).join(' · ');
   const din = v => v > 0.5 ? money(v) : '';
   const fila = (f, i) => {
-    const { w, c, s } = f, falto = c.tf.dias - c.trabajados, det = detalle(f);
+    const { w, c, s } = f, falto = diasFalto(c), det = detalle(f);
     return `<tr>
       <td class="r">${i + 1}</td>
       <td class="nm"><b>${esc(w.nombre)}</b>${w.activo ? '' : ' (baja)'}<small>${esc(w.puesto)}${det ? ' · ' + esc(det) : ''}</small></td>
@@ -1016,7 +1023,8 @@ async function anular(id) {
 function vEquipo() {
   const lun = lunes(HOY);
   const fila = w => { const t = tarifa(w, lun); return `<div><button class="rowb" data-act="editW" data-id="${w.id}" ${PUEDE_EQUIPO ? '' : 'disabled style="cursor:default"'}>
-    <span class="g"><b>${esc(w.nombre)}</b><small>${esc(w.puesto)} · ${money(t.salario)}/sem · ${fdias(t.dias)} días · ${money(t.dias ? t.salario / t.dias : 0)}/día</small></span>
+    <span class="g"><b>${esc(w.nombre)}</b><small>${esc(w.puesto)} · ${soloRegistro(w, lun) ? `solo días registrados · ${money(t.dias ? t.salario / t.dias : 0)}/día`
+      : `${money(t.salario)}/sem · ${fdias(t.dias)} días · ${money(t.dias ? t.salario / t.dias : 0)}/día`}</small></span>
     <span class="r"><small>${esc(w.forma)}</small></span></button></div>`; };
   const lista = W.filter(w => w.activo && (S.lugar === 'Todos' || w.lugar === S.lugar));
   const inact = W.filter(w => !w.activo);
@@ -1045,6 +1053,8 @@ function hojaTrabajador(id) {
       </div>
       <div class="f"><label>Forma de pago</label><select id="e-forma">${FORMAS.map(f => `<option ${w.forma === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></div>
       <div class="f"><label>Cuenta / CLABE (opcional)</label><input id="e-cuenta" maxlength="40" value="${esc(w.cuenta)}"></div>
+      <label style="display:flex;gap:10px;align-items:center;margin-top:14px;color:var(--text);font-size:15px"><input type="checkbox" id="e-solo" ${w.soloDesde ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--amb)"> Solo se le paga cuando se le registran días</label>
+      <div class="hint">Para quien no viene todas las semanas (p. ej. solo los domingos con producción): la semana que trabaje se le ponen sus días en Falta › Días trabajados exactos; si no, esa semana no gana. ${w.soloDesde ? `Desde la semana del ${fCorta(w.soloDesde)}.` : 'Cuenta desde esta semana; las anteriores no cambian.'}</div>
       <label style="display:flex;gap:10px;align-items:center;margin-top:14px;color:var(--text);font-size:15px"><input type="checkbox" id="e-activo" ${w.activo ? 'checked' : ''} style="width:22px;height:22px;accent-color:var(--amb)"> Activo (aparece en la nómina)</label>
       <div class="hint" style="margin-top:10px">${id ? `Si cambias el sueldo, cuenta desde esta semana (${wkLabel(lunes(HOY))}); las anteriores no cambian.`
         : `Entra a la nómina desde esta semana (${wkLabel(lunes(HOY))}).`}</div>
@@ -1071,7 +1081,7 @@ async function guardarW(id, confirmado) {
   const b = g('ok'); b.disabled = true; b.textContent = 'Guardando…'; g('err').textContent = '';
   try {
     await Sesion.api({ action: 'nomina_trabajador', datos: { id: id || null, nombre, puesto: g('puesto').value.trim(), lugar,
-      forma: g('forma').value, cuenta: g('cuenta').value.trim(), activo: g('activo').checked, salario: sal, dias } });
+      forma: g('forma').value, cuenta: g('cuenta').value.trim(), activo: g('activo').checked, solo_registro: g('solo').checked, salario: sal, dias } });
     await cargar();
     cerrarHoja(); render(); aviso('✓ Trabajador guardado');
   } catch (e) {
@@ -1125,7 +1135,10 @@ document.addEventListener('click', e => {
     case 'lugar': S.lugar = v; render(); break;
     case 'pickW': R = { wid: id, ...formVacio('prestamo') }; render(); scrollTo(0, 0); break;
     case 'changeW': if (!guardando) { R = { wid: null, ...formVacio('prestamo') }; render(); scrollTo(0, 0); } break;
-    case 'tipo': if (R.tipo !== v) { R = { wid: R.wid, ...formVacio(v) }; render(); } break;   // al cambiar de tipo se limpia el monto
+    case 'tipo': if (R.tipo !== v) {   // al cambiar de tipo se limpia el monto
+      R = { wid: R.wid, ...formVacio(v) };
+      const w = wById(R.wid); if (v === 'falta' && w && soloRegistro(w, lunes(HOY))) R.modo = 'dias';   // a quien solo se le paga lo registrado, se le ponen días
+      render(); } break;
     case 'modo': R.modo = v; R.diasExactos = null; render(); break;
     case 'semDias': R.semanaDias = v; R.diasExactos = null; render(); break;
     case 'falta': R.falta = v; render(); break;
