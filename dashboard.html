@@ -86,6 +86,7 @@ td{padding:8px 12px;border-bottom:1px solid var(--bd);white-space:nowrap}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(247,147,30,.03)}
 .tag{display:inline-block;padding:2px 7px;font-size:10px;font-weight:600}
+.nom-est{font-size:10px;color:var(--muted);font-weight:400}
 .ta{background:rgba(220,38,38,.15);color:var(--neg)}
 .tm{background:rgba(247,147,30,.15);color:var(--warn)}
 .tb{background:rgba(22,163,74,.15);color:var(--pos)}
@@ -1143,7 +1144,7 @@ function desgloseHtml(id) {
       ${ins.map(r => fila(r.insumo, lbl(r.uso), f2(r.consumo_L)+' L', $(r.costo_unit), r.costo_total)).join('')}
       ${agrKg ? fila('Teórico: agregados (grava y arena)', 'PRODUCCION', f2(agrKg)+' kg', $(N(p.gasto_material)/agrKg), p.gasto_material) : ''}
       ${otros.map(g => fila(g.descripcion||'Otro gasto', g.categoria||'', '—', '—', g.monto)).join('')}
-      ${N(p.nomina_prorrateada) ? fila('Nómina de producción', 'Prorrateada en la semana', '—', '—', p.nomina_prorrateada) : ''}
+      ${N(p.nomina_prorrateada) ? fila('Nómina de producción', p.nomina_estimada ? 'Prorrateada en la semana · estimada (la semana no ha terminado)' : 'Prorrateada en la semana', '—', '—', p.nomina_prorrateada) : ''}
       <tr><td colspan="4" class="rt" style="font-weight:600">Total</td><td class="rt amb" style="font-weight:600">${$(gastos)}</td></tr>
     </tbody></table></div>
     <div class="sub" style="border-bottom:none;text-transform:none;letter-spacing:0;font-size:12px;justify-content:flex-start;gap:20px;flex-wrap:wrap">
@@ -1235,7 +1236,7 @@ function htmlReporte(d) {
       <td class="r">${f2(agrKg)}</td><td>$${f2(N(p.gasto_material)/agrKg)}</td><td class="r">${money(p.gasto_material)}</td></tr>` : '')
     + otros.map(g => `<tr><td>${String(g.descripcion||'OTRO GASTO').toUpperCase()}</td><td>${g.categoria||''}</td>
       <td></td><td></td><td class="r">${money(g.monto)}</td></tr>`).join('')
-    + (N(p.nomina_prorrateada) ? `<tr><td>NÓMINA DE PRODUCCIÓN</td><td></td><td></td><td></td><td class="r">${money(p.nomina_prorrateada)}</td></tr>` : '')
+    + (N(p.nomina_prorrateada) ? `<tr><td>NÓMINA DE PRODUCCIÓN${p.nomina_estimada ? ' (ESTIMADA)' : ''}</td><td></td><td></td><td></td><td class="r">${money(p.nomina_prorrateada)}</td></tr>` : '')
     + `<tr><td class="nb" colspan="3"></td><td class="y">TOTAL</td><td class="y r">${money(gastos)}</td></tr>`;
 
   // Con varios clientes: una fila por cliente (gastos prorrateados por toneladas) + total
@@ -1625,12 +1626,20 @@ function isoWeek(dateStr) {
 }
 
 // ── Nómina prorrateada ────────────────────
+// Desde que se usa Nómina (D.nomina.inicio): lo que ganó en la semana la gente de la planta (lo manda el
+// servidor ya sumado; la semana actual es estimada). Antes de eso: los Gastos con categoría NOMINA.
+// La de cada semana se reparte igual entre las producciones de esa semana.
+function nominaSemanas() {
+  const nomSem = {}, estimada = new Set();
+  const ini = D.nomina && !D.nomina.error ? D.nomina.inicio : null;
+  (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA' && !(ini && F10(g.fecha) >= ini))
+    .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
+  if (ini) (D.nomina.semanas||[]).forEach(s => { const w=isoWeek(s.lunes); nomSem[w]=(nomSem[w]||0)+N(s.monto); if (s.en_curso) estimada.add(w); });
+  return { nomSem, estimada };
+}
 function calcNomina(prodList) {
   const isProd = p => String(p.id_prod||'').startsWith('PROD-');
-
-  const nomSem = {};
-  (D.gastos||[]).filter(g => (g.categoria||'').toUpperCase() === 'NOMINA')
-    .forEach(g => { const w=isoWeek(g.fecha); nomSem[w]=(nomSem[w]||0)+N(g.monto); });
+  const { nomSem, estimada } = nominaSemanas();
 
   // Conteo sobre TODAS las producciones de la semana (no la lista filtrada), sin MANT
   const countSem = {};
@@ -1640,17 +1649,20 @@ function calcNomina(prodList) {
   return prodList.map(p => {
     const w   = isoWeek(p.fecha);
     const nom = (isProd(p) && countSem[w] && nomSem[w]) ? nomSem[w]/countSem[w] : 0;
-    return { ...p, nomina_prorrateada:nom, utilidad_real:N(p.utilidad)-nom };
+    return { ...p, nomina_prorrateada:nom, nomina_estimada:!!nom && estimada.has(w), utilidad_real:N(p.utilidad)-nom };
   });
 }
+// Marca para la nómina de la semana en curso (todavía pueden registrarse faltas)
+const estTag = p => p.nomina_estimada ? ' <span class="nom-est" title="Semana en curso: estimada con lo registrado en Nómina">est.</span>' : '';
 // Igual, pero por renglón de cliente: una producción con varios clientes reparte su nómina por toneladas
 function filasConNomina(rows) {
   const nom = {}, tonsId = {};
-  calcNomina(uniq(D.producciones||[])).forEach(p => { nom[p.id_prod] = p.nomina_prorrateada; tonsId[p.id_prod] = N(p.tons_real); });
+  const est = new Set();
+  calcNomina(uniq(D.producciones||[])).forEach(p => { nom[p.id_prod] = p.nomina_prorrateada; tonsId[p.id_prod] = N(p.tons_real); if (p.nomina_estimada) est.add(p.id_prod); });
   return rows.map(p => {
     const n  = tonsId[p.id_prod] ? (nom[p.id_prod]||0) * N(p.tons_real)/tonsId[p.id_prod] : 0;
     const ut = N(p.utilidad) - n;
-    return { ...p, nomina_prorrateada:n, utilidad_real:ut, margen_real: N(p.ingreso_total)>0 ? ut/N(p.ingreso_total) : null };
+    return { ...p, nomina_prorrateada:n, nomina_estimada:!!n && est.has(p.id_prod), utilidad_real:ut, margen_real: N(p.ingreso_total)>0 ? ut/N(p.ingreso_total) : null };
   });
 }
 
@@ -1775,7 +1787,7 @@ function renderFin() {
   document.getElementById('f-met').innerHTML=`
     <div class="mc m"><div class="ml">Ingresos</div><div class="mv" style="font-size:17px">${$(ing)}</div><div class="ms">${prods.length} producciones · ${fdv||fhv?`${fdv||'inicio'} → ${fhv||'hoy'}`:'todo el histórico'}</div>${cmp('ing', ing, 'up')}</div>
     <div class="mc r"><div class="ml">Gs. insumos</div><div class="mv" style="font-size:17px">${$(gsIns)}</div>${cmp('gsIns', gsIns, 'down')}</div>
-    <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div>${cmp('nom', nom, 'down')}</div>
+    <div class="mc r"><div class="ml">Nómina prorrateada</div><div class="mv" style="font-size:17px">${$(nom)}</div>${prods.some(p=>p.nomina_estimada)?'<div class="ms">Incluye la semana en curso (estimada)</div>':''}${cmp('nom', nom, 'down')}</div>
     <div class="mc r"><div class="ml">Otros gastos</div><div class="mv" style="font-size:17px">${$(otros)}</div>${cmp('otros', otros, 'down')}</div>
     <div class="mc ${utilReal>=0?'g':'r'}"><div class="ml">Utilidad</div><div class="mv" style="font-size:17px">${$(utilReal)}</div><div class="ms">Margen ${fp(mgReal)} · incluye nómina</div>${cmp('utilReal', utilReal, 'up')}</div>`;
 
@@ -1794,7 +1806,7 @@ function renderFin() {
         <td class="amb">${p.id_prod}</td><td>${p.fecha.slice(0,10)}</td><td>${p.clientes.join(', ')}</td>
         <td class="rt">${$(p.ingreso_total)}</td>
         <td class="rt neg">${$(N(p.gastos_insumos)+N(p.gasto_material))}</td>
-        <td class="rt neg">${N(p.nomina_prorrateada)>0?$(p.nomina_prorrateada):'—'}</td>
+        <td class="rt neg">${N(p.nomina_prorrateada)>0?$(p.nomina_prorrateada)+estTag(p):'—'}</td>
         <td class="rt neg">${$(p.otros_gastos)}</td>
         <td class="rt ${N(p.utilidad_real)>=0?'pos':'neg'}">${$(p.utilidad_real)}</td>
         <td class="rt ${mgR>=.35?'pos':mgR>=.2?'':'neg'}">${N(p.ingreso_total)>0?fp(mgR):'—'}</td>
@@ -2690,7 +2702,7 @@ function renderHist() {
         <td class="rt">${f2(x.tons_pedido)}</td><td class="rt">${f2(x.tons_real)}</td>
         <td class="rt">${$(x.precio_venta)}</td><td class="rt">${$(x.ingreso_total)}</td>
         <td class="rt neg">${$(N(x.gastos_insumos)+N(x.gasto_material)+N(x.otros_gastos))}</td>
-        <td class="rt neg">${x.nomina_prorrateada>0 ? $(x.nomina_prorrateada) : '—'}</td>
+        <td class="rt neg">${x.nomina_prorrateada>0 ? $(x.nomina_prorrateada)+estTag(x) : '—'}</td>
         <td class="rt ${x.utilidad_real>=0?'pos':'neg'}">${$(x.utilidad_real)}</td>
         <td class="rt ${N(x.margen_real)>=.35?'pos':N(x.margen_real)>=.2?'':'neg'}">${fp(x.margen_real)}</td>
       </tr>`).join('')}</tbody></table>`
