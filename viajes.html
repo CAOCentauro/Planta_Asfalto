@@ -174,7 +174,7 @@ details[open] > summary .fl::after{content:'Ocultar ▾'}
 .ob-o table{width:100%}
 .ob-vacio{font-size:12px;color:var(--muted);padding:10px}
 .ob-ok{font-size:12px;border-left:3px solid var(--pos);background:rgba(34,197,94,.1);padding:8px 10px;margin-bottom:12px;line-height:1.5}
-.ob-p{display:grid;grid-template-columns:1fr 120px;gap:6px;margin-bottom:6px}
+.ob-p{display:grid;grid-template-columns:1fr 96px 104px;gap:6px;margin-bottom:6px}
 .cc-obra{display:flex;flex-direction:column;gap:4px;font-size:11px;color:var(--muted);margin-bottom:12px}
 .cc-pad{padding:10px;font-size:13px;line-height:1.5}
 .cc-pad small{color:var(--muted)}
@@ -522,7 +522,10 @@ function opcionesVj(todos, k) {
   return ops.sort((a, b) => orden ? orden(a) - orden(b) : a.t.localeCompare(b.t, 'es'));
 }
 
-// ── Precio por m³ de cada viaje (Sheets "Precios viajes"): cliente + material, la obra si se puso, y el vigente a esa fecha ──
+// ── Precio de cada viaje (Sheets "Precios viajes"): cliente + material, la obra si se puso, y el vigente a esa fecha ──
+// Devuelve el renglón de precio ({ precio, porViaje, ... }) o null. porViaje = cuesta lo mismo cada viaje, sin importar los m³.
+const importePrecio = (p, m3) => p.porViaje ? p.precio : p.precio * (Number(m3) || 0);
+const unidadPrecio = p => p.porViaje ? 'por viaje' : 'por m³';
 function precioVj(v, precios) {
   const c = claveVj(v.cliente), m = claveVj(v.material), o = claveVj(v.obra);
   let mejor = null;
@@ -533,7 +536,7 @@ function precioVj(v, precios) {
     const r = [p.obra ? 1 : 0, p.desde || ''];
     if (!mejor || r[0] > mejor.r[0] || (r[0] === mejor.r[0] && r[1] >= mejor.r[1])) mejor = { p, r };
   });
-  return mejor ? mejor.p.precio : null;
+  return mejor ? mejor.p : null;
 }
 
 // Viajes del periodo ya ordenados, con avisos, precio e importe, y los filtrados
@@ -551,8 +554,10 @@ function datosViajes() {
     if (!v.cliente) v.avisos.push('Sin cliente (la obra no está en el catálogo)');
     if (!v.m3) v.avisos.push('Sin m³');
     // Viajes a la planta: si no tienen precio en el Sheets van en $0 (son de la casa), sin aviso de "sin precio"
-    v.precio = hayPrecios ? (precioVj(v, VJ.precios) ?? (v.planta ? 0 : null)) : null;
-    v.importe = v.precio == null ? null : v.precio * v.m3;
+    const p = hayPrecios ? precioVj(v, VJ.precios) : null;
+    v.porViaje = !!(p && p.porViaje);
+    v.precio = p ? p.precio : hayPrecios && v.planta ? 0 : null;
+    v.importe = p ? importePrecio(p, v.m3) : v.precio;
   });
   return { cat, todos, lista:todos.filter(v => pasaVj(v)), hayPrecios };
 }
@@ -622,7 +627,7 @@ function renderViajes() {
         SINP_VJ.map((x, i) => `<tr><td>${esc(x.items[0].cliente) || '<span class="neg">Sin cliente</span>'}</td><td>${esc(x.items[0].obra)}</td>
           <td>${esc(x.items[0].material)}</td><td class="rt">${x.viajes}</td><td class="rt">${f0(x.m3)}</td>
           ${PUEDE_OBRAS ? `<td class="rt"><button class="ftb" onclick="Obras.ponerSinPrecio(${i})">${x.items[0].cliente ? 'Poner precio' : 'Iniciar obra'}</button></td>` : ''}</tr>`).join(''))}
-      <div class="nota-pn">${PUEDE_OBRAS ? 'Con "Poner precio" se guarda el precio por m³ de ese material en esa obra. Si la obra no tiene cliente, primero hay que iniciarla.'
+      <div class="nota-pn">${PUEDE_OBRAS ? 'Con "Poner precio" se guarda el precio (por m³ o por viaje) de ese material en esa obra. Si la obra no tiene cliente, primero hay que iniciarla.'
         : 'Los precios se ponen en Fletes › Obras y precios (pide el permiso "Obras y precios").'}</div></details>` : '';
 
   const vistas = vistasHtml('vistaVj', [['viajes', 'Viajes'], ['resumenes', 'Resúmenes'], ['acumulado', 'Acumulado']], VISTA_VJ);
@@ -677,11 +682,11 @@ function renderViajes() {
           <td class="neg">${v.avisos.join(' · ')}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))}</div>` : ''}
     <div class="pn"><div class="pnh">Viajes <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
       ${subTxt('Todas las notas del periodo, una por renglón (en rojo las que tienen aviso).')}
-      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">$/m³</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th><th></th>`,
+      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">Precio</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th><th></th>`,
         lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
           <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
-          ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
+          ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}${v.porViaje ? ' <span style="color:var(--muted)">/ viaje</span>' : ''}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
           <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
           <td>${v.planta ? '<span class="tag tb" title="Capturado en Registro › Compras; se corrige ahí">A la planta</span>'
             : `<span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}`}</td>
@@ -747,7 +752,8 @@ async function excelViajes(btn) {
   try {
     if (!window.XLSX) await cargarScript(XLSX_URL);
     const nombre = `${ddmmyy(VJ.desde)}-${ddmmyy(VJ.hasta)}`, fil = filtrosTxtVj(todos);
-    const imp = v => hayPrecios ? [v.precio ?? '', v.importe ?? ''] : [];
+    // por viaje: PRECIO M3 vacío y el importe es el precio del viaje (como en las conciliaciones)
+    const imp = v => hayPrecios ? [v.porViaje ? '' : v.precio ?? '', v.importe ?? ''] : [];
     const filas = lista.map((v, i) => [i+1, diaVj(v.fecha), celdaFecha(v.fecha), v.folio, v.material.toUpperCase(), v.obra.toUpperCase(),
       v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase(), ...imp(v)]);
     const totM3 = lista.reduce((s,v) => s + v.m3, 0), totImp = lista.reduce((s, v) => s + (v.importe || 0), 0);
@@ -831,13 +837,13 @@ const Obras = (() => {
       const mats = porMaterial(preciosDe(o.cliente, o.obra));
       return `<div class="ob-o"><div class="ob-h"><span><b>${esc(o.obra)}</b> <small>· ${esc(o.cliente) || 'sin cliente'}${o.inicio ? ' · inició el ' + fechaLarga(o.inicio) : ''}</small></span>
           <button class="ftb" data-a="precio" data-i="${i}">Agregar precio</button></div>
-        ${mats.length ? `<div class="tw"><table><thead><tr><th>Material</th><th>Precio por m³</th><th></th></tr></thead><tbody>
-          ${mats.map(ps => `<tr><td>${esc(ps[0].material)}</td><td>${ps.map(p => `<div>${$$(p.precio)} <span style="color:var(--muted)">· ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}${p.obra ? '' : ' · todas las obras del cliente'}</span></div>`).join('')}</td>
+        ${mats.length ? `<div class="tw"><table><thead><tr><th>Material</th><th>Precio</th><th></th></tr></thead><tbody>
+          ${mats.map(ps => `<tr><td>${esc(ps[0].material)}</td><td>${ps.map(p => `<div>${$$(p.precio)} ${unidadPrecio(p)} <span style="color:var(--muted)">· ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}${p.obra ? '' : ' · todas las obras del cliente'}</span></div>`).join('')}</td>
             <td class="rt"><button class="btn-ed" data-a="cambiar" data-i="${i}" data-m="${esc(ps[0].material)}" title="Cambiar el precio de ${esc(ps[0].material)}">Cambiar</button></td></tr>`).join('')}
           </tbody></table></div>` : '<div class="ob-vacio">Sin precios: sus viajes salen "sin precio" en Fletes.</div>'}</div>`;
     };
     pintar(`${aviso ? `<div class="ob-ok">${aviso}</div>` : ''}
-      <div class="ed-info">Cada obra con su cliente y su precio por m³ de cada material. Cambiar un precio no borra el anterior: el nuevo cuenta desde la fecha que pongas.</div>
+      <div class="ed-info">Cada obra con su cliente y el precio de cada material (por m³ o por viaje). Cambiar un precio no borra el anterior: el nuevo cuenta desde la fecha que pongas.</div>
       <div style="margin-bottom:12px"><button class="ftb p" data-a="iniciar">Iniciar obra</button></div>
       ${obras.length ? obras.map(tarjeta).join('') : '<div class="ob-vacio">Todavía no hay obras.</div>'}
       <div class="dlg-b"><button class="ftb" data-a="cerrar">Cerrar</button></div>`);
@@ -846,16 +852,17 @@ const Obras = (() => {
 
   // ── Iniciar obra ──
   const renglonPrecio = (m = '') => `<div class="ob-p"><input class="ci" data-p="material" list="ob-mat" placeholder="Material" maxlength="60" value="${esc(m)}">
-    <input class="ci" data-p="precio" type="number" step="0.01" min="0" placeholder="$ por m³"></div>`;
+    <input class="ci" data-p="precio" type="number" step="0.01" min="0" placeholder="$">
+    <select class="ci" data-p="cobro" title="Se cobra"><option value="m3">por m³</option><option value="viaje">por viaje</option></select></div>`;
   function iniciar(pre = {}) {
     pintar(`<div class="ed-info"><b>Iniciar obra</b><br>Con esto la obra sale en la lista al subir notas y sus viajes salen a nombre del cliente.
-        Pon el precio por m³ de los materiales que ya sepas; los demás se pueden poner después.</div>
+        Pon el precio de los materiales que ya sepas (por m³ o por viaje); los demás se pueden poner después.</div>
       <div class="ed-g">
         <label>Cliente<input class="ci" data-k="cliente" list="ob-cli" maxlength="60" value="${esc(pre.cliente || '')}" placeholder="Escoge o escribe"></label>
         <label>Fecha de inicio<input class="ci" data-k="inicio" type="date" value="${esc(pre.inicio || txtFecha(new Date()))}"></label>
         <label class="w2">Nombre de la obra<input class="ci" data-k="obra" maxlength="80" value="${esc(pre.obra || '')}" placeholder="Ej. Calle Francisco Villa - Tezoyuca"></label>
       </div>
-      <div class="ed-info" style="margin-bottom:6px">Precio por m³</div>
+      <div class="ed-info" style="margin-bottom:6px">Precios</div>
       <div id="ob-precios">${(pre.materiales || ['', '', '']).map(m => renglonPrecio(m)).join('')}</div>
       <div style="margin:4px 0 16px"><button class="ftb" data-a="otro">+ Otro material</button></div>
       ${listas()}
@@ -871,14 +878,15 @@ const Obras = (() => {
     if (ya) return alert(`Ya existe la obra "${ya.obra}" (de ${ya.cliente || 'sin cliente'}). Usa otro nombre, por ejemplo con la calle o la colonia.`);
     for (const r of cuerpo().querySelectorAll('.ob-p')) {
       const m = r.querySelector('[data-p=material]').value.trim(), p = r.querySelector('[data-p=precio]').value.trim();
+      const porViaje = r.querySelector('[data-p=cobro]').value === 'viaje';
       if (!m && !p) continue;
       if (!m) return alert('Falta el material del precio $' + p + '.');
-      if (!(Number(p) > 0)) return alert(`Escribe el precio por m³ de ${m}.`);
+      if (!(Number(p) > 0)) return alert(`Escribe el precio de ${m}.`);
       if (datos.precios.some(x => claveVj(x.material) === claveVj(m))) return alert(`${m} está dos veces.`);
-      datos.precios.push({ material:m, precio:Number(p) });
+      datos.precios.push({ material:m, precio:Number(p), porViaje });
     }
     const txt = `Iniciar la obra "${datos.obra}" de ${datos.cliente}${datos.inicio ? ', desde el ' + fechaLarga(datos.inicio) : ''}.\n\n`
-      + (datos.precios.length ? 'Precios por m³:\n' + datos.precios.map(p => `${p.material}: ${$$(p.precio)}`).join('\n') : 'Sin precios por ahora.') + '\n\n¿Guardar?';
+      + (datos.precios.length ? 'Precios:\n' + datos.precios.map(p => `${p.material}: ${$$(p.precio)} ${unidadPrecio(p)}`).join('\n') : 'Sin precios por ahora.') + '\n\n¿Guardar?';
     if (!(await preguntar(txt, 'Sí, guardar'))) return;
     await enviar(btn, { action:'obra_guardar', datos }, r => `Obra "${esc(datos.obra)}" iniciada.`
       + (r.materialesNuevos?.length ? ` Se agregó al catálogo de materiales: ${esc(r.materialesNuevos.join(', '))}.` : '')
@@ -890,15 +898,18 @@ const Obras = (() => {
     pintar(`<div class="ed-info"><b>Precio para ${esc(o.obra)}</b> · ${esc(o.cliente)}</div>
       <div class="ed-g">
         <label class="w2">Material<input class="ci" data-k="material" list="ob-mat" maxlength="60" value="${esc(material)}" placeholder="Escoge o escribe"></label>
-        <label>Precio por m³ ($)<input class="ci" data-k="precio" type="number" step="0.01" min="0"></label>
+        <label>Se cobra<select class="ci" data-k="cobro"><option value="m3">Por m³</option><option value="viaje">Por viaje</option></select></label>
+        <label><span class="ob-pl">Precio por m³ ($)</span><input class="ci" data-k="precio" type="number" step="0.01" min="0"></label>
         <label>Vale desde<input class="ci" data-k="desde" type="date"></label>
       </div>
       <div class="ed-info ob-hint"></div>
       ${listas()}
       <div class="dlg-b"><button class="ftb" data-a="volver">Cancelar</button><button class="ftb p" data-a="guardarPrecio">Guardar precio</button></div>`);
     cuerpo().dataset.obra = o.obra; cuerpo().dataset.cliente = o.cliente;
-    // Si ya tiene precio, el nuevo lleva fecha (hoy, o la del primer viaje sin precio); si no, vale para todos
-    cuerpo().querySelector('[data-k=desde]').value = existentes(o, material).length ? (desde || txtFecha(new Date())) : '';
+    // Si ya tiene precio, el nuevo lleva fecha (hoy, o la del primer viaje sin precio) y se cobra igual que el último; si no, vale para todos
+    const ya = existentes(o, material);
+    cuerpo().querySelector('[data-k=desde]').value = ya.length ? (desde || txtFecha(new Date())) : '';
+    if (ya.length && ya[ya.length - 1].porViaje) cuerpo().querySelector('[data-k=cobro]').value = 'viaje';
     pista();
     cuerpo().querySelector(`[data-k="${material ? 'precio' : 'material'}"]`).focus();
   }
@@ -908,22 +919,24 @@ const Obras = (() => {
     const el = cuerpo().querySelector('.ob-hint');
     if (!el) return;
     const v = k => cuerpo().querySelector(`[data-k="${k}"]`).value.trim();
-    const o = actual(), m = v('material'), desde = v('desde'), ps = existentes(o, m);
+    const o = actual(), m = v('material'), desde = v('desde'), ps = existentes(o, m), porViaje = v('cobro') === 'viaje';
+    const pl = cuerpo().querySelector('.ob-pl'); if (pl) pl.textContent = porViaje ? 'Precio por viaje ($)' : 'Precio por m³ ($)';
     const igual = ps.find(p => claveVj(p.obra) === claveVj(o.obra) && (p.desde || '') === desde);
-    el.innerHTML = !m ? 'Escoge el material.'
-      : igual ? `Ya hay un precio de ${esc(m)} ${desde ? 'desde el ' + fechaLarga(desde) : 'para todos los viajes'} (${$$(igual.precio)}): se corrige ese.`
-      : ps.length ? `Ahora: ${ps.map(p => `${$$(p.precio)} ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}`).join(', ')}.
+    el.innerHTML = (porViaje ? 'Por viaje: cada viaje vale ese precio, traiga los m³ que traiga.<br>' : '') + (!m ? 'Escoge el material.'
+      : igual ? `Ya hay un precio de ${esc(m)} ${desde ? 'desde el ' + fechaLarga(desde) : 'para todos los viajes'} (${$$(igual.precio)} ${unidadPrecio(igual)}): se corrige ese.`
+      : ps.length ? `Ahora: ${ps.map(p => `${$$(p.precio)} ${unidadPrecio(p)} ${p.desde ? 'desde el ' + fechaLarga(p.desde) : 'siempre'}`).join(', ')}.
           ${desde ? `El nuevo cuenta para los viajes desde el ${fechaLarga(desde)}; los de antes siguen con su precio.` : '<span class="sinp">Sin fecha, el nuevo cuenta para todos los viajes de esta obra, también los de antes.</span>'}`
       : desde ? `Es el primer precio de ${esc(m)} en esta obra. Los viajes de antes del ${fechaLarga(desde)} se quedan sin precio.`
-      : `Es el primer precio de ${esc(m)} en esta obra: cuenta para todos sus viajes, también los de antes. Si solo debe contar desde una fecha, ponla.`;
+      : `Es el primer precio de ${esc(m)} en esta obra: cuenta para todos sus viajes, también los de antes. Si solo debe contar desde una fecha, ponla.`);
   }
   async function guardarPrecio(btn) {
     const v = k => cuerpo().querySelector(`[data-k="${k}"]`).value.trim();
-    const o = actual(), datos = { cliente:o.cliente, obra:o.obra, material:v('material'), precio:Number(v('precio')), desde:v('desde') };
+    const o = actual(), datos = { cliente:o.cliente, obra:o.obra, material:v('material'), precio:Number(v('precio')), porViaje:v('cobro') === 'viaje', desde:v('desde') };
+    const un = unidadPrecio(datos);
     if (!datos.material) return alert('Escoge o escribe el material.');
-    if (!(datos.precio > 0)) return alert('Escribe el precio por m³.');
-    if (!(await preguntar(`${datos.material} en ${o.obra}: ${$$(datos.precio)} por m³, ${datos.desde ? 'desde el ' + fechaLarga(datos.desde) : 'para todos sus viajes'}.\n\n¿Guardar?`, 'Sí, guardar'))) return;
-    await enviar(btn, { action:'precio_guardar', datos }, r => `${r.como === 'corregido' ? 'Precio corregido' : 'Precio guardado'}: ${esc(datos.material)} en ${esc(o.obra)}, ${$$(datos.precio)} por m³.`
+    if (!(datos.precio > 0)) return alert(`Escribe el precio ${un}.`);
+    if (!(await preguntar(`${datos.material} en ${o.obra}: ${$$(datos.precio)} ${un}, ${datos.desde ? 'desde el ' + fechaLarga(datos.desde) : 'para todos sus viajes'}.\n\n¿Guardar?`, 'Sí, guardar'))) return;
+    await enviar(btn, { action:'precio_guardar', datos }, r => `${r.como === 'corregido' ? 'Precio corregido' : 'Precio guardado'}: ${esc(datos.material)} en ${esc(o.obra)}, ${$$(datos.precio)} ${un}.`
       + (r.materialesNuevos?.length ? ` Se agregó al catálogo de materiales: ${esc(r.materialesNuevos.join(', '))}.` : ''));
   }
 
@@ -1003,7 +1016,7 @@ const Conc = (() => {
   // Viajes de la obra con su precio e importe, en el orden de la conciliación (fecha, folio)
   function viajesDe(o, desde = '', hasta = '9999') {
     return (V.viajes || []).filter(v => !v.planta && claveVj(v.obra) === claveVj(o.obra) && v.fecha >= desde && v.fecha <= hasta)
-      .map(v => { const precio = precioVj(v, V.precios); return { ...v, precio, importe:precio == null ? null : precio * N(v.m3) }; })
+      .map(v => { const p = precioVj(v, V.precios); return { ...v, precio:p ? p.precio : null, porViaje:!!(p && p.porViaje), importe:p ? importePrecio(p, v.m3) : null }; })
       .sort((a, b) => a.fecha.localeCompare(b.fecha) || (Number(a.folio) || 0) - (Number(b.folio) || 0)
         || String(a.folio).localeCompare(String(b.folio)) || a.placa.localeCompare(b.placa));
   }
@@ -1209,8 +1222,9 @@ const Conc = (() => {
     ['N°', 'FOLIO', 'FECHA', 'MATERIAL', 'PLACA', 'M3', 'COSTO', 'COSTO FINAL'].forEach((t, i) => celda(ws, COLS[i] + 6, t, { font:{ bold:true }, border:BORDE }));
     vs.forEach((v, i) => {
       const f = 7 + i;
-      [i + 1, String(v.folio ?? ''), fechaXl(v.fecha), String(v.material || '').toUpperCase(), v.placa, N(v.m3), v.precio,
-       { formula:`G${f}*F${f}`, result:v.importe }].forEach((x, j) =>
+      // por viaje: COSTO vacío y COSTO FINAL = el precio del viaje
+      [i + 1, String(v.folio ?? ''), fechaXl(v.fecha), String(v.material || '').toUpperCase(), v.placa, N(v.m3), v.porViaje ? null : v.precio,
+       v.porViaje ? v.importe : { formula:`G${f}*F${f}`, result:v.importe }].forEach((x, j) =>
         celda(ws, COLS[j] + f, x, { border:BORDE, numFmt:j === 1 ? '@' : j === 2 ? 'dd/mm/yyyy' : j >= 6 ? MONEDA : undefined }));
     });
     const u = 6 + Math.max(vs.length, 1), t = u + 1, t2 = t + 2;
@@ -1379,10 +1393,10 @@ const Cobr = (() => {
     const conc = D.conc || [], m = {};
     (V.viajes || []).filter(v => !v.planta && v.cliente).forEach(v => {
       if (conc.some(c => claveVj(c.obra) === claveVj(v.obra) && v.fecha >= c.desde && v.fecha <= c.hasta)) return;
-      const precio = precioVj(v, V.precios), k = ku(v.cliente);
+      const p = precioVj(v, V.precios), k = ku(v.cliente);
       const x = m[k] = m[k] || { nombre:String(v.cliente).trim(), viajes:0, m3:0, importe:0, sinPrecio:0, desde:v.fecha, hasta:v.fecha, obras:new Set() };
       x.viajes++; x.m3 += N(v.m3); x.obras.add(v.obra);
-      if (precio == null) x.sinPrecio++; else x.importe += precio * N(v.m3);
+      if (p == null) x.sinPrecio++; else x.importe += importePrecio(p, v.m3);
       if (v.fecha < x.desde) x.desde = v.fecha; if (v.fecha > x.hasta) x.hasta = v.fecha;
     });
     return m;
