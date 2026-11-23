@@ -110,6 +110,12 @@ summary.pnh::-webkit-details-marker{display:none}
 .vistas button.on{color:var(--amb);border-bottom-color:var(--amb)}
 .vista-c{display:flex;flex-direction:column;gap:16px}
 .vista-c[hidden]{display:none}
+/* Diésel › Tanques: un color por camión (gráfica y cuadrito de la tabla) */
+:root{--tq0:#5B9BE8;--tq1:#f2b45c;--tq2:#5fd18e;--tq3:#f28b82;--tq4:#c4a5f5;--tq5:#4fd1c5;--tq6:#e8a0c8;--tq7:#b8c4cc}
+:root[data-theme="light"]{--tq0:#1F64B5;--tq1:#a65300;--tq2:#1b7a43;--tq3:#b42318;--tq4:#6d3fc0;--tq5:#0f7c74;--tq6:#a8326e;--tq7:#5d6d78}
+.tq-g{position:relative;height:300px;padding:12px 12px 6px}
+.tq-c{display:inline-block;width:10px;height:10px;margin-right:6px;vertical-align:-1px}
+@media(max-width:640px){.tq-g{height:250px;padding:8px 4px 4px}}
 /* Línea gris bajo el título de cada panel: para qué sirve */
 .pn-sub{font-size:12px;color:var(--muted);padding:8px 16px;border-bottom:1px solid var(--bd);line-height:1.5}
 /* Pasos del Diario */
@@ -376,7 +382,10 @@ function setTheme(t, guardar = true) {   // sin guardar: sigue el modo del telé
   if (guardar) try { localStorage.setItem('tema', t); } catch(e) {}
   document.querySelectorAll('.theme-btn').forEach(b => b.textContent = t==='light' ? 'Modo oscuro' : 'Modo claro');
 }
-function toggleTheme() { setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light'); }
+function toggleTheme() {
+  setTheme(document.documentElement.dataset.theme==='light' ? 'dark' : 'light');
+  if (typeof TQ !== 'undefined' && TQ.graficas.length) dibujarTanques();      // la gráfica de Tanques toma los colores del tema
+}
 
 // Vistas dentro de una sección (Capturar / Ver, Viajes / Resúmenes / Acumulado, Tickets / Rendimiento):
 // se pintan todas y solo se muestra una, así cambiar de vista es inmediato y no se pierde lo escrito
@@ -2963,10 +2972,13 @@ async function cargarDiesel(forzar) {
   finally { bar(false); }
 }
 
-// Filtros (como los de Fletes) y vistas: Tickets (lo administrativo) y Rendimiento (km por litro)
+// Filtros (como los de Fletes) y vistas: Tickets (lo administrativo), Rendimiento (km por litro) y Tanques (cm del Diario)
 const FD = { chofer:'', unidad:'' };
-let VISTA_DS = vistaGuardada('ds-vista', 'tickets', ['tickets', 'rendimiento']), FIL_DS_ABIERTO = false;
-function vistaDs(v) { VISTA_DS = v; guardarVista('ds-vista', v); mostrarVista(document.getElementById('ds-body'), v); }
+let VISTA_DS = vistaGuardada('ds-vista', 'tickets', ['tickets', 'rendimiento', 'tanques']), FIL_DS_ABIERTO = false;
+function vistaDs(v) {
+  VISTA_DS = v; guardarVista('ds-vista', v); mostrarVista(document.getElementById('ds-body'), v);
+  if (v === 'tanques') dibujarTanques();          // la gráfica se dibuja ya visible (escondida mide 0)
+}
 function filtrarDs(k, v) { FD[k] = v; renderDiesel(); }
 
 // Tickets ordenados, con los filtros de chofer y unidad y los avisos de cada uno
@@ -2992,7 +3004,7 @@ function renderDiesel() {
   const body = document.getElementById('ds-body');
   const { todos, lista } = datosDiesel();
   const titulo = tituloDs();
-  if (!todos.length && !(DS.rendimiento?.km || []).length) {
+  if (!todos.length && !(DS.rendimiento?.km || []).length && !(DS.rendimiento?.cm || []).some(x => x.fecha >= DS.desde)) {
     const ult = DS.ultima && DS.ultima < DS.desde
       ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ${porMesDs() ? 'ese mes' : 'esa semana'}</button>` : '';
     body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel ${esteDs()}${ult}</div></div>`;
@@ -3003,6 +3015,12 @@ function renderDiesel() {
     const otro = k === 'chofer' ? t => !FD.unidad || t.placa === FD.unidad : t => !FD.chofer || claveVj(t.chofer) === FD.chofer;
     const m = new Map();
     todos.filter(otro).forEach(t => { const c = get(t); if (!c) return; if (!m.has(c)) m.set(c, { c, t:txt(t), n:0 }); m.get(c).n++; });
+    // Unidades con cm pero sin tickets (para verlas en Tanques)
+    if (k === 'unidad' && !FD.chofer) (DS.rendimiento?.cm || []).forEach(x => {
+      if (x.fecha < DS.desde || m.has(x.placa)) return;
+      const d = (DS.placas || []).find(y => y.placa === x.placa)?.descripcion;
+      m.set(x.placa, { c:x.placa, t:d ? `${x.placa} — ${d}` : x.placa, n:0 });
+    });
     if (FD[k] && !m.has(FD[k])) m.set(FD[k], { c:FD[k], t:FD[k], n:0 });
     return [...m.values()].sort((a, b) => a.t.localeCompare(b.t, 'es'));
   };
@@ -3017,7 +3035,7 @@ function renderDiesel() {
     ${puestos.length ? `<div class="vj-chips" style="padding:0">${puestos.map(d => `<button class="chip" onclick="filtrarDs('${d[0]}', '')" title="Quitar este filtro">${d[1]}: ${esc(txtPuesto(d))} ✕</button>`).join('')}
       <button class="ftb" onclick="FD.chofer = FD.unidad = ''; renderDiesel()">Quitar filtros</button>
       <span style="color:var(--muted)">${lista.length} de ${todos.length} tickets</span></div>` : ''}`;
-  const vistas = vistasHtml('vistaDs', [['tickets', 'Tickets'], ['rendimiento', 'Rendimiento']], VISTA_DS);
+  const vistas = vistasHtml('vistaDs', [['tickets', 'Tickets'], ['rendimiento', 'Rendimiento'], ['tanques', 'Tanques']], VISTA_DS);
 
   const L = sumaDs(lista, 'litros'), M = sumaDs(lista, 'monto');
   const sinFact = lista.filter(t => !t.facturado).length, sinRec = lista.filter(t => !t.recibido).length;
@@ -3074,7 +3092,8 @@ function renderDiesel() {
     </div>`;
 
   const c = (v, html) => `<div class="vista-c" data-v="${v}" ${VISTA_DS === v ? '' : 'hidden'}>${html}</div>`;
-  body.innerHTML = vistas + filtros + c('tickets', vTickets) + c('rendimiento', rendimientoHtml(lista));
+  body.innerHTML = vistas + filtros + c('tickets', vTickets) + c('rendimiento', rendimientoHtml(lista)) + c('tanques', tanquesHtml(todos));
+  dibujarTanques();
 }
 
 // Km por litro de la semana: km de ProTrack (Diario) entre los litros de los tickets.
@@ -3136,6 +3155,138 @@ function rendimientoHtml(lista) {
       nomCh.map(c => `<tr><td>${esc(c)}</td><td class="rt">${f0(kmCh[c] || 0)}</td><td class="rt">${f0(LCh[c] || 0)}</td>
         <td class="rt"><b>${kmlTxt(kml(kmCh[c] || 0, LCh[c] || 0))}</b></td><td class="rt${excCh[c] ? ' neg' : ''}">${excCh[c] || 0}</td></tr>`).join(''))
       + '<div class="nota-pn">Los km de cada día van al chofer que traía ese camión según el Diario; los litros, al chofer del ticket; los excesos, igual que los km.</div>', 'por chofer')}`;
+}
+
+// ── Vista Tanques: cómo se movió el diésel en el tanque de cada camión, con los cm que se capturan en el Diario ──
+// Con medidas en la hoja Tanques se ve en litros; sin medidas, en cm (otra gráfica, para no mezclar unidades).
+// Las cargas (tickets de esa placa y ese día) se marcan con un triángulo sobre la línea.
+const CHART_URL = 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js';
+const TQ = { datos:null, graficas:[], cargando:null };
+const L0 = v => f0(Math.round(v));
+const diaCorto = f => `${diaNombre(f).slice(0, 3)} ${+f.slice(8, 10)}`;
+
+function datosTanques(todos) {
+  const R = DS.rendimiento, dias = [];
+  for (let f = DS.desde; f <= DS.hasta; f = masDias(f, 1)) dias.push(f);
+  const conCm = (R.cm || []).filter(x => !vacioCm(x.cm1) || !vacioCm(x.cm2));
+  // El color de cada camión no cambia al filtrar
+  const todas = [...new Set(conCm.filter(x => x.fecha >= DS.desde && x.fecha <= DS.hasta).map(x => x.placa))].sort();
+  const cat = {}; (DS.placas || []).forEach(p => cat[p.placa] = p);
+  const carga = {}; todos.forEach(t => { const k = t.placa + '|' + t.fecha; carga[k] = (carga[k] || 0) + t.litros; });
+  const descs = todas.map(p => cat[p]?.descripcion || '');
+  const camiones = todas.filter(p => !FD.unidad || p === FD.unidad).map(p => {
+    const t = R.tanques?.[p], desc = cat[p]?.descripcion || '';
+    const regs = conCm.filter(x => x.placa === p && x.fecha <= DS.hasta).sort((a, b) => a.fecha.localeCompare(b.fecha))
+      .map(x => ({ ...x, litros:litrosCamion(p, x.cm1, x.cm2, R.tanques) }));
+    const filas = [];
+    regs.forEach((x, i) => {
+      if (x.fecha < DS.desde) return;                    // el día anterior al periodo solo sirve de punto de partida
+      // Consumo: lo que había en la medida anterior + lo que cargó desde entonces − lo que hay hoy
+      const ant = regs.slice(0, i).reverse().find(y => y.litros != null);
+      let consumo = null;
+      if (x.litros != null && ant) {
+        let L = 0;
+        for (let f = masDias(ant.fecha, 1); f <= x.fecha; f = masDias(f, 1)) L += carga[p + '|' + f] || 0;
+        consumo = ant.litros + L - x.litros;
+      }
+      filas.push({ ...x, cargo:carga[p + '|' + x.fecha] || 0, consumo, desde:ant && consumo != null ? ant.fecha : null });
+    });
+    return { p, nombre:desc ? `${p} — ${desc}` : p, corto:desc && descs.filter(d => d === desc).length === 1 ? desc : p,
+      color:todas.indexOf(p) % 8, medidas:!!(t?.diametro && t?.largo), dos:t?.tanques === 2, filas,
+      cargas:dias.map(f => carga[p + '|' + f] || 0) };
+  }).filter(c => c.filas.length);
+  return { dias, camiones };
+}
+
+function tanquesHtml(todos) {
+  const R = DS.rendimiento;
+  const pn = (tit, sub, c) => `<div class="pn"><div class="pnh"><span>${tit}</span></div>${sub ? subTxt(sub) : ''}${c}</div>`;
+  if (!R || R.error) return pn('Tanques', '', `<div class="empty">No se pudieron leer los cm de los tanques${R?.error ? ': ' + esc(R.error) : ''}</div>`);
+  const D = TQ.datos = datosTanques(todos);
+  if (!D.camiones.length) return pn('Tanques', '', `<div class="empty">Sin cm de los tanques ${FD.unidad ? 'de este camión ' : ''}${esteDs()}.
+    Los cm se capturan cada día en <a href="#" onclick="event.preventDefault();irSeccion('diario')">Diario</a>.</div>`);
+  const enL = D.camiones.filter(c => c.medidas), enCm = D.camiones.filter(c => !c.medidas);
+  const graf = (id, tit, sub) => pn(tit, sub, `<div class="tq-g"><canvas data-tq="${id}" role="img" aria-label="${tit}"></canvas></div>`);
+  const dos = D.camiones.some(c => c.dos);
+  const cmTxt = v => vacioCm(v) ? '—' : f0(v);
+  const filas = D.camiones.flatMap(c => c.filas.map(x => {
+    const neg = x.consumo != null && x.consumo < -5;
+    const cons = x.consumo == null ? '—' : `<b${neg ? ' class="neg" title="El tanque subió más de lo que dicen los tickets: falta un ticket o el cm se midió mal"' : ''}>${L0(x.consumo)}</b>`
+      + (x.desde !== masDias(x.fecha, -1) && x.desde ? `<br><small style="color:var(--muted)">desde el ${fechaCorta(x.desde)}</small>` : '');
+    return `<tr><td>${diaCorto(x.fecha)} ${fechaCorta(x.fecha).split(' ')[1]}</td><td title="${esc(c.nombre)}"><span class="tq-c" style="background:var(--tq${c.color})"></span>${esc(c.corto)}</td>
+      <td class="rt">${cmTxt(x.cm1)}</td>${dos ? `<td class="rt">${c.dos ? cmTxt(x.cm2) : '<span style="color:var(--muted)">—</span>'}</td>` : ''}
+      <td class="rt amb">${x.litros != null ? L0(x.litros) : `<span style="color:var(--muted)" title="${c.medidas ? 'Falta un cm' : 'Sin medidas en la hoja Tanques'}">—</span>`}</td>
+      <td class="rt">${x.cargo ? L0(x.cargo) : '—'}</td><td class="rt">${cons}</td></tr>`;
+  })).join('');
+  return `
+    ${enL.length ? graf('L', 'Nivel de los tanques · en litros', 'Cuánto diésel tenía cada camión al terminar el día. El triángulo es un día que cargó; toca un día para ver los litros.') : ''}
+    ${enCm.length ? graf('cm', 'Nivel de los tanques · en cm', 'Camiones que aún no tienen las medidas del tanque en la hoja Tanques: se ven en cm, no en litros.' + (enCm.some(c => c.dos) ? ' La línea punteada es el tanque 2.' : '')) : ''}
+    ${pn('Tanques · por día', 'Los cm del Diario de cada camión, los litros que equivalen, lo que cargó ese día y lo que gastó desde la medida anterior.',
+      `<div class="tw"><table><thead><tr><th>Fecha</th><th>Camión</th><th class="rt">cm tanque 1</th>${dos ? '<th class="rt">cm tanque 2</th>' : ''}
+        <th class="rt">Litros en el tanque</th><th class="rt">Litros cargados</th><th class="rt" title="Litros de la medida anterior + cargas − litros de hoy">Consumo (L)</th></tr></thead><tbody>${filas}</tbody></table></div>
+      <div class="nota-pn">Consumo = lo que había en la medida anterior + lo que cargó − lo que hay hoy. En rojo: el tanque subió más de lo que dicen los tickets
+        (falta un ticket o el cm se midió mal). Sin las medidas del tanque no se pueden sacar litros ni consumo.</div>`)}`;
+}
+
+// Valor de la línea en el día i (si ese día no se midió, entre las medidas de antes y de después)
+function valorEnTq(serie, i) {
+  if (serie[i] != null) return serie[i];
+  let a = i - 1, b = i + 1;
+  while (a >= 0 && serie[a] == null) a--;
+  while (b < serie.length && serie[b] == null) b++;
+  if (a >= 0 && b < serie.length) return serie[a] + (serie[b] - serie[a]) * (i - a) / (b - a);
+  return a >= 0 ? serie[a] : b < serie.length ? serie[b] : null;
+}
+
+async function dibujarTanques() {
+  TQ.graficas.forEach(g => g.destroy()); TQ.graficas = [];
+  const D = TQ.datos, cajas = [...document.querySelectorAll('#ds-body canvas[data-tq]')];
+  if (!D || VISTA_DS !== 'tanques' || !cajas.length) return;
+  if (!window.Chart) {
+    try { await (TQ.cargando ||= cargarScript(CHART_URL)); }
+    catch (e) {
+      TQ.cargando = null;
+      cajas.forEach(c => c.parentNode.innerHTML = `<div class="empty">No se pudo cargar la gráfica (${esc(e.message)}). La tabla de abajo trae los mismos datos.</div>`);
+      return;
+    }
+    if (D !== TQ.datos || !cajas[0].isConnected) return;     // mientras cargaba se volvió a pintar (y ese dibuja)
+  }
+  const css = getComputedStyle(document.documentElement), v = n => css.getPropertyValue(n).trim();
+  Chart.defaults.font.family = 'Inter, sans-serif';
+  cajas.forEach(cv => {
+    const enL = cv.dataset.tq === 'L', datasets = [];
+    D.camiones.filter(c => c.medidas === enL).forEach(c => {
+      const col = v('--tq' + c.color);
+      const series = enL ? [['', 'litros']] : c.dos ? [[' · tanque 1', 'cm1'], [' · tanque 2', 'cm2']] : [['', 'cm1']];
+      series.forEach(([suf, k], j) => {
+        const data = D.dias.map(f => { const y = c.filas.find(x => x.fecha === f)?.[k]; return vacioCm(y) ? null : +y; });
+        datasets.push({ label:c.corto + suf, data, tq:c, borderColor:col, backgroundColor:col, borderWidth:2.5, borderDash:j ? [6, 4] : [],
+          pointRadius:3, pointHoverRadius:6, spanGaps:true });
+        // order -1: el triángulo se dibuja encima de las líneas
+        if (!j && c.cargas.some(x => x)) datasets.push({ label:'Carga · ' + c.corto, tq:c, carga:true, showLine:false, order:-1,
+          data:D.dias.map((f, i) => c.cargas[i] ? valorEnTq(data, i) : null),
+          pointStyle:'triangle', pointRadius:9, pointHoverRadius:11, borderColor:v('--s1'), borderWidth:1.5, backgroundColor:col });
+      });
+    });
+    const ejes = { ticks:{ color:v('--muted'), font:{ size:11 } }, grid:{ color:v('--bd') }, border:{ color:v('--bd') } };
+    TQ.graficas.push(new Chart(cv, { type:'line', data:{ labels:D.dias.map(diaCorto), datasets },
+      options:{ responsive:true, maintainAspectRatio:false, animation:false, interaction:{ mode:'index', intersect:false },
+        scales:{ x:{ ...ejes, ticks:{ ...ejes.ticks, maxRotation:0, autoSkip:true } },
+          y:{ ...ejes, beginAtZero:true, title:{ display:true, text:enL ? 'Litros' : 'cm', color:v('--muted') } } },
+        plugins:{
+          legend:{ position:'bottom', labels:{ color:v('--text'), boxWidth:12, boxHeight:12, font:{ size:12 }, filter:(it, d) => !d.datasets[it.datasetIndex].carga },
+            // Esconder un camión también esconde sus cargas
+            onClick:(e, it, leg) => { const ch = leg.chart, c = ch.data.datasets[it.datasetIndex].tq, ver = !ch.isDatasetVisible(it.datasetIndex);
+              ch.data.datasets.forEach((d, j) => { if (d.tq === c) ch.setDatasetVisibility(j, ver); }); ch.update(); } },
+          tooltip:{ filter:it => it.raw != null, itemSort:(a, b) => a.datasetIndex - b.datasetIndex, callbacks:{
+            title:its => `${diaNombre(D.dias[its[0].dataIndex])} ${fechaCorta(D.dias[its[0].dataIndex])}`,
+            label:it => {
+              const d = it.dataset, f = D.dias[it.dataIndex];
+              if (d.carga) return ` ${d.tq.corto} cargó ${L0(d.tq.cargas[it.dataIndex])} L`;
+              const x = d.tq.filas.find(y => y.fecha === f);
+              return enL ? ` ${d.label}: ${L0(it.raw)} L (${[x.cm1, d.tq.dos ? x.cm2 : null].filter(y => !vacioCm(y)).join(' y ')} cm)` : ` ${d.label}: ${f0(it.raw)} cm`;
+            } } } } } }));
+  });
 }
 
 // Guarda la casilla en la hoja de Diesel; si falla, la regresa como estaba
