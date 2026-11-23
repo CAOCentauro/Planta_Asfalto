@@ -690,18 +690,19 @@ function renderViajes() {
         conAviso.map(v => `<tr><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.obra)}</td>
           <td class="neg">${v.avisos.join(' · ')}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))}</div>` : ''}
     <div class="pn"><div class="pnh">Viajes <span style="color:var(--muted);font-weight:400">· última nota registrada ${VJ.ultima || '—'}</span></div>
-      ${subTxt('Todas las notas del periodo, una por renglón (en rojo las que tienen aviso).')}
-      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">Precio</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th><th></th>`,
+      ${subTxt('Todas las notas del periodo, una por renglón (en rojo las que tienen aviso). Palomea "Recibida física" cuando la nota en papel llegue a la oficina.')}
+      ${tabla(`<th class="rt">#</th><th>Día</th><th>Fecha</th><th>Folio</th><th>Material</th><th>Obra</th><th>Placas</th><th class="rt">M3</th>${conImp ? '<th class="rt">Precio</th><th class="rt">Importe</th>' : ''}<th>A nombre de</th><th>Chofer</th><th>Revisión</th><th>Foto</th><th>Recibida física</th><th></th>`,
         lista.map((v, i) => `<tr${v.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
           <td class="rt" style="color:var(--muted)">${i+1}</td><td>${diaVj(v.fecha)}</td><td>${v.fecha}</td><td>${esc(v.folio) || '—'}</td>
           <td>${esc(v.material)}</td><td>${esc(v.obra)}</td><td>${esc(v.placa)}</td><td class="rt">${f0(v.m3)}</td>
           ${conImp ? (v.precio == null ? '<td class="rt sinp">—</td><td class="rt sinp">sin precio</td>' : `<td class="rt">${$$(v.precio)}${v.porViaje ? ' <span style="color:var(--muted)">/ viaje</span>' : ''}</td><td class="rt">${$$(v.importe)}</td>`) : ''}
           <td>${esc(v.cliente) || '—'}</td><td>${esc(v.chofer) || '—'}</td>
           <td>${v.planta ? '<span class="tag tb" title="Capturado en Registro › Compras; se corrige ahí">A la planta</span>'
-            : `<span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>${v.entregado ? '' : ' <span class="tag ta" title="La nota en papel no se ha entregado">Sin física</span>'}`}</td>
+            : `<span class="tag ${v.revisado ? 'tb' : 'tm'}">${v.revisado ? 'Revisado' : 'Pendiente'}</span>`}</td>
           <td>${/^https:\/\/drive\.google\.com\//.test(v.foto) ? `<a href="${esc(v.foto)}" target="_blank" rel="noopener">Ver</a>` : '—'}</td>
+          <td>${v.planta || !v.fila ? '—' : `<input type="checkbox" class="vj-papel" ${v.entregado ? 'checked' : ''} onchange="papelVj(${v.fila}, this)" title="La nota en papel ya llegó a la oficina">`}</td>
           <td>${EditNota.boton(v.fila)}</td></tr>`).join(''),
-        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="5"></td>`)}
+        `<td colspan="7"><b>Total</b></td><td class="rt"><b>${f0(tot.m3)}</b></td>${conImp ? `<td></td><td class="rt"><b>${importeVj(tot)}</b></td>` : ''}<td colspan="6"></td>`)}
       <div class="nota-pn">Con ✏ se corrige una nota ya registrada (folio, fecha, chofer, obra, material, m³, placa) o se anula si quedó repetida.
         Los viajes "A la planta" (arena y grava para la planta de asfalto) se capturan y se corrigen en Registro de planta › Compras.</div>
       ${VJ.errPlanta ? `<div class="banner-dr">No se pudieron leer los viajes a la planta: ${esc(VJ.errPlanta)}</div>` : ''}
@@ -752,6 +753,20 @@ function renderViajes() {
   body.innerHTML = vistas + filtros + avisoPrecios + tarjetas + c('viajes', vViajes) + c('resumenes', vResumenes) + c('acumulado', vAcumulado);
 }
 
+// Casilla "Recibida física" (ENTREGADO_FISICO en Notas de Viaje): la nota en papel ya llegó a la oficina
+async function papelVj(fila, chk) {
+  const v = (VJ?.viajes || []).find(x => x.fila === fila && !x.planta);
+  if (!v) return;
+  chk.disabled = true;
+  try {
+    await api({ action:'nota_papel', fila, valor:chk.checked, folio:v.folio, fecha:v.fecha });
+    Object.values(VJ_CACHE).forEach(r => (r.viajes || []).forEach(o => { if (o.fila === fila && !o.planta) o.entregado = chk.checked; }));
+    v.entregado = chk.checked;
+    Diario.olvidar();
+    renderViajes();
+  } catch(e) { chk.checked = !chk.checked; chk.disabled = false; alert('No se pudo guardar la casilla: ' + e.message); }
+}
+
 // Mismo formato que la hoja de FLETES DE LA SEMANA (con lo filtrado), más los totales y el acumulado
 async function excelViajes(btn) {
   if (!VJ) return;
@@ -764,12 +779,12 @@ async function excelViajes(btn) {
     // por viaje: PRECIO M3 vacío y el importe es el precio del viaje (como en las conciliaciones)
     const imp = v => hayPrecios ? [v.porViaje ? '' : v.precio ?? '', v.importe ?? ''] : [];
     const filas = lista.map((v, i) => [i+1, diaVj(v.fecha), celdaFecha(v.fecha), v.folio, v.material.toUpperCase(), v.obra.toUpperCase(),
-      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase(), ...imp(v)]);
+      v.placa, v.m3, v.cliente.toUpperCase(), v.chofer.toUpperCase(), ...imp(v), v.planta ? '' : v.entregado ? 'SÍ' : 'NO']);
     const totM3 = lista.reduce((s,v) => s + v.m3, 0), totImp = lista.reduce((s, v) => s + (v.importe || 0), 0);
     const hoja = XLSX.utils.aoa_to_sheet([['', 'FLETES ' + tituloVj({ per:elVj('vj-per').value, desde:VJ.desde, hasta:VJ.hasta }).toUpperCase()], fil ? ['', fil] : [],
-      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER', ...(hayPrecios ? ['PRECIO M3','IMPORTE'] : [])], ...filas,
+      ['CONSECUTIVO','DIA','FECHA','FOLIO','MATERIAL','OBRA','PLACAS','M3','A NOMBRE DE','CHOFER', ...(hayPrecios ? ['PRECIO M3','IMPORTE'] : []), 'RECIBIDA FÍSICA'], ...filas,
       [], ['', '', '', '', '', '', 'TOTAL', totM3, '', '', ...(hayPrecios ? ['', totImp] : [])]]);
-    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18,10,12].map(wch => ({ wch }));
+    hoja['!cols'] = [12,11,11,9,16,16,10,6,20,18, ...(hayPrecios ? [10,12] : []), 15].map(wch => ({ wch }));
     const im = x => hayPrecios ? [x.importe] : [];
     const tot = [['POR DÍA'], ['DIA','FECHA','VIAJES','M3', ...(hayPrecios ? ['IMPORTE'] : [])],
       ...agruparVj(lista, v => v.fecha).map(x => [diaVj(x.k), celdaFecha(x.k), x.viajes, x.m3, ...im(x)]), [],
@@ -2579,9 +2594,14 @@ const Diario = (() => {
   function reparto() {
     const f = D.fecha, L = [`*Camiones del ${diaNombre(f).toLowerCase()} ${fechaCorta(f)}*`];
     const con = D.filas.filter(x => x.placa);
+    const pl = (n, s) => `${n} ${s}${n !== 1 ? 's' : ''}`;
     con.forEach(x => {
       const p = (D.placas || []).find(y => y.placa === x.placa);
       L.push(`• ${p?.descripcion ? p.descripcion + ' ' : ''}${x.placa}: ${x.chofer}${x.cam?.fecha === f && x.cam?.motivo ? ` (cambio: ${x.cam.motivo})` : ''}`);
+      // Notas del chofer ese día (como en la tabla de camiones) y tickets de diésel de ese camión
+      const nv = notasDe(x.chofer), tk = (D.tickets || []).filter(t => t.placa === x.placa);
+      L.push(nv.length ? `  Notas: ${pl(nv.length, 'viaje')}, ${nv.filter(v => v.entregado).length} en papel, ${pl(nv.filter(v => v.foto).length, 'foto')}` : '  Notas: sin viajes');
+      L.push(tk.length ? `  Diésel: ${pl(tk.length, 'ticket')}, ${pl(tk.filter(t => t.foto).length, 'foto')}` : '  Diésel: sin carga');
     });
     if (!con.length) L.push('• Sin camiones');
     return L.join('\n');
