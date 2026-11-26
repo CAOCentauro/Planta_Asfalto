@@ -308,7 +308,7 @@ a{color:var(--amb)}
     <div class="ph bar">
       <h2>Diésel y rendimiento</h2>
       <div class="flt">
-        <select id="ds-per" onchange="cargarDiesel()" title="Ver por semana o por mes"><option value="semana">Semana</option><option value="mes">Mes</option></select>
+        <select id="ds-per" onchange="cargarDiesel()" title="Ver por día, semana o mes"><option value="dia">Día</option><option value="semana" selected>Semana</option><option value="mes">Mes</option></select>
         <button class="ftb" onclick="moverDs(-1)" title="Anterior">‹</button>
         <input type="date" id="ds-dia" onchange="cargarDiesel()" title="Cualquier día de la semana o del mes">
         <button class="ftb" onclick="moverDs(1)" title="Siguiente">›</button>
@@ -2192,6 +2192,7 @@ function leerInformeKm(wb) {
   return out;
 }
 
+var RARAS_DR_ABIERTO = false;      // el aviso de notas con fecha rara del Diario va plegado; se queda como se dejó
 const Diario = (() => {
   let D = null, pide = 0;
   const CACHE = {};
@@ -2476,11 +2477,12 @@ const Diario = (() => {
     body.innerHTML = `${vistasHtml('Diario.verVista', [['capturar', 'Capturar'], ['ver', 'Ver el día']], vista)}
       ${saltado === masDias(f, 1) ? `<div class="banner-dr">El domingo ${fechaCorta(saltado)} no hubo notas, diésel ni recorridos: se muestra el sábado.
         <button class="ftb" onclick="document.getElementById('dr-dia').value='${saltado}';Diario.cargar()">Ver el domingo</button></div>` : ''}
-      ${(D.raras || []).length ? `<div class="pn rara-pn"><div class="pnh"><span class="neg">Notas subidas estos días con la fecha rara (${D.raras.length})</span></div>
-        ${subTxt('Casi siempre la IA leyó mal la fecha. Mientras no se corrija, la nota no sale en el día que es. Corrígela con ✏.')}
+      ${(D.raras || []).length ? `<details class="pn fil rara-pn" ${RARAS_DR_ABIERTO ? 'open' : ''} ontoggle="RARAS_DR_ABIERTO = this.open">
+        <summary class="pnh"><span class="neg">${D.raras.length} nota${D.raras.length !== 1 ? 's' : ''} con la fecha rara</span><span class="fl"></span></summary>
+        ${subTxt('Notas subidas estos días con una fecha que no cuadra. Casi siempre la IA leyó mal la fecha: mientras no se corrija, la nota no sale en el día que es. Corrígela con ✏. Las capturadas de una conciliación no cuentan aunque sean viejas.')}
         ${tabla('<th>Se subió</th><th>Fecha de la nota</th><th>Folio</th><th>Chofer</th><th>Placa</th><th>Por qué</th><th></th>',
           D.raras.map(v => `<tr><td>${v.registro ? fechaCorta(v.registro) : '—'}</td><td class="neg">${esc(v.fecha) || '—'}</td><td>${esc(v.folio) || '—'}</td>
-            <td>${esc(v.chofer) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.rara)}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))}</div>` : ''}
+            <td>${esc(v.chofer) || '—'}</td><td>${esc(v.placa)}</td><td>${esc(v.rara)}</td><td>${EditNota.boton(v.fila)}</td></tr>`).join(''))}</details>` : ''}
       <div class="vista-c" data-v="capturar" ${vista === 'capturar' ? '' : 'hidden'}>
         <div class="avance">${pasos.map(p => `<i class="${p[2] ? 'ok' : ''}"></i>`).join('')}<b>${listos} de ${pasos.length} pasos listos</b><span>· ${titulo}</span></div>
         ${pasos.map(paso).join('')}
@@ -2956,22 +2958,24 @@ const DS_CACHE = {};
 let DS = null;
 const $$ = v => '$' + new Intl.NumberFormat('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2}).format(N(v));
 
-// Semana (lunes a domingo) o mes completo del día escogido
+// Un día (p. ej. para facturar los tickets que entraron ese día), la semana (lunes a domingo) o el mes completo del día escogido
 const porMesDs = () => document.getElementById('ds-per').value === 'mes';
+const porDiaDs = () => document.getElementById('ds-per').value === 'dia';
 function periodoDs(dia) {
+  if (porDiaDs()) return { desde:dia, hasta:dia };
   if (!porMesDs()) return semanaVj(dia);
   const d = fechaLocal(dia);
   return { desde:txtFecha(new Date(d.getFullYear(), d.getMonth(), 1)), hasta:txtFecha(new Date(d.getFullYear(), d.getMonth() + 1, 0)) };
 }
-const queDs = () => porMesDs() ? 'mes' : 'semana';
-const esteDs = () => porMesDs() ? 'este mes' : 'esta semana';
+const esteDs = () => porMesDs() ? 'este mes' : porDiaDs() ? 'este día' : 'esta semana';
 const tituloDs = () => porMesDs()
   ? `Mes de ${MESES[+DS.desde.slice(5, 7) - 1].toLowerCase()} ${DS.desde.slice(0, 4)}`
+  : porDiaDs() ? `Día ${fechaCorta(DS.desde)} ${DS.desde.slice(0, 4)}`
   : `Semana del ${fechaCorta(DS.desde)} al ${fechaCorta(DS.hasta)} ${DS.hasta.slice(0, 4)}`;
 function moverDs(n) {
   const inp = document.getElementById('ds-dia');
   const d = fechaLocal(inp.value || txtFecha(new Date()));
-  if (porMesDs()) d.setMonth(d.getMonth() + n, 1); else d.setDate(d.getDate() + 7 * n);
+  if (porMesDs()) d.setMonth(d.getMonth() + n, 1); else d.setDate(d.getDate() + (porDiaDs() ? 1 : 7) * n);
   inp.value = txtFecha(d);
   cargarDiesel();
 }
@@ -2980,6 +2984,7 @@ async function cargarDiesel(forzar) {
   if (!inp.value) inp.value = txtFecha(new Date());
   const { desde, hasta } = periodoDs(inp.value);
   const k = desde + '|' + hasta, body = document.getElementById('ds-body');
+  MARCADOS_DS.clear();
   if (!forzar && DS_CACHE[k]) { DS = DS_CACHE[k]; return renderDiesel(); }
   body.innerHTML = '<div class="pn"><div class="empty">Leyendo los tickets de diésel…</div></div>';
   bar(true);
@@ -2993,7 +2998,11 @@ async function cargarDiesel(forzar) {
 }
 
 // Filtros (como los de Fletes) y vistas: Tickets (lo administrativo), Rendimiento (km por litro) y Tanques (cm del Diario)
-const FD = { chofer:'', unidad:'' };
+// fact: '' todos · 'no' sin facturar · 'si' facturados. Los que se palomean se quedan a la vista hasta volver a cargar
+// (para poder deshacer si se palomeó el que no era)
+const FD = { chofer:'', unidad:'', fact:'' };
+const MARCADOS_DS = new Set();
+const FACT_DS = { no:'Sin facturar', si:'Facturados' };
 let VISTA_DS = vistaGuardada('ds-vista', 'tickets', ['tickets', 'rendimiento', 'tanques']), FIL_DS_ABIERTO = false;
 function vistaDs(v) {
   VISTA_DS = v; guardarVista('ds-vista', v); mostrarVista(document.getElementById('ds-body'), v);
@@ -3014,7 +3023,9 @@ function datosDiesel() {
     if (!cat[t.placa]) t.avisos.push('Unidad no está en el catálogo');
     if (t.sin_fecha_ticket) t.avisos.push('Sin fecha del ticket (se usó la de registro)');
   });
-  return { cat, todos, lista: todos.filter(t => (!uni || t.placa === uni) && (!ch || claveVj(t.chofer) === ch)) };
+  const fa = FD.fact;
+  return { cat, todos, lista: todos.filter(t => (!uni || t.placa === uni) && (!ch || claveVj(t.chofer) === ch)
+    && (!fa || (fa === 'si') === !!t.facturado || MARCADOS_DS.has(t.fila))) };
 }
 const sumaDs = (lista, k) => lista.reduce((s, t) => s + t[k], 0);
 const precioProm = lista => { const L = sumaDs(lista, 'litros'); return L ? sumaDs(lista, 'monto') / L : 0; };
@@ -3026,7 +3037,7 @@ function renderDiesel() {
   const titulo = tituloDs();
   if (!todos.length && !(DS.rendimiento?.km || []).length && !(DS.rendimiento?.cm || []).some(x => x.fecha >= DS.desde)) {
     const ult = DS.ultima && DS.ultima < DS.desde
-      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ${porMesDs() ? 'ese mes' : 'esa semana'}</button>` : '';
+      ? `<br>El último ticket registrado es del <b>${DS.ultima}</b>. <button class="ftb" onclick="document.getElementById('ds-dia').value='${DS.ultima}';cargarDiesel()">Ir a ${porMesDs() ? 'ese mes' : porDiaDs() ? 'ese día' : 'esa semana'}</button>` : '';
     body.innerHTML = `<div class="pn"><div class="pnh">${titulo}</div><div class="empty">Sin tickets de diésel ${esteDs()}${ult}</div></div>`;
     return;
   }
@@ -3046,14 +3057,19 @@ function renderDiesel() {
   };
   const defs = [['chofer', 'Chofer', t => claveVj(t.chofer), t => t.chofer], ['unidad', 'Unidad', t => t.placa, t => t.unidad]];
   const puestos = defs.filter(([k]) => FD[k]);
+  const nFil = puestos.length + (FD.fact ? 1 : 0);
   const txtPuesto = ([k, , get, txt]) => { const t = todos.find(x => get(x) === FD[k]); return t ? txt(t) : FD[k]; };
+  const nFact = { no:todos.filter(t => !t.facturado).length, si:todos.filter(t => t.facturado).length };
   const filtros = `<details class="pn fil" ${FIL_DS_ABIERTO ? 'open' : ''} ontoggle="FIL_DS_ABIERTO = this.open">
-      <summary class="pnh"><span>Filtros${puestos.length ? ` (${puestos.length})` : ''} · chofer, unidad</span><span class="fl"></span></summary>
+      <summary class="pnh"><span>Filtros${nFil ? ` (${nFil})` : ''} · chofer, unidad, facturado</span><span class="fl"></span></summary>
       <div class="vj-fil">${defs.map(([k, n, get, txt]) => `<label>${n}<select class="${FD[k] ? 'on' : ''}" onchange="filtrarDs('${k}', this.value)">
-        <option value="">Todos</option>${opsDs(k, get, txt).map(o => `<option value="${esc(o.c)}" ${FD[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}</div>
+        <option value="">Todos</option>${opsDs(k, get, txt).map(o => `<option value="${esc(o.c)}" ${FD[k] === o.c ? 'selected' : ''}>${esc(o.t)} (${o.n})</option>`).join('')}</select></label>`).join('')}
+        <label>Facturado<select id="ds-fact" class="${FD.fact ? 'on' : ''}" onchange="filtrarDs('fact', this.value)"><option value="">Todos</option>
+          ${Object.entries(FACT_DS).map(([c, t]) => `<option value="${c}" ${FD.fact === c ? 'selected' : ''}>${t} (${nFact[c]})</option>`).join('')}</select></label></div>
     </details>
-    ${puestos.length ? `<div class="vj-chips" style="padding:0">${puestos.map(d => `<button class="chip" onclick="filtrarDs('${d[0]}', '')" title="Quitar este filtro">${d[1]}: ${esc(txtPuesto(d))} ✕</button>`).join('')}
-      <button class="ftb" onclick="FD.chofer = FD.unidad = ''; renderDiesel()">Quitar filtros</button>
+    ${nFil ? `<div class="vj-chips" style="padding:0">${puestos.map(d => `<button class="chip" onclick="filtrarDs('${d[0]}', '')" title="Quitar este filtro">${d[1]}: ${esc(txtPuesto(d))} ✕</button>`).join('')}
+      ${FD.fact ? `<button class="chip" onclick="filtrarDs('fact', '')" title="Quitar este filtro">${FACT_DS[FD.fact]} ✕</button>` : ''}
+      <button class="ftb" onclick="FD.chofer = FD.unidad = FD.fact = ''; renderDiesel()">Quitar filtros</button>
       <span style="color:var(--muted)">${lista.length} de ${todos.length} tickets</span></div>` : ''}`;
   const vistas = vistasHtml('vistaDs', [['tickets', 'Tickets'], ['rendimiento', 'Rendimiento'], ['tanques', 'Tanques']], VISTA_DS);
 
@@ -3069,14 +3085,16 @@ function renderDiesel() {
     : (t[campo] ? '✓' : '—');
 
   // ── Vista Tickets: lo administrativo (gasto, facturas, tickets en papel) ──
-  const vTickets = !lista.length ? `<div class="pn"><div class="empty">Sin tickets ${puestos.length ? 'con estos filtros' : esteDs()}</div></div>` : `
+  const vTickets = !lista.length ? `<div class="pn"><div class="empty">${FD.fact === 'no' && !puestos.length ? `Todos los tickets de ${esteDs()} ya están facturados`
+      : `Sin tickets ${nFil ? 'con estos filtros' : esteDs()}`}</div></div>` : `
     <div class="mg">
       <div class="mc m"><div class="ml">Litros</div><div class="mv">${f0(L)}</div><div class="ms">${titulo}</div></div>
       <div class="mc"><div class="ml">Gasto en diésel</div><div class="mv">${$$(M)}</div><div class="ms">${lista.length} ticket${lista.length!==1?'s':''} · ${$$(precioProm(lista))} por litro</div></div>
-      <div class="mc ${sinFact ? 'r' : 'g'}"><div class="ml">Sin facturar</div><div class="mv">${sinFact}</div><div class="ms">${sinRec} sin ticket en papel</div></div>
+      <div class="mc ${sinFact ? 'r' : 'g'}" id="ds-sinfact" style="cursor:pointer" onclick="filtrarDs('fact', FD.fact === 'no' ? '' : 'no')"
+        title="${FD.fact === 'no' ? 'Ver todos los tickets' : 'Ver solo los que faltan por facturar'}"><div class="ml">Sin facturar</div><div class="mv">${sinFact}</div><div class="ms">${FD.fact === 'no' ? 'Toca para ver todos' : 'Toca para ver solo esos'} · ${sinRec} sin ticket en papel</div></div>
       <div class="mc ${conAviso.length ? 'r' : 'g'}"><div class="ml">Con aviso</div><div class="mv">${conAviso.length}</div><div class="ms">Se marcan en rojo en la lista</div></div>
     </div>
-    <div class="pn"><div class="pnh">Tickets ${porMesDs() ? 'del mes' : 'de la semana'} <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
+    <div class="pn"><div class="pnh">Tickets ${porMesDs() ? 'del mes' : porDiaDs() ? 'del día' : 'de la semana'} <span style="color:var(--muted);font-weight:400">· último registrado ${DS.ultima || '—'}${DS.marcar ? '' : ' · faltan las columnas FACTURADO / RECIBIDO FISICO en la hoja'}</span></div>
       ${subTxt('Palomea "Facturado" cuando ya se tenga la factura y "Recibido físico" cuando el ticket en papel llegue a la oficina. Con ✏ se corrige un ticket (unidad, chofer, litros…).')}
       ${tabla('<th>Fecha</th><th>Hora</th><th>Chofer</th><th>Unidad</th><th class="rt">Litros</th><th class="rt">Monto</th><th class="rt">Precio/L</th><th>Gasolinera</th><th>Facturado</th><th>Recibido físico</th><th>Foto</th><th>Avisos</th><th></th>',
         lista.map(t => `<tr${t.avisos.length ? ' style="background:rgba(239,68,68,.08)"' : ''}>
@@ -3169,7 +3187,7 @@ function rendimientoHtml(lista) {
       filas.map(x => `<tr><td class="amb">${esc(nomPlaca(x))}</td><td class="rt">${f0(x.km)}</td><td class="rt">${f0(x.L)}</td>
         <td class="rt"><b>${kmlTxt(x.r)}</b></td><td class="rt">${x.km > 0 && x.M ? $$(x.M / x.km) : '—'}</td><td class="rt">${kmlTxt(x.corr)}</td><td class="rt${x.exc ? ' neg' : ''}">${x.exc}</td>
         <td class="av" style="color:var(--warn)">${aviso(x)}</td></tr>`).join(''))
-      + `<div class="nota-pn">Promedio: <b>${kmlTxt(prom)}</b> km/L. ${porMesDs() ? 'Por mes sale más parejo que por semana.' : 'Por semana sale poco exacto porque las cargas no caen parejo (velo por mes).'}
+      + `<div class="nota-pn">Promedio: <b>${kmlTxt(prom)}</b> km/L. ${porMesDs() ? 'Por mes sale más parejo que por semana.' : (porDiaDs() ? 'Por día' : 'Por semana') + ' sale poco exacto porque las cargas no caen parejo (velo por mes).'}
         La columna "con cm" corrige con lo que había en el tanque el día antes de empezar y el último día con cm (cuando estén las medidas de los tanques).</div>`, 'por camión')}
     ${pn(tabla('<th>Chofer</th><th class="rt">Km</th><th class="rt">Litros</th><th class="rt">km/L</th><th class="rt">Excesos de velocidad</th>',
       nomCh.map(c => `<tr><td>${esc(c)}</td><td class="rt">${f0(kmCh[c] || 0)}</td><td class="rt">${f0(LCh[c] || 0)}</td>
@@ -3316,7 +3334,9 @@ async function marcarTicket(fila, campo, chk) {
   chk.disabled = true;
   try {
     await api({ action:'diesel_marcar', fila, campo, valor:chk.checked, fecha:t.fecha, monto:t.monto });
-    t[campo] = chk.checked;
+    // El mismo ticket puede estar en el día, la semana y el mes ya leídos
+    [DS, ...Object.values(DS_CACHE)].forEach(r => (r?.tickets || []).forEach(x => { if (x.fila === fila) x[campo] = chk.checked; }));
+    if (campo === 'facturado') MARCADOS_DS.add(fila);
     renderDiesel();
   } catch(e) {
     chk.checked = !chk.checked; chk.disabled = false;
@@ -3331,7 +3351,7 @@ async function excelDiesel(btn) {
   btn.disabled = true;
   try {
     if (!window.XLSX) await cargarScript(XLSX_URL);
-    const nombre = porMesDs() ? `${MESES[+DS.desde.slice(5, 7) - 1]} ${DS.desde.slice(0, 4)}` : `${ddmmyy(DS.desde)}-${ddmmyy(DS.hasta)}`;
+    const nombre = porMesDs() ? `${MESES[+DS.desde.slice(5, 7) - 1]} ${DS.desde.slice(0, 4)}` : porDiaDs() ? ddmmyy(DS.desde) : `${ddmmyy(DS.desde)}-${ddmmyy(DS.hasta)}`;
     const hoja = XLSX.utils.aoa_to_sheet([['', 'DIÉSEL — ' + tituloDs().toUpperCase()], [],
       ['FECHA','HORA','CHOFER','UNIDAD','LITROS','MONTO','PRECIO/L','GASOLINERA','FACTURADO','RECIBIDO FÍSICO'],
       ...lista.map(t => [celdaFecha(t.fecha), t.hora, t.chofer, t.unidad, t.litros, t.monto, t.precio || '', t.gasolinera, t.facturado ? 'SÍ' : 'NO', t.recibido ? 'SÍ' : 'NO']),
