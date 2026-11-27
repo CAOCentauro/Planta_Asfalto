@@ -16,12 +16,14 @@
   --brand:#F7931E;--brand-bg:#fff4e6;--btn:#3D5A6C;--btn-ink:#fff;--sel:#e9eff3;--panel:#0d141a;--panel-ink:#fff;--stripe:#0d141a;
   --ok:#1b7a43;--ok-bg:#e5f4eb;--warn:#a65300;--warn-bg:#fff1df;--err:#b42318;--err-bg:#fdeceb;--loan:#6a41b8;--loan-bg:#f1ebfb;
   --t-pago:#3D5A6C;--t-prestamo:#6a41b8;--t-falta:#d93025;--t-deduccion:#c25400;--t-premio:#1e8e3e;--t-dias:#80868b;
+  --pay:#0b57d0;--pay-est:#4f86d6;
   --r:4px;--r-sm:3px;
   --f-tit:'Outfit',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;--f-txt:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
 @media (prefers-color-scheme:dark){:root{--bg:#0b1116;--card:#141d24;--bd:#26333d;--text:#e8eef2;--muted:#93a3ae;--in:#0f171d;
   --brand:#F7931E;--brand-bg:#2a1c0b;--btn:#4b6d82;--btn-ink:#fff;--sel:#1d2a33;--panel:#1c2832;--panel-ink:#fff;--stripe:#33424d;
   --ok:#5fd18e;--ok-bg:#10281a;--warn:#f2b45c;--warn-bg:#2b1f0c;--err:#f28b82;--err-bg:#2c1210;--loan:#c3a6f5;--loan-bg:#231a35;
-  --t-pago:#8fb3c9;--t-prestamo:#b794f6;--t-falta:#f28b82;--t-deduccion:#f6a35b;--t-premio:#6fd39a;--t-dias:#9aa0a6}}
+  --t-pago:#8fb3c9;--t-prestamo:#b794f6;--t-falta:#f28b82;--t-deduccion:#f6a35b;--t-premio:#6fd39a;--t-dias:#9aa0a6;
+  --pay:#8ab4f8;--pay-est:#6f8fbf}}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{background:var(--bg)}
 body{background:var(--bg);color:var(--text);font-family:var(--f-txt);font-size:16px;line-height:1.45;padding-bottom:110px;-webkit-font-smoothing:antialiased}
@@ -122,8 +124,7 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
 .money:focus-within{outline:2px solid var(--btn);border-color:var(--btn)}
 .money span{font-family:var(--f-tit);font-size:22px;font-weight:600;color:var(--muted)}
 .money.mas span{color:var(--t-premio)} .money.menos span{color:var(--t-deduccion)}
-.money input{border:none;background:none;font-family:var(--f-tit);font-size:28px;font-weight:600;padding:8px 6px;outline:none}
-.stepper{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--bd);border-radius:var(--r-sm);background:var(--in);padding:6px}
+.money input{border:none;background:none;font-family:var(--f-tit);font-size:28px;font-weight:600;padding:8px 6px;outline:none}.stepper{display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--bd);border-radius:var(--r-sm);background:var(--in);padding:6px}
 .stepper button{font:inherit;width:48px;height:44px;border-radius:var(--r-sm);border:1px solid var(--bd);background:var(--card);color:var(--text);font-size:22px;font-weight:600;cursor:pointer}
 .stepper .v{text-align:center;font-family:var(--f-tit);font-size:26px;font-weight:600}
 .stepper .v small{display:block;font-family:var(--f-txt);font-size:12px;font-weight:400;color:var(--muted)}
@@ -203,6 +204,17 @@ input:focus,select:focus,textarea:focus{outline:2px solid var(--btn);outline-off
   #print .tot div{border:1pt solid #000;padding:5pt 7pt}
   #print .tot small{display:block;font-size:8pt}
   #print .tot b{font-family:var(--f-tit);font-size:13pt}
+  /* Lo que se paga: azul, negritas, más grande y en recuadro (se lee también en blanco y negro).
+     Estimado (lunes a jueves): azul claro y recuadro punteado. En papel siempre los azules del modo claro */
+  #print{--pay:#0b57d0;--pay-est:#4f86d6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #print .pp-v{display:inline-block;border:1.5pt solid var(--pay);color:var(--pay);padding:1pt 4pt;font-size:13pt;font-weight:700}
+  #print h2 .pp-v{font-size:12pt}
+  #print .pp-v.est{border-style:dashed;border-color:var(--pay-est);color:var(--pay-est)}
+  #print th.pp-h{color:var(--pay)} #print th.pp-h.est{color:var(--pay-est)}
+  #print .tot div.pp-tot{border:2.5pt solid var(--pay)}
+  #print .tot div.pp-tot.est{border-style:dashed;border-color:var(--pay-est)}
+  #print .tot .pp-tot b{font-size:17pt;color:var(--pay)}
+  #print .tot .pp-tot.est b{color:var(--pay-est)}
 }
 </style>
 </head>
@@ -913,7 +925,7 @@ function reporteNomina(lun) {
       <td class="r">${din(c.premios)}</td>
       <td class="r">${din(c.deducc)}</td>
       <td class="r">${din(c.prestado)}</td>
-      <td class="r pp">${s > 0.5 ? money(s) : s < -0.5 ? `<span style="font-weight:400;font-size:8.5pt">Debe préstamo<br>${money(-s)}</span>` : '<span style="font-weight:400">Al corriente</span>'}</td>
+      <td class="r pp">${s > 0.5 ? `<span class="pp-v${cur ? ' est' : ''}">${money(s)}</span>` : s < -0.5 ? `<span style="font-weight:400;font-size:8.5pt">Debe préstamo<br>${money(-s)}</span>` : '<span style="font-weight:400">Al corriente</span>'}</td>
       <td>${w.forma === 'Transferencia' ? 'Transf.' : 'Efectivo'}</td>
       <td class="esc"></td>
     </tr>`;
@@ -923,11 +935,11 @@ function reporteNomina(lun) {
   const cols = `<colgroup>${anchos.map(a => `<col style="width:${a}%">`).join('')}</colgroup>`;
   const enc = `<tr><th class="r">#</th><th>Trabajador · lo de la semana</th><th class="r">Sueldo semanal</th><th class="r">Faltas</th>
     <th class="r">Bonos</th><th class="r">Deducciones</th><th class="r">Préstamos</th>
-    <th class="r">${cur ? 'Estimado por pagar' : 'Falta por pagar'}</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
+    <th class="r pp-h${cur ? ' est' : ''}">${cur ? 'Estimado por pagar' : 'Falta por pagar'}</th><th>Forma</th><th class="esc">Anotaciones</th></tr>`;
   let n = 0;
   const grupos = porLugar(filas.map(f => f.w)).map(g => {
     const fs = filas.filter(f => f.w.lugar === g.l).sort((a, b) => a.w.nombre.localeCompare(b.w.nombre, 'es'));
-    return `<h2><span>${esc(g.l)}</span><span>${cur ? 'Estimado por pagar' : 'Falta por pagar'} ${money(sum(fs, f => Math.max(0, f.s)))}</span></h2>
+    return `<h2><span>${esc(g.l)}</span><span>${cur ? 'Estimado por pagar' : 'Falta por pagar'} ${(t => t > 0.5 ? `<span class="pp-v${cur ? ' est' : ''}">${money(t)}</span>` : money(t))(sum(fs, f => Math.max(0, f.s)))}</span></h2>
       <table>${cols}<thead>${enc}</thead><tbody>${fs.map(f => fila(f, n++)).join('')}</tbody></table>`;
   }).join('');
   const porPagar = sum(filas, f => Math.max(0, f.s)), efectivo = sum(filas.filter(f => f.w.forma === 'Efectivo'), f => Math.max(0, f.s));
@@ -945,7 +957,7 @@ function reporteNomina(lun) {
       "Falta por pagar" también incluye lo que quedó pendiente o los préstamos de semanas anteriores (se explica debajo del nombre).</div>
     ${grupos || '<p>No hay trabajadores en este filtro.</p>'}
     <div class="tot">
-      <div><small>${cur ? 'Total estimado por pagar' : 'Total que falta por pagar'}</small><b>${money(porPagar)}</b></div>
+      <div class="pp-tot${cur ? ' est' : ''}"><small>${cur ? 'Total estimado por pagar' : 'Total que falta por pagar'}</small><b>${money(porPagar)}</b></div>
       <div><small>En efectivo</small><b>${money(efectivo)}</b></div>
       <div><small>Por transferencia</small><b>${money(porPagar - efectivo)}</b></div>
       <div><small>Préstamos por recuperar</small><b>${money(sum(filas, f => Math.max(0, -f.s)))}</b></div>
